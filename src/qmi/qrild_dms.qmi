@@ -1,0 +1,43 @@
+package dms;
+
+const QMI_RESULT_SUCCESS = 0;
+const QMI_RESULT_FAILURE = 1;
+
+const QMI_DMS_GET_OPERATING_MODE = 0x2D;
+const QMI_DMS_SET_OPERATING_MODE = 0x2E;
+
+const QMI_DMS_OPERATING_MODE_ONLINE = 0;
+const QMI_DMS_OPERATING_MODE_LOW_POWER = 1;
+const QMI_DMS_OPERATING_MODE_FACTORY_TEST = 2;
+const QMI_DMS_OPERATING_MODE_OFFLINE = 3;
+const QMI_DMS_OPERATING_MODE_RESET = 4;
+const QMI_DMS_OPERATING_MODE_SHUTTING_DOWN = 5;
+const QMI_DMS_OPERATING_MODE_PERSISTENT_LOW_POWER = 6;
+const QMI_DMS_OPERATING_MODE_MODE_ONLY_LOW_POWER = 7;
+const QMI_DMS_OPERATING_MODE_UNKNOWN = 0xFF;
+
+struct qmi_result {
+	u16 result;
+	u16 error;
+};
+
+request get_operating_mode_req {
+} = 0x002D;
+
+response get_operating_mode_resp {
+	required qmi_result res = 0x02;
+	required u8 mode = 0x01;
+	# Only set if mode is QMI_DMS_OPERATING_MODE_OFFLINE
+	optional u16 offline_reason = 0x10;
+	required u8 hardware_restricted = 0x11;
+	#
+} = 0x002D;
+
+request set_operating_mode_req {
+	required u8 mode = 0x01;
+} = 0x002E;
+
+request set_operating_mode_resp {
+	required qmi_result res = 0x02;
+} = 0x002E;
+
