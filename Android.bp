@@ -5,14 +5,19 @@ cc_binary {
         "src/qrild.c",
         "src/qrild_qmi.c",
         "src/qrild_qrtr.c",
+        "src/qrild_link.c",
         "src/qmi_tlv.c",
         "src/util.c",
         // Auto-generated with qmic
-        "src/qmi_uim.c",
-        "src/qmi_dms.c",
+        "src/qmi/qmi_dms.c",
+        "src/qmi/qmi_dpm.c",
+        "src/qmi/qmi_uim.c",
+        "src/qmi/qmi_wda.c",
+        "src/qmi/qmi_wds.c",
     ],
     local_include_dirs: [
         "src",
+        "src/qmi",
     ],
     include_dirs: [
         "hardware/ril/include",
