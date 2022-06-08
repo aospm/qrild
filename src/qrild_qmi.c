@@ -843,7 +843,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state) {
 	struct qmi_result *res;
 	uint32_t txn;
 	struct qrild_msg *msg;
-	struct in_addr in;
+	struct in_addr ip, brd, sub;
 	uint32_t val;
 	uint16_t val16;
 	int rc;
@@ -884,24 +884,24 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state) {
 		fprintf(stderr, "Failed to get IPv4 address preference: %d\n", rc);
 		return QRILD_STATE_ERROR;
 	}
-	in.s_addr = htonl(val);
-	printf("IPv4 Address Preference: %s\n", inet_ntoa(in));
+	ip.s_addr = htonl(val);
+	printf("IPv4 Address Preference: %s\n", inet_ntoa(ip));
 
 	rc = wds_get_current_settings_resp_get_ipv4_gateway_addr(resp, &val);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to get IPv4 Gateway Address: %d\n", rc);
 		return QRILD_STATE_ERROR;
 	}
-	in.s_addr = htonl(val);
-	printf("IPv4 Gateway Address: %s\n", inet_ntoa(in));
+	brd.s_addr = htonl(val);
+	printf("IPv4 Gateway Address: %s\n", inet_ntoa(brd));
 
 	rc = wds_get_current_settings_resp_get_ipv4_subnet_mask(resp, &val);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to get IPv4 Subnet Mask: %d\n", rc);
 		return QRILD_STATE_ERROR;
 	}
-	in.s_addr = htonl(val);
-	printf("IPv4 Subnet Mask: %s\n", inet_ntoa(in));
+	sub.s_addr = htonl(val);
+	printf("IPv4 Subnet Mask: %s\n", inet_ntoa(sub));
 	
 	rc = wds_get_current_settings_resp_get_mtu(resp, &val);
 	if (rc < 0) {
@@ -917,7 +917,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state) {
 	}
 	printf("IP Family: %d\n", val16);
 
-	return QRILD_STATE_DONE;
+	return qrild_link_configure(&ip, &brd);
 }
 
 const char *qmi_service_to_string(enum qmi_service service, bool short_name)

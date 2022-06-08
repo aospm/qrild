@@ -26,13 +26,13 @@ void print_hex_dump(const char *prefix, const void *buf, size_t len)
 	int i;
 	int j;
 
-	if (len < 0) {
-		LOGW("%s: len %zu less than 0", __func__, len);
-		return;
-	}
+	// if (len < 0) {
+	// 	LOGW("%s: len %zu less than 0", __func__, len);
+	// 	return;
+	// }
 
 	if (prefix)
-		LOGD("<<< %s:", prefix);
+		printf("%s:\n", prefix);
 
 	for (i = 0; i < len; i += LINE_LENGTH) {
 		linelen = MIN(LINE_LENGTH, len - i);
@@ -58,7 +58,7 @@ void print_hex_dump(const char *prefix, const void *buf, size_t len)
 
 		line[li] = '\0';
 
-		LOGD("<<<    %s (%zu)\n", line, linelen);
+		printf("%s\n\n", line, linelen);
 	}
 }
 
@@ -67,4 +67,32 @@ void *zalloc(size_t size)
 	void *buf = malloc(size);
 	memset(buf, 0, size);
 	return buf;
+}
+
+struct bytearray *ba_init(size_t size) {
+	struct bytearray *arr = zalloc(sizeof(struct bytearray));
+	arr->len = size;
+	arr->data = zalloc(4096);
+	printf("Created array of %zu bytes\n", arr->len);
+
+	return arr;
+}
+
+void ba_free(struct bytearray *ba) {
+	free(ba->data);
+	free(ba);
+}
+
+void ba_set_size(struct bytearray *ba, size_t newsize) {
+	size_t oldsize = ba->len;
+	if (newsize > 4096) {
+		printf("can't resize larger than 4096\n");
+	}
+	ba->len = newsize;
+	return;
+	// ba->data = realloc(ba->data, newsize);
+	// ba->len = newsize;
+	// printf("resized to %u\n", ba->len);
+
+	// memset(ba->data + oldsize, 0, newsize - oldsize);
 }

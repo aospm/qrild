@@ -32,11 +32,14 @@
 #include <syslog.h>
 #include <errno.h>
 #include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "libqrtr.h"
 #include "logging.h"
 
 #include "qrild.h"
+#include "qrild_link.h"
 #include "qrild_qrtr.h"
 #include "qrild_qmi.h"
 #include "util.h"
@@ -71,6 +74,9 @@ static int process_pending(struct rild_state *state) {
 	case QRILD_ACTION_GET_RUNTIME_SETTINGS:
 		rc = qrild_qmi_wds_get_current_settings(state);
 		break;
+	// case QRILD_ACTION_NETLINK:
+	// 	rc = qrild_qmi_wds_get_current_settings(state);
+	// 	break;
 	case QRILD_ACTION_HALT:
 		printf("Sleeping to keep port open\n");
 		rc = QRILD_STATE_DONE;
@@ -96,10 +102,26 @@ static int process_pending(struct rild_state *state) {
 	return 0;
 }
 
+void usage() {
+	fprintf(stderr, "qrild: QRTR modem interface / RIL\n");
+	fprintf(stderr, "--------------------------------------\n");
+	fprintf(stderr, "qrild [-h] [-i IP -g GATEWAY]\n");
+	fprintf(stderr, "    -h               This help message\n");
+	fprintf(stderr, "    -i IP            IP address to configure\n");
+	fprintf(stderr, "    -g GATEWAY       Gateway address to use\n\n");
+	fprintf(stderr, "When the IP address and gateway are specified qrild will not\n");
+	fprintf(stderr, "talk to the modem but just configure the rmnet interface.\n");
+
+	exit(1);
+}
+
 int main(int argc, char **argv) {
 	struct rild_state state;
 	int rc;
+	int opt;
 	const char *progname = basename(argv[0]);
+	const char *ip_str = NULL, *gateway_str = NULL;
+	struct in_addr ip, gateway;
 
 	(void)argc;
 
@@ -113,6 +135,47 @@ int main(int argc, char **argv) {
 	list_init(&state.services);
 	list_init(&state.resp_queue);
 	state.started = false;
+
+	while ((opt = getopt(argc, argv, "hi:g:")) != -1) {
+		switch (opt) {
+		case 'i':
+			ip_str = optarg;
+			break;
+		case 'g':
+			gateway_str = optarg;
+			break;
+		case 'h':
+		default:
+			usage();
+		}
+	}
+
+	if ((ip_str && !gateway_str) || (gateway_str && !ip_str)) {
+		fprintf(stderr, "You must pass both '-i' and '-g' or none of them\n");
+		return EXIT_FAILURE;
+	}
+
+	if (ip_str) {
+		printf("Got IP: %s, gateway: %s\n", ip_str, gateway_str);
+		rc = inet_aton(ip_str, &ip);
+		if (rc == 0) {
+			fprintf(stderr, "Invalid IP address: '%s'\n", ip_str);
+			return EXIT_FAILURE;
+		}
+		rc = inet_aton(gateway_str, &gateway);
+		if (rc == 0) {
+			fprintf(stderr, "Invalid gateway address: '%s'\n", ip_str);
+			return EXIT_FAILURE;
+		}
+		printf("Both inet_aton success\n");
+
+		rc = qrild_link_configure(&ip, &gateway);
+		if (rc < 0) {
+			fprintf(stderr, "Failed to configure rmnet interface\n");
+			return EXIT_FAILURE;
+		}
+		return EXIT_SUCCESS;
+	}
 
 	state.sock = qrtr_open(0);
 	if (state.sock < 0) {

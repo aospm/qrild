@@ -2,6 +2,7 @@ src = [
   'qrild.c',
   'qrild_qmi.c',
   'qrild_qrtr.c',
+  'qrild_link.c',
   'qmi_tlv.c',
   'util.c',
   # Auto-generated with qmic
