@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
+// FIXME: add these headers for building on Linux too
+#ifdef ANDROID
 #include <telephony/ril.h>
+#endif
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -28,6 +31,7 @@
 #include <sys/types.h>
 #include <syslog.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "libqrtr.h"
 #include "logging.h"
@@ -45,6 +49,32 @@ static int process_pending(struct rild_state *state) {
 		break;
 	case QRILD_ACTION_SLOT_STATUS:
 		rc = qrild_qmi_uim_get_card_status(state);
+		break;
+	case QRILD_ACTION_PROVISION:
+		rc = qrild_qmi_uim_set_provisioning(state);
+		break;
+	case QRILD_ACTION_OPEN_PORT:
+		rc = qrild_qmi_dpm_open_port(state);
+		break;
+	case QRILD_ACTION_SET_DATA_FORMAT:
+		rc = qrild_qmi_wda_set_data_format(state);
+		break;
+	case QRILD_ACTION_BIND_SUBSCRIPTION:
+		rc = qrild_qmi_wds_bind_subscription(state);
+		break;
+	case QRILD_ACTION_MUX_DATA_PORT:
+		rc = qrild_qmi_wds_bind_mux_data_port(state);
+		break;
+	case QRILD_ACTION_START_NET_IFACES:
+		rc = qrild_qmi_wds_start_network_interface(state);
+		break;
+	case QRILD_ACTION_GET_RUNTIME_SETTINGS:
+		rc = qrild_qmi_wds_get_current_settings(state);
+		break;
+	case QRILD_ACTION_HALT:
+		printf("Sleeping to keep port open\n");
+		rc = QRILD_STATE_DONE;
+		sleep(100000);
 		break;
 	default:
 		fprintf(stderr, "[STATE] unknown state %d\n", state->state);
@@ -68,7 +98,7 @@ static int process_pending(struct rild_state *state) {
 
 int main(int argc, char **argv) {
 	struct rild_state state;
-	int len, rc;
+	int rc;
 	const char *progname = basename(argv[0]);
 
 	(void)argc;
@@ -79,9 +109,10 @@ int main(int argc, char **argv) {
 	memset(&state, 0, sizeof(state));
 
 	state.sock = -1;
-	state.txn = 1;
+	state.txn = 4;
 	list_init(&state.services);
 	list_init(&state.resp_queue);
+	state.started = false;
 
 	state.sock = qrtr_open(0);
 	if (state.sock < 0) {
@@ -97,10 +128,10 @@ int main(int argc, char **argv) {
 		if (rc < 0)
 			PLOGE_AND_EXIT("Failed to poll");
 
-		if (!rc) // timeout
-			continue;
-
-		qrild_qrtr_recv(&state);
+		if (rc)
+			qrild_qrtr_recv(&state);
+		else
+			printf("Pending...\n");
 
 		if (process_pending(&state) < 0)
 			break;

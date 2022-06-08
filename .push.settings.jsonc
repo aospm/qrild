@@ -1,0 +1,30 @@
+// Push settings file - first generated on Fri Jun 03 2022 15:48:37 GMT+0100 (British Summer Time).
+// Note: Optional items are commented out and can be uncommented if you wish to set them.
+// Preset environments are: prod, dev, stage. Custom environments (and their colours) can be created in settings.
+{
+	"env": "default",
+	"default": {
+		"service": "SFTP",
+		"options": {
+			// "timeZoneOffset": 0,
+			// "testCollisionTimeDiffs": true,
+			"collisionUploadAction": "overwrite",
+			"queueWatchedFiles": false,
+			// "collisionDownloadAction": null,
+			// "followSymlinks": false,
+			"reminder": true,
+			// "reminderTimeout": null,
+			"host": "172.16.42.1",
+			// "port": 22,
+			"username": "user",
+			"password": "147147",
+			// "privateKey": "",
+			// "keyPassphrase": "",
+			"root": "/home/user/qrild",
+			"keepaliveInterval": 3000,
+			// "debug": false,
+			// "fileMode": "",
+			// "sshGateway": null
+		}
+	}
+}

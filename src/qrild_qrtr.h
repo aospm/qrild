@@ -4,6 +4,7 @@
 #include "qrild.h"
 #include <stdbool.h>
 
+void print_service(struct qmi_service_info *pkt);
 int qrild_qrtr_send_to_service(struct rild_state *state,
 			       enum qmi_service svc_id, const void *data,
 			       size_t sz);

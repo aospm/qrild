@@ -1,0 +1,8 @@
+{
+        "files.associations": {
+                "*.qmi": "rust",
+                "logging.h": "c",
+                "libqrtr.h": "c",
+                "socket.h": "c"
+        }
+}

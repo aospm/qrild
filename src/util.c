@@ -62,3 +62,9 @@ void print_hex_dump(const char *prefix, const void *buf, size_t len)
 	}
 }
 
+void *zalloc(size_t size)
+{
+	void *buf = malloc(size);
+	memset(buf, 0, size);
+	return buf;
+}

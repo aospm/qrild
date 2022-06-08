@@ -7,16 +7,23 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include <arpa/inet.h>
+
 #include "libqrtr.h"
 #include "logging.h"
 
 #include "list.h"
 #include "util.h"
 #include "qrild.h"
+#include "qrild_link.h"
 #include "qrild_qmi.h"
 #include "qrild_qrtr.h"
+
 #include "qmi_uim.h"
+#include "qmi_dpm.h"
 #include "qmi_dms.h"
+#include "qmi_wda.h"
+#include "qmi_wds.h"
 
 struct qmi_result {
 	uint16_t result;
@@ -72,19 +79,14 @@ static struct qmi_result *qmi_get_result(void *tlv, char *prefix)
 static bool qrild_msg_is_pending(struct list_head *list, uint32_t msg_id)
 {
 	struct qrild_msg *msg;
-	bool res = false;
-	int i = 0;
 	if (!list->head)
 		return false;
-	printf("looking for pending msg_id: %d\n", msg_id);
 	list_for_each_entry(msg, (list), li)
 	{
 		if (!msg)
 			continue;
-		printf("i: %d, id: %d, txn: %u\n", i++, msg->msg_id,
-		       msg->txn);
 		if (msg->msg_id == msg_id) {
-			printf("found match for msg_id: %u\n", msg_id);
+			printf("found pending msg msg_id: %u\n", msg_id);
 			return true;
 		}
 	}
@@ -122,7 +124,6 @@ static bool qrild_msg_is_pending(struct list_head *list, uint32_t msg_id)
 static void dms_get_operating_mode_request(struct rild_state *state)
 {
 	struct dms_get_operating_mode_req *req;
-	struct qrild_msg *msg;
 	void *buf;
 	size_t len;
 
@@ -145,7 +146,7 @@ static void dms_get_operating_mode_request(struct rild_state *state)
  * Example:
  * qrild_qmi_get_msg_if_match(state, msg, QMI_DMS_GET_OPERATING_MODE, QMI_DMS_SET_OPERATING_MODE, 0);
  */
-int qrild_qmi_get_msg_if_match(struct rild_state *state, struct qrild_msg *msg,
+int qrild_qmi_get_msg_if_match(struct rild_state *state, struct qrild_msg **msg,
 			       ...)
 {
 	va_list ap;
@@ -157,12 +158,16 @@ int qrild_qmi_get_msg_if_match(struct rild_state *state, struct qrild_msg *msg,
 	va_start(ap, msg);
 	msg_id = va_arg(ap, int);
 	while (msg_id) {
+		printf("Checking for id %u\n", msg_id);
 		if (msg_id == state->resp_pending->msg_id) {
-			msg = state->resp_pending;
+			*msg = state->resp_pending;
 			state->resp_pending = NULL;
+			list_remove(&(*msg)->li);
 			va_end(ap);
+			printf("Got response for {msg_id: %u, txn: %u}\n", msg_id, (*msg)->txn);
 			return 0;
 		}
+		msg_id = va_arg(ap, int);
 	}
 
 	va_end(ap);
@@ -182,6 +187,7 @@ int qrild_qmi_powerup(struct rild_state *state)
 	struct dms_set_operating_mode_req *req;
 	struct dms_get_operating_mode_resp *resp;
 	struct qrild_msg *msg = NULL;
+	struct qmi_result *res;
 	void *buf;
 	size_t len;
 	uint8_t mode = 0, hw_restricted = 0;
@@ -192,7 +198,7 @@ int qrild_qmi_powerup(struct rild_state *state)
 		return QRILD_STATE_PENDING;
 
 	printf("before get_msg_if_match\n");
-	rc = qrild_qmi_get_msg_if_match(state, msg, QMI_DMS_GET_OPERATING_MODE,
+	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_DMS_GET_OPERATING_MODE,
 					QMI_DMS_SET_OPERATING_MODE, 0);
 	printf("Got rc=%d\n", rc);
 	switch (rc) {
@@ -207,6 +213,8 @@ int qrild_qmi_powerup(struct rild_state *state)
 	default:
 		break;
 	}
+
+	printf("Handling pending msg {id: %u, txn: %u}\n", msg->msg_id, msg->txn);
 
 	if (!msg->buf) {
 		fprintf(stderr, "msg pending but no buf!!!\n");
@@ -225,11 +233,10 @@ int qrild_qmi_powerup(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 	}
 
-	qmi_get_result((void *)resp, "DMS Operating Mode");
+	res = qmi_get_result((void *)resp, "DMS Operating Mode");
 
-	if (msg->msg_id == QMI_DMS_SET_OPERATING_MODE) {
+	if (msg->msg_id == QMI_DMS_SET_OPERATING_MODE && res->result == 0) {
 		printf("Modem powerup success!");
-		list_remove(&msg->li);
 		free(msg->buf);
 		free(msg);
 		return QRILD_STATE_DONE;
@@ -264,7 +271,7 @@ int qrild_qmi_powerup(struct rild_state *state)
 
 	qrild_qrtr_send_to_service(state, QMI_SERVICE_DMS, buf, len);
 
-	return QRILD_STATE_DONE;
+	return QRILD_STATE_PENDING;
 }
 
 static void dump_card_status(struct uim_card_status *cs)
@@ -349,7 +356,7 @@ static int uim_get_card_status_request(struct rild_state *state)
 
 	uim_get_card_status_req_free(req);
 
-	return 0;
+	return rc;
 }
 
 int qrild_qmi_uim_get_card_status(struct rild_state *state)
@@ -359,7 +366,7 @@ int qrild_qmi_uim_get_card_status(struct rild_state *state)
 	uint32_t txn;
 	struct uim_get_card_status_resp *resp;
 
-	switch (qrild_qmi_get_msg_if_match(state, msg, QMI_UIM_GET_CARD_STATUS,
+	switch (qrild_qmi_get_msg_if_match(state, &msg, QMI_UIM_GET_CARD_STATUS,
 					   0)) {
 	case -1: // some other request is pending, some other handler should deal with it
 	case -2: // no pending response, so we should be sending a request
@@ -383,6 +390,532 @@ int qrild_qmi_uim_get_card_status(struct rild_state *state)
 	state->card_status = uim_get_card_status_resp_get_status(resp);
 
 	dump_card_status(state->card_status);
+
+	free(msg->buf);
+	free(msg);
+
+	return QRILD_STATE_DONE;
+}
+
+static int qrild_uim_change_provisioning_send_req(struct rild_state *state) {
+	struct uim_provisioning_session_change change;
+	struct uim_provisioning_session_application application;
+	struct card_status_cards_applications *appn = NULL;
+	struct uim_change_provisioning_session_req *req;
+	int rc, i = 0;
+	void *buf;
+	size_t buf_sz;
+
+	while (!appn && i < state->card_status->cards_n) {
+		if (state->card_status->cards[i].applications)
+			appn = state->card_status->cards[i].applications;
+	}
+
+	if (!appn) {
+		fprintf(stderr, "No valid application found!\n");
+		return QRILD_STATE_ERROR;
+	}
+
+	printf("Provisioning slot %d!\n", i);
+
+	change.session_type = QMI_UIM_SESSION_TYPE_PRIMARY_GW_PROVISIONING;
+	change.activate = true;
+
+	application.slot = i + 1;
+	application.application_identifier_value_n = appn->application_identifier_value_n;
+	application.application_identifier_value = appn->application_identifier_value;
+
+	req = uim_change_provisioning_session_req_alloc(state->txn);
+	uim_change_provisioning_session_req_set_session_change(req, &change);
+	uim_change_provisioning_session_req_set_application_information(req, &application);
+
+	buf = uim_change_provisioning_session_req_encode(req, &buf_sz);
+
+	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_UIM, buf, buf_sz);
+
+	uim_change_provisioning_session_req_free(req);
+
+	return rc;
+}
+
+int qrild_qmi_uim_set_provisioning(struct rild_state *state)
+{
+	struct uim_change_provisioning_session_resp *resp;
+	struct qmi_result *res;
+	uint32_t txn;
+	struct qrild_msg *msg;
+	int rc;
+
+	if (!state->card_status) {
+		fprintf(stderr, "Card status not set!\n");
+		return QRILD_STATE_ERROR;
+	}
+
+	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_UIM_CHANGE_PROVISIONING_SESSION,
+					   0);
+	printf("got RC=%d\n", rc);
+
+	switch (rc) {
+	case -1: // some other request is pending, some other handler should deal with it
+	case -2: // no pending response, so we should be sending a request
+		// but only if we haven't already
+		if (!qrild_msg_is_pending(&state->resp_queue,
+					  QMI_UIM_CHANGE_PROVISIONING_SESSION))
+			qrild_uim_change_provisioning_send_req(state);
+		return QRILD_STATE_PENDING;
+	case 0:
+	default:
+		break;
+	}
+
+	resp = uim_change_provisioning_session_resp_parse(msg->buf, msg->buf_len, &txn);
+
+	res = qmi_get_result((void *)resp, "UIM set provisioning");
+
+	free(msg->buf);
+	free(msg);
+
+	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+}
+
+static int qrild_qmi_dpm_open_port_send_req(struct rild_state *state) {
+	struct dpm_open_port_req *req;
+	struct dpm_control_port port;
+	int rc;
+	void *buf;
+	size_t buf_sz;
+
+	port.ep_type = 4;
+	port.iface_id = 1;
+	port.consumer_pipe_num = 2;
+	port.producer_pipe_num = 10;
+
+	printf("Opening port!\n");
+
+	req = dpm_open_port_req_alloc(state->txn);
+	dpm_open_port_req_set_port_list(req, &port, 1);
+
+	buf = dpm_open_port_req_encode(req, &buf_sz);
+
+	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_DPM, buf, buf_sz);
+
+	dpm_open_port_req_free(req);
+
+	return rc;
+}
+
+int qrild_qmi_dpm_open_port(struct rild_state *state) {
+	struct dpm_open_port_resp *resp;
+	struct qmi_result *res;
+	uint32_t txn;
+	struct qrild_msg *msg;
+	int rc;
+
+	if (!state->card_status) {
+		fprintf(stderr, "Card status not set!\n");
+		return QRILD_STATE_ERROR;
+	}
+
+	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_DPM_OPEN_PORT,
+					   0);
+	printf("got RC=%d\n", rc);
+
+	switch (rc) {
+	case -1: // some other request is pending, some other handler should deal with it
+	case -2: // no pending response, so we should be sending a request
+		// but only if we haven't already
+		if (!qrild_msg_is_pending(&state->resp_queue,
+					  QMI_DPM_OPEN_PORT))
+			qrild_qmi_dpm_open_port_send_req(state);
+		return QRILD_STATE_PENDING;
+	case 0:
+	default:
+		break;
+	}
+
+	resp = dpm_open_port_resp_parse(msg->buf, msg->buf_len, &txn);
+
+	res = qmi_get_result((void *)resp, "DPM open port");
+
+	free(msg->buf);
+	free(msg);
+
+	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+}
+
+static int qrild_qmi_wda_set_data_format_send_req(struct rild_state *state) {
+	struct wda_set_data_format_req *req;
+	struct wda_ep_type_iface_id ep_type;
+	int rc;
+	void *buf;
+	size_t buf_sz;
+
+	printf("Setting data format!\n");
+
+	req = wda_set_data_format_req_alloc(state->txn);
+	wda_set_data_format_req_set_link_prot(req, 2);
+	wda_set_data_format_req_set_ul_data_aggregation_protocol(req, 8);
+	wda_set_data_format_req_set_dl_data_aggregation_protocol(req, 8);
+	wda_set_data_format_req_set_dl_data_aggretation_max_datagrams(req, 1);
+	wda_set_data_format_req_set_dl_data_aggregation_max_size(req, 1504);
+
+	ep_type.ep_type = 4;
+	ep_type.iface_id = 1;
+
+	wda_set_data_format_req_set_ep_type(req, &ep_type);
+
+	buf = wda_set_data_format_req_encode(req, &buf_sz);
+
+	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_WDA, buf, buf_sz);
+
+	wda_set_data_format_req_free(req);
+
+	return rc;
+}
+
+int qrild_qmi_wda_set_data_format(struct rild_state *state) {
+	struct wda_set_data_format_resp *resp;
+	struct qmi_result *res;
+	uint32_t txn;
+	struct qrild_msg *msg;
+	int rc;
+
+	if (!state->card_status) {
+		fprintf(stderr, "Card status not set!\n");
+		return QRILD_STATE_ERROR;
+	}
+
+	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_WDA_SET_DATA_FORMAT,
+					   0);
+	printf("got RC=%d\n", rc);
+
+	switch (rc) {
+	case -1: // some other request is pending, some other handler should deal with it
+	case -2: // no pending response, so we should be sending a request
+		// but only if we haven't already
+		if (!qrild_msg_is_pending(&state->resp_queue,
+					  QMI_WDA_SET_DATA_FORMAT))
+			qrild_qmi_wda_set_data_format_send_req(state);
+		return QRILD_STATE_PENDING;
+	case 0:
+	default:
+		break;
+	}
+
+	resp = wda_set_data_format_resp_parse(msg->buf, msg->buf_len, &txn);
+
+	res = qmi_get_result((void *)resp, "WDA Set data format");
+
+	free(msg->buf);
+	free(msg);
+
+	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+}
+
+static int qrild_qmi_wds_bind_subscription_send_req(struct rild_state *state) {
+	struct wds_bind_subscription_req *req;
+	int rc;
+	void *buf;
+	size_t buf_sz;
+
+	printf("Binding subscription!\n");
+
+	req = wds_bind_subscription_req_alloc(state->txn);
+	
+	wds_bind_subscription_req_set_subscription(req, 0);
+
+	buf = wds_bind_subscription_req_encode(req, &buf_sz);
+
+	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_WDS, buf, buf_sz);
+
+	wds_bind_subscription_req_free(req);
+
+	return rc;
+}
+
+int qrild_qmi_wds_bind_subscription(struct rild_state *state) {
+	struct wds_bind_subscription_resp *resp;
+	struct qmi_result *res;
+	uint32_t txn;
+	struct qrild_msg *msg;
+	int rc;
+
+	if (!state->card_status) {
+		fprintf(stderr, "Card status not set!\n");
+		return QRILD_STATE_ERROR;
+	}
+
+	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_WDS_BIND_SUBSCRIPTION,
+					   0);
+	printf("got RC=%d\n", rc);
+
+	switch (rc) {
+	case -1: // some other request is pending, some other handler should deal with it
+	case -2: // no pending response, so we should be sending a request
+		// but only if we haven't already
+		if (!qrild_msg_is_pending(&state->resp_queue,
+					  QMI_WDS_BIND_SUBSCRIPTION))
+			qrild_qmi_wds_bind_subscription_send_req(state);
+		return QRILD_STATE_PENDING;
+	case 0:
+	default:
+		break;
+	}
+
+	resp = wds_bind_subscription_resp_parse(msg->buf, msg->buf_len, &txn);
+
+	res = qmi_get_result((void *)resp, "WDS Bind subscription");
+
+	free(msg->buf);
+	free(msg);
+
+	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+}
+
+static int qrild_qmi_wds_bind_mux_data_port_send_req(struct rild_state *state) {
+	struct wds_bind_mux_data_port_req *req;
+	struct wds_ep_type_iface_id ep_type;
+	int rc;
+	void *buf;
+	size_t buf_sz;
+
+	printf("Muxing data port!\n");
+
+	req = wds_bind_mux_data_port_req_alloc(state->txn);
+	
+	ep_type.ep_type = 4;
+	ep_type.iface_id = 1;
+	wds_bind_mux_data_port_req_set_ep_id(req, &ep_type);
+	wds_bind_mux_data_port_req_set_mux_id(req, 1);
+
+	buf = wds_bind_mux_data_port_req_encode(req, &buf_sz);
+
+	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_WDS, buf, buf_sz);
+
+	wds_bind_mux_data_port_req_free(req);
+
+	return rc;
+}
+
+int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state) {
+	struct wds_bind_mux_data_port_resp *resp;
+	struct qmi_result *res;
+	uint32_t txn;
+	struct qrild_msg *msg;
+	int rc;
+
+	if (!state->card_status) {
+		fprintf(stderr, "Card status not set!\n");
+		return QRILD_STATE_ERROR;
+	}
+
+	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_WDS_BIND_MUX_DATA_PORT,
+					   0);
+	printf("got RC=%d\n", rc);
+
+	switch (rc) {
+	case -1: // some other request is pending, some other handler should deal with it
+	case -2: // no pending response, so we should be sending a request
+		// but only if we haven't already
+		if (!qrild_msg_is_pending(&state->resp_queue,
+					  QMI_WDS_BIND_MUX_DATA_PORT))
+			qrild_qmi_wds_bind_mux_data_port_send_req(state);
+		return QRILD_STATE_PENDING;
+	case 0:
+	default:
+		break;
+	}
+
+	resp = wds_bind_mux_data_port_resp_parse(msg->buf, msg->buf_len, &txn);
+
+	res = qmi_get_result((void *)resp, "WDS Bind mux data port");
+
+	free(msg->buf);
+	free(msg);
+
+	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+}
+
+static int qrild_qmi_wds_start_network_interface_send_req(struct rild_state *state) {
+	struct wds_start_network_interface_req *req;
+	int rc;
+	void *buf;
+	size_t buf_sz;
+	char *apn_name = "three.co.uk";
+
+	printf("Starting net ifaces!\n");
+
+	req = wds_start_network_interface_req_alloc(state->txn);
+	
+	wds_start_network_interface_req_set_apn_name(req, apn_name, strlen(apn_name));
+	wds_start_network_interface_req_set_ip_family_preference(req, 4);
+
+	buf = wds_start_network_interface_req_encode(req, &buf_sz);
+
+	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_WDS, buf, buf_sz);
+
+	wds_start_network_interface_req_free(req);
+
+	return rc;
+}
+
+static int qrild_qmi_handle_wds_pkt_srvc(struct rild_state *state, struct qrild_msg *msg) {
+	uint32_t txn;
+	struct wds_get_pkt_srvc_status_ind *ind = wds_get_pkt_srvc_status_ind_parse(msg->buf, msg->buf_len, &txn);
+	struct wds_pkt_srvc_status *status = wds_get_pkt_srvc_status_ind_get_status(ind);
+
+	printf("Connection status: %u\n", status->connection_status);
+	return 0;
+}
+
+int qrild_qmi_wds_start_network_interface(struct rild_state *state) {
+	struct wds_start_network_interface_resp *resp;
+	struct qmi_result *res;
+	uint32_t txn;
+	struct qrild_msg *msg;
+	int rc;
+
+	if (!state->card_status) {
+		fprintf(stderr, "Card status not set!\n");
+		return QRILD_STATE_ERROR;
+	}
+
+	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_WDS_START_NETWORK_INTERFACE,
+					   QMI_WDS_PKT_SRVC_STATUS, 0);
+	printf("got RC=%d\n", rc);
+
+	switch (rc) {
+	case -1: // some other request is pending, some other handler should deal with it
+	case -2: // no pending response, so we should be sending a request
+		// but only if we haven't already
+		if (!qrild_msg_is_pending(&state->resp_queue,
+					  QMI_WDS_START_NETWORK_INTERFACE))
+			qrild_qmi_wds_start_network_interface_send_req(state);
+		return QRILD_STATE_PENDING;
+	case 0:
+	default:
+		break;
+	}
+
+	if (msg->msg_id == QMI_WDS_PKT_SRVC_STATUS) {
+		qrild_qmi_handle_wds_pkt_srvc(state, msg);
+		state->started = true;
+		free(msg->buf);
+		free(msg);
+		return QRILD_STATE_DONE;
+	}
+
+	resp = wds_start_network_interface_resp_parse(msg->buf, msg->buf_len, &txn);
+
+	res = qmi_get_result((void *)resp, "WDS Start net ifaces");
+	printf("Started ? %d\n", state->started);
+
+	free(msg->buf);
+	free(msg);
+
+	return res->result == 0 ? (state->started ? QRILD_STATE_DONE : QRILD_STATE_PENDING) : QRILD_STATE_ERROR;
+}
+
+static int qrild_qmi_wds_get_current_settings_send_req(struct rild_state *state) {
+	struct wds_get_current_settings_req *req;
+	int rc;
+	void *buf;
+	size_t buf_sz;
+
+	printf("Getting runtime settings!\n");
+
+	req = wds_get_current_settings_req_alloc(state->txn);
+
+	wds_get_current_settings_req_set_requested_settings(req,
+		1 << 8 | 1 << 9 | 1 << 13 | 1 << 15);
+
+	buf = wds_get_current_settings_req_encode(req, &buf_sz);
+
+	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_WDS, buf, buf_sz);
+
+	wds_get_current_settings_req_free(req);
+
+	return rc;
+}
+
+int qrild_qmi_wds_get_current_settings(struct rild_state *state) {
+	struct wds_get_current_settings_resp *resp;
+	struct qmi_result *res;
+	uint32_t txn;
+	struct qrild_msg *msg;
+	struct in_addr in;
+	uint32_t val;
+	uint16_t val16;
+	int rc;
+
+	if (!state->card_status) {
+		fprintf(stderr, "Card status not set!\n");
+		return QRILD_STATE_ERROR;
+	}
+
+	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_WDS_GET_CURRENT_SETTINGS,
+					   0);
+	printf("got RC=%d\n", rc);
+
+	switch (rc) {
+	case -1: // some other request is pending, some other handler should deal with it
+	case -2: // no pending response, so we should be sending a request
+		// but only if we haven't already
+		if (!qrild_msg_is_pending(&state->resp_queue,
+					  QMI_WDS_GET_CURRENT_SETTINGS))
+			qrild_qmi_wds_get_current_settings_send_req(state);
+		return QRILD_STATE_PENDING;
+	case 0:
+	default:
+		break;
+	}
+
+	resp = wds_get_current_settings_resp_parse(msg->buf, msg->buf_len, &txn);
+
+	free(msg->buf);
+	free(msg);
+
+	res = qmi_get_result((void *)resp, "Get runtime settings");
+	if (res->result)
+		return QRILD_STATE_ERROR;
+
+	rc = wds_get_current_settings_resp_get_ipv4_address_preference(resp, &val);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to get IPv4 address preference: %d\n", rc);
+		return QRILD_STATE_ERROR;
+	}
+	in.s_addr = htonl(val);
+	printf("IPv4 Address Preference: %s\n", inet_ntoa(in));
+
+	rc = wds_get_current_settings_resp_get_ipv4_gateway_addr(resp, &val);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to get IPv4 Gateway Address: %d\n", rc);
+		return QRILD_STATE_ERROR;
+	}
+	in.s_addr = htonl(val);
+	printf("IPv4 Gateway Address: %s\n", inet_ntoa(in));
+
+	rc = wds_get_current_settings_resp_get_ipv4_subnet_mask(resp, &val);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to get IPv4 Subnet Mask: %d\n", rc);
+		return QRILD_STATE_ERROR;
+	}
+	in.s_addr = htonl(val);
+	printf("IPv4 Subnet Mask: %s\n", inet_ntoa(in));
+	
+	rc = wds_get_current_settings_resp_get_mtu(resp, &val);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to get MTU: %d\n", rc);
+		return QRILD_STATE_ERROR;
+	}
+	printf("MTU: %d\n", val);
+
+	rc = wds_get_current_settings_resp_get_ip_family(resp, &val16);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to get IP Family: %d\n", rc);
+		return QRILD_STATE_ERROR;
+	}
+	printf("IP Family: %d\n", val16);
 
 	return QRILD_STATE_DONE;
 }

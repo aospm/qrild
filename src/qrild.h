@@ -246,7 +246,7 @@ struct qrild_msg {
 	uint32_t msg_id;
 	struct qmi_service_info *service;
 
-	uint8_t *buf;
+	void *buf;
 	size_t buf_len;
 
 	struct list_head li;
@@ -267,21 +267,23 @@ struct rild_state {
 	struct list_head resp_queue;
 	struct qrild_msg *resp_pending;
 
+	bool started;
+
 	// Available QMI services
 	struct list_head services;
 
 	struct uim_card_status *card_status;
 };
 
-#define qmi_service_get(_i, _s)                                                \
+#define qmi_service_get(list, _s)                                              \
 	({                                                                     \
-		struct list_head *node;                                        \
 		struct qmi_service_info *svc, *out = NULL;                     \
-		list_for_each(_i, node)                                        \
+		list_for_each_entry(svc, (list), li)                           \
 		{                                                              \
-			svc = list_entry(node, struct qmi_service_info, li);   \
-			if (svc->type == _s)                                   \
+			if (svc->type == _s) {                                 \
 				out = svc;                                     \
+				break;                                         \
+			};                                                     \
 		}                                                              \
 		out;                                                           \
 	})
@@ -295,25 +297,29 @@ struct rild_state {
 // message state handling
 #define qrild_msg_get_by_txn(list, _txn)                                       \
 	({                                                                     \
-		struct qrild_msg *msg;                                         \
+		struct qrild_msg *msg, *out = NULL;                            \
 		list_for_each_entry(msg, (list), li)                           \
 		{                                                              \
-			if (msg->txn == _txn)                                  \
+			if (msg->txn == _txn) {                                \
+				out = msg;                                     \
 				break;                                         \
+			};                                                     \
 		}                                                              \
-		msg;                                                           \
+		out;                                                           \
 	})
 
-// #define rild_state_next(state)                                                 \
-// 	({                                                                     \
-// 		(state)->pending.state++;                                      \
-// 		(state)->pending.req_sent = false;                             \
-// 	})
+/*
+#define rild_state_next(state)                                                 \
+	({                                                                     \
+		(state)->pending.state++;                                      \
+		(state)->pending.req_sent = false;                             \
+	})
 
-// #define rild_state_req_sent(state)	 ({ (state)->pending.req_sent = true; })
+#define rild_state_req_sent(state)	 ({ (state)->pending.req_sent = true; })
 
-// #define rild_state_pending_action(state) ({ (state)->pending.state; })
+#define rild_state_pending_action(state) ({ (state)->pending.state; })
 
-// #define rild_state_waiting(state)	 ({ (state)->pending.req_sent; })
+#define rild_state_waiting(state)	 ({ (state)->pending.req_sent; })
+*/
 
 #endif

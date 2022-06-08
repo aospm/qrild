@@ -16,7 +16,7 @@
 
 #include "qmi_uim.h"
 
-static void print_service(struct qmi_service_info *pkt)
+void print_service(struct qmi_service_info *pkt)
 {
 	if (!pkt)
 		return;
@@ -32,6 +32,7 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 {
 	struct qrild_msg *msg;
 	struct qmi_service_info *service;
+	const struct qmi_header *qmi;
 	int rc;
 
 	if (svc_id == QMI_SERVICE_CTL) {
@@ -39,8 +40,11 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 		return -1;
 	}
 
+	qmi = (const struct qmi_header*)data;
+
 	msg = malloc(sizeof(struct qrild_msg));
 	msg->txn = state->txn;
+	msg->msg_id = qmi->msg_id;
 	list_init(&msg->li);
 
 	// The TX n is encoded in the QMI packet, it must be incremented for
@@ -73,13 +77,13 @@ void qrild_qrtr_recv(struct rild_state *state)
 	struct qrtr_packet pkt;
 	struct sockaddr_qrtr sq;
 	socklen_t sl = sizeof(sq);
-	char buf[1024];
-	int ret, len;
+	void *buf = zalloc(256);
+	int ret;
 	struct qmi_service_info *service;
 	const struct qmi_header *qmi;
 	struct qrild_msg *msg;
 
-	ret = recvfrom(state->sock, buf, sizeof(buf), 0, (void *)&sq, &sl);
+	ret = recvfrom(state->sock, buf, 256, 0, (void *)&sq, &sl);
 	if (ret < 0) {
 		if (errno == ENETRESET)
 			LOGE("[QRTR] received ENETRESET, please retry\n");
@@ -93,7 +97,6 @@ void qrild_qrtr_recv(struct rild_state *state)
 		LOGE("[QRTR] failed to decode qrtr packet\n");
 		return;
 	}
-	len = ret;
 
 	switch (pkt.type) {
 	case QRTR_TYPE_NEW_SERVER:
@@ -101,6 +104,7 @@ void qrild_qrtr_recv(struct rild_state *state)
 			break;
 
 		service = zalloc(sizeof(*service));
+		list_init(&service->li);
 
 		service->type = pkt.service;
 		service->node = pkt.node;
@@ -127,6 +131,12 @@ void qrild_qrtr_recv(struct rild_state *state)
 			return;
 		}
 		msg = qrild_msg_get_by_txn(&state->resp_queue, qmi->txn_id);
+		if (!msg) {
+			fprintf(stderr, "FIXME!!! can't find msg, creating\n");
+			msg = zalloc(sizeof(struct qrild_msg));
+			msg->txn = qmi->txn_id;
+			list_append(&state->resp_queue, &msg->li);
+		}
 		msg->msg_id = qmi->msg_id;
 		msg->buf = pkt.data;
 		msg->buf_len = pkt.data_len;
@@ -145,6 +155,8 @@ void qrild_qrtr_recv(struct rild_state *state)
 			free(msg);
 		}
 
+		state->resp_pending = msg;
+
 		print_hex_dump("QRTR RX", pkt.data, pkt.data_len);
 	};
 }
@@ -153,8 +165,7 @@ void qrild_qrtr_recv(struct rild_state *state)
 bool qrild_qrtr_do_lookup(struct rild_state *state)
 {
 	struct qrtr_ctrl_pkt pkt;
-	struct qmi_service_info *service;
-	int rc, len;
+	int rc;
 
 	if (state->sock < 0)
 		return false;
@@ -166,34 +177,6 @@ bool qrild_qrtr_do_lookup(struct rild_state *state)
 	rc = qrtr_sendto(state->sock, 1, QRTR_PORT_CTRL, &pkt, sizeof(pkt));
 	if (rc < 0)
 		PLOGE_AND_EXIT("Couldn't send lookup");
-
-	//LOGD("| type | node | port  | major | minor | name");
-
-	// while ((len = recv(state->sock, &pkt, sizeof(pkt), 0)) >= 0) {
-	// 	uint32_t type = pkt.cmd;
-
-	// 	if (len < sizeof(pkt) || type != QRTR_TYPE_NEW_SERVER) {
-	// 		PLOGW("invalid/short packet");
-	// 		continue;
-	// 	}
-
-	// 	if (!pkt.server.service && !pkt.server.instance &&
-	// 	    !pkt.server.node && !pkt.server.port)
-	// 		break;
-
-	// 	service = zalloc(sizeof(*service));
-
-	// 	service->type = pkt.server.service;
-	// 	service->node = pkt.server.node;
-	// 	service->port = pkt.server.port;
-	// 	service->major = pkt.server.instance & 0xff;
-	// 	service->minor = pkt.server.instance >> 8;
-	// 	service->name = qmi_service_to_string(service->type, false);
-
-	// 	print_service(service);
-
-	// 	list_append(&state->services, &service->li);
-	// }
 
 	return true;
 }

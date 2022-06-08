@@ -1,0 +1,84 @@
+package wds;
+
+const QMI_WDS_SERVICE = 0x1;
+
+const QMI_WDS_START_NETWORK_INTERFACE = 32;
+const QMI_WDS_PKT_SRVC_STATUS = 34;
+const QMI_WDS_GET_CURRENT_SETTINGS = 45;
+const QMI_WDS_BIND_MUX_DATA_PORT = 162;
+const QMI_WDS_BIND_SUBSCRIPTION = 175;
+
+struct qmi_result {
+	u16 result;
+	u16 error;
+};
+
+struct ep_type_iface_id {
+	u32 ep_type;
+	u32 iface_id;
+};
+
+struct pkt_srvc_status {
+	u8 connection_status;
+	u8 reconfiguration_required;
+};
+
+request start_network_interface_req {
+	optional string apn_name = 0x14;
+	optional u32 apn_type = 0x38;
+	optional u8 ip_family_preference = 0x19;
+	optional ep_type_iface_id ep_type = 59;
+	optional u8 bring_up_by_apn_name = 60;
+	optional u8 call_type = 0x35;
+	optional u8 profile_index = 0x31;
+} = 32;
+
+struct call_end_reason_ext {
+	u16 call_end_reason_type;
+	u16 call_end_reason;
+};
+
+response start_network_interface_resp {
+	required qmi_result r = 2;
+	required u32 pkt_data_handle = 1;
+	optional u16 call_end_reason = 0x10;
+	optional call_end_reason_ext ext = 0x11;
+
+} = 32;
+
+indication get_pkt_srvc_status_ind {
+	required pkt_srvc_status status = 1;
+	optional u8 ip_family = 0x12;
+	optional u16 tech_name = 0x13;
+	optional u8 xlat_capable = 0x15;
+} = 34;
+
+request get_current_settings_req {
+	optional u32 requested_settings = 0x10;
+} = 45;
+
+response get_current_settings_resp {
+	required qmi_result r = 2;
+	optional u32 ipv4_address_preference = 30;
+	optional u32 ipv4_gateway_addr = 32;
+	optional u32 ipv4_subnet_mask = 33;
+	optional u32 mtu = 41;
+	optional u8 ip_family = 43;
+} = 45;
+
+request bind_mux_data_port_req {
+	optional ep_type_iface_id ep_id = 0x10;
+	optional u8 mux_id = 0x11;
+} = 162;
+
+response bind_mux_data_port_resp {
+	required qmi_result r = 2;
+} = 162;
+
+request bind_subscription_req {
+	optional u32 subscription = 0x1;
+} = 175;
+
+response bind_subscription_resp {
+	required qmi_result r = 2;
+} = 175;

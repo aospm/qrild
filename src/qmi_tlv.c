@@ -118,7 +118,8 @@ void *qmi_tlv_get(struct qmi_tlv *tlv, unsigned id, size_t *len)
 	if (!item)
 		return NULL;
 
-	*len = item->len;
+	if (len)
+		*len = item->len;
 	return item->data;
 }
 
@@ -144,6 +145,8 @@ void *qmi_tlv_get_array(struct qmi_tlv *tlv, unsigned id, unsigned len_size,
 	case 1:
 		count = *(uint8_t *)ptr++;
 		break;
+	default:
+		return NULL;
 	}
 
 	*len = count;

@@ -3,6 +3,10 @@ package uim;
 const QMI_RESULT_SUCCESS = 0;
 const QMI_RESULT_FAILURE = 1;
 const QMI_UIM_GET_CARD_STATUS = 0x2F;
+const QMI_UIM_CHANGE_PROVISIONING_SESSION = 0x38;
+
+const QMI_UIM_SESSION_TYPE_PRIMARY_GW_PROVISIONING = 0;
+
 
 struct qmi_result {
 	u16 result;
@@ -42,6 +46,17 @@ struct card_status {
 	} *cards;
 };
 
+struct provisioning_session_change {
+	u8 session_type;
+	u8 activate;
+};
+
+struct provisioning_session_application {
+	u8 slot;
+	u8 application_identifier_value_n;
+	u8 *application_identifier_value;
+};
+
 request get_card_status_req {
 } = 0x002F;
 
@@ -49,3 +64,12 @@ response get_card_status_resp {
 	required qmi_result result = 0x02;
 	optional card_status status = 0x10;
 } = 0x002F;
+
+request change_provisioning_session_req {
+	optional provisioning_session_change session_change = 0x01;
+	optional provisioning_session_application application_information = 0x10;
+} = 0x0038;
+
+response change_provisioning_session_resp {
+	required qmi_result result = 0x02;
+} = 0x0038;

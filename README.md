@@ -8,5 +8,5 @@ This MR is also needed if it's not merged: https://github.com/andersson/qmic/pul
 
 ```sh
 cd src
-cat qrild.qmi | qmic -a
+for x in src/qmi/*.qmi; do qmic -f $x -o src/qmi; done
 ```
