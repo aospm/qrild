@@ -8,16 +8,16 @@ cc_binary {
         "src/qrild_link.c",
         "src/qmi_tlv.c",
         "src/util.c",
-        // Auto-generated with qmic
-        "src/qmi/qmi_dms.c",
-        "src/qmi/qmi_dpm.c",
-        "src/qmi/qmi_uim.c",
-        "src/qmi/qmi_wda.c",
-        "src/qmi/qmi_wds.c",
+        // Generated with qmic
+        "_android/qmi_dms.c",
+        "_android/qmi_dpm.c",
+        "_android/qmi_uim.c",
+        "_android/qmi_wda.c",
+        "_android/qmi_wds.c",
     ],
     local_include_dirs: [
         "src",
-        "src/qmi",
+        "_android",
     ],
     include_dirs: [
         "hardware/ril/include",
