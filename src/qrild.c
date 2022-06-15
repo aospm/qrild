@@ -107,6 +107,7 @@ void usage() {
 	fprintf(stderr, "--------------------------------------\n");
 	fprintf(stderr, "qrild [-h] [-i IP -g GATEWAY]\n");
 	fprintf(stderr, "    -h               This help message\n");
+	fprintf(stderr, "    -n               Don't configure network interfaces automatically\n");
 	fprintf(stderr, "    -i IP            IP address to configure\n");
 	fprintf(stderr, "    -g GATEWAY       Gateway address to use\n\n");
 	fprintf(stderr, "When the IP address and gateway are specified qrild will not\n");
@@ -121,7 +122,7 @@ int main(int argc, char **argv) {
 	int opt;
 	const char *progname = basename(argv[0]);
 	const char *ip_str = NULL, *gateway_str = NULL;
-	struct in_addr ip, gateway;
+	struct in_addr ip, mask, gateway;
 
 	(void)argc;
 
@@ -135,9 +136,13 @@ int main(int argc, char **argv) {
 	list_init(&state.services);
 	list_init(&state.resp_queue);
 	state.started = false;
+	state.no_configure_inet = false;
 
-	while ((opt = getopt(argc, argv, "hi:g:")) != -1) {
+	while ((opt = getopt(argc, argv, "hni:g:")) != -1) {
 		switch (opt) {
+		case 'n':
+			state.no_configure_inet = true;
+			break;
 		case 'i':
 			ip_str = optarg;
 			break;
@@ -169,7 +174,10 @@ int main(int argc, char **argv) {
 		}
 		printf("Both inet_aton success\n");
 
-		rc = qrild_link_configure(&ip, &gateway);
+		// hardcode the mask for now when setting manually, it's always /29 anyway
+		mask.s_addr = htonl(0xfffffff8);
+
+		rc = qrild_link_configure(&ip, &mask, &gateway);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to configure rmnet interface\n");
 			return EXIT_FAILURE;

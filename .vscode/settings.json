@@ -3,6 +3,11 @@
                 "*.qmi": "rust",
                 "logging.h": "c",
                 "libqrtr.h": "c",
-                "socket.h": "c"
+                "socket.h": "c",
+                "if_arp.h": "c",
+                "features.h": "c",
+                "array": "c",
+                "string": "c",
+                "string_view": "c"
         }
 }

@@ -759,7 +759,7 @@ static int qrild_qmi_wds_start_network_interface_send_req(struct rild_state *sta
 	return rc;
 }
 
-static int qrild_qmi_handle_wds_pkt_srvc(struct rild_state *state, struct qrild_msg *msg) {
+static int qrild_qmi_handle_wds_pkt_srvc(struct qrild_msg *msg) {
 	uint32_t txn;
 	struct wds_get_pkt_srvc_status_ind *ind = wds_get_pkt_srvc_status_ind_parse(msg->buf, msg->buf_len, &txn);
 	struct wds_pkt_srvc_status *status = wds_get_pkt_srvc_status_ind_get_status(ind);
@@ -798,7 +798,7 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state) {
 	}
 
 	if (msg->msg_id == QMI_WDS_PKT_SRVC_STATUS) {
-		qrild_qmi_handle_wds_pkt_srvc(state, msg);
+		qrild_qmi_handle_wds_pkt_srvc(msg);
 		state->started = true;
 		free(msg->buf);
 		free(msg);
@@ -845,7 +845,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state) {
 	struct qrild_msg *msg;
 	struct in_addr ip, brd, sub;
 	uint32_t val;
-	uint16_t val16;
+	uint8_t val8;
 	int rc;
 
 	if (!state->card_status) {
@@ -901,7 +901,8 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state) {
 		return QRILD_STATE_ERROR;
 	}
 	sub.s_addr = htonl(val);
-	printf("IPv4 Subnet Mask: %s\n", inet_ntoa(sub));
+	printf("IPv4 Subnet Mask: %s (NL endienness: 0x%x, host endianness: 0x%x)\n",
+		inet_ntoa(sub), sub.s_addr, val);
 	
 	rc = wds_get_current_settings_resp_get_mtu(resp, &val);
 	if (rc < 0) {
@@ -910,14 +911,17 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state) {
 	}
 	printf("MTU: %d\n", val);
 
-	rc = wds_get_current_settings_resp_get_ip_family(resp, &val16);
+	rc = wds_get_current_settings_resp_get_ip_family(resp, &val8);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to get IP Family: %d\n", rc);
 		return QRILD_STATE_ERROR;
 	}
-	printf("IP Family: %d\n", val16);
+	printf("IP Family: %d\n", val8);
 
-	return qrild_link_configure(&ip, &brd);
+	if (!state->no_configure_inet)
+		return qrild_link_configure(&ip, &sub, &brd);
+	
+	return QRILD_STATE_DONE;
 }
 
 const char *qmi_service_to_string(enum qmi_service service, bool short_name)

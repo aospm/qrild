@@ -33,6 +33,9 @@
 #include <unistd.h>
 
 #include <linux/rtnetlink.h>
+#include <linux/netlink.h>
+#include <linux/if_addr.h>
+#define __USE_MISC
 #include <net/if.h>
 #include <net/if_arp.h>
 
@@ -46,16 +49,33 @@
 typedef struct bytearray nlmessage;
 
 #define nl_new(extra) (nlmessage*)ba_init(extra);
-#define nl_header(msg) ((struct nlmsghdr*)msg->data)
-#define nl_hdr_ifinfo(msg) ((struct ifinfomsg*)(msg->data + NLMSG_HDRLEN))
-#define nl_hdr_ifaddr(msg) ((struct ifaddrmsg*)(msg->data + NLMSG_HDRLEN))
-#define nl_hdr_rt(msg) ((struct rtmsg*)(msg->data + NLMSG_HDRLEN))
+#define nl_header(msg) ((struct nlmsghdr*)(msg->data))
+#define nl_hdr_ifinfo(msg) ((struct ifinfomsg*)(((char*)(msg->data)) + NLMSG_HDRLEN))
+#define nl_hdr_ifaddr(msg) ((struct ifaddrmsg*)(((char*)(msg->data)) + NLMSG_HDRLEN))
+#define nl_hdr_rt(msg) ((struct rtmsg*)(((char*)(msg->data)) + NLMSG_HDRLEN))
 #define nl_next_attr(msg) NLMSG_ALIGN(msg->len)
-#define nl_tail(msg) (((void *) (msg->data)) + NLMSG_ALIGN(nl_header(msg)->nlmsg_len))
+#define nl_tail(msg) ((void *)(((char*)(msg->data)) + NLMSG_ALIGN(nl_header(msg)->nlmsg_len)))
 #define nl_free(nlm) ba_free(nlm)
 
 static int sock_fd;
 static int sndbuf = 32768;
+
+/**
+ * Get the CIDR / notation for a subnet mask
+ */
+static uint32_t mask_to_prefix(struct in_addr *mask) {
+	uint32_t prefix = 0;
+	uint32_t n = ntohl(mask->s_addr);
+
+	for(prefix = 0; n & (1 << 31);) {
+		prefix++;
+		n = n << 1;
+		if (prefix > 31)
+			break;
+	}
+
+	return prefix;
+}
 
 static void nl_append_attr(nlmessage *msg, uint16_t type, const void *buf, size_t len) {
 	struct rtattr *rta;
@@ -144,7 +164,7 @@ static int qrild_link_send(nlmessage *msg) {
 	memset(&dest_addr, 0, sizeof(dest_addr));
 	dest_addr.nl_family = AF_NETLINK;
 
-	printf("msg len: %u, hdr_len: %u\n", msg->len, nl_header(msg)->nlmsg_len);
+	printf("msg len: %zu, hdr_len: %u\n", msg->len, nl_header(msg)->nlmsg_len);
 	if (msg->len != nl_header(msg)->nlmsg_len) {
 		fprintf(stderr, "message length mismatch!\n");
 		return -1;
@@ -169,8 +189,6 @@ static int qrild_link_send(nlmessage *msg) {
 
 	skmsg.msg_iov = &resp;
 	skmsg.msg_iovlen = 1;
-
-	printf("Waiting for message from kernel\n");
 
 	/* Read message from kernel */
 	// recv_len = recvmsg(sock_fd, &skmsg, 0);
@@ -223,14 +241,13 @@ int qrild_link_add_link(char* ifname, uint32_t base_ifindex, uint16_t mux_id) {
 	//printf("before append IFLA_RMNET_FLAGS\n");
 	nl_append_attr(msg, IFLA_RMNET_FLAGS, &flags, sizeof(struct ifla_rmnet_flags));
 	// Inner nested data
-	data->rta_len = nl_tail(msg) - (void*)data;
+	data->rta_len = (uint16_t)((char*)nl_tail(msg) - (char*)data);
 	printf("data len: %u\n", data->rta_len);
 	// Outer nested data
-	link->rta_len = nl_tail(msg) - (void*)link;
-	printf("link rta len: %u\n", link->rta_len);
+	link->rta_len = (uint16_t)((char*)nl_tail(msg) - (char*)link);
+	printf("link len: %u\n", link->rta_len);
 
 	ifi = nl_hdr_ifinfo(msg);
-	printf("ifi offset: %u\n", (void*)ifi - msg->data);
 	//ifi->ifi_index = base_ifindex;
 	ifi->ifi_family = PF_UNSPEC;
 	ifi->ifi_type = 0;
@@ -243,21 +260,15 @@ int qrild_link_add_link(char* ifname, uint32_t base_ifindex, uint16_t mux_id) {
 	return QRILD_STATE_DONE;
 }
 
-int qrild_link_set_addr(char* dev_ifname, struct in_addr *addr, struct in_addr *gateway) {
+int qrild_link_set_addr(char* dev_ifname, struct in_addr *addr, struct in_addr *mask) {
 	nlmessage *msg;
 	struct ifaddrmsg *ifa;
-	uint32_t addr_nl;
 	uint32_t dev_ifindex;
 
 	msg = nl_message_new(RTM_NEWADDR, NLM_F_CREATE | NLM_F_EXCL, sizeof(struct ifaddrmsg));
-	addr_nl = addr->s_addr;
 	// Local address we're setting
-	nl_append_val(msg, IFA_LOCAL, addr_nl);
-	nl_append_val(msg, IFA_ADDRESS, addr_nl);
-	
-	addr_nl = gateway->s_addr;
-	// Broadcast (gateway) address
-	nl_append_val(msg, IFA_BROADCAST, addr_nl);
+	nl_append_val(msg, IFA_LOCAL, addr->s_addr);
+	nl_append_val(msg, IFA_ADDRESS, addr->s_addr);
 
 	dev_ifindex = if_nametoindex(dev_ifname);
 	if (!dev_ifindex) {
@@ -271,6 +282,9 @@ int qrild_link_set_addr(char* dev_ifname, struct in_addr *addr, struct in_addr *
 	ifa->ifa_index = dev_ifindex;
 	// hardcode IPv4 for now
 	ifa->ifa_family = AF_INET;
+	// IPA should always give us a /29
+	ifa->ifa_prefixlen = mask_to_prefix(mask);
+	printf("Got subnet: %u\n", ifa->ifa_prefixlen);
 
 	qrild_link_send(msg);
 	nl_free(msg);
@@ -278,7 +292,7 @@ int qrild_link_set_addr(char* dev_ifname, struct in_addr *addr, struct in_addr *
 	return QRILD_STATE_DONE;
 }
 
-int qrild_link_add_default_route(char* dev_ifname) {
+int qrild_link_add_default_route(char* dev_ifname, struct in_addr *gateway) {
 	nlmessage *msg;
 	struct rtmsg *rt;
 	uint32_t dev_ifindex;
@@ -286,12 +300,13 @@ int qrild_link_add_default_route(char* dev_ifname) {
 	msg = nl_message_new(RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL, sizeof(struct rtmsg));
 
 	rt = nl_hdr_rt(msg);
-	rt->rtm_family = AF_INET;
-	rt->rtm_table = RT_TABLE_MAIN;
-	// Valid because not RTM_DELROUTE
-	rt->rtm_protocol = RTPROT_BOOT;
-	rt->rtm_scope = RT_SCOPE_LINK;
-	rt->rtm_type = RTN_UNICAST;
+	rt->rtm_family = AF_INET; // good
+	rt->rtm_table = RT_TABLE_MAIN; // good
+	rt->rtm_protocol = RTPROT_BOOT; // good
+	rt->rtm_scope = RT_SCOPE_UNIVERSE; // was RT_SCOPE_LINK which is wrong (not what iproute2 does anyway)
+	rt->rtm_type = RTN_UNICAST; // good
+
+	nl_append_val(msg, RTA_GATEWAY, gateway->s_addr);
 
 	dev_ifindex = if_nametoindex(dev_ifname);
 	if (!dev_ifindex) {
@@ -300,6 +315,7 @@ int qrild_link_add_default_route(char* dev_ifname) {
 		return QRILD_STATE_ERROR;
 	}
 
+	// Index of "output interface", it's rmnet_data0 here
 	nl_append_val(msg, RTA_OIF, dev_ifindex);
 
 	qrild_link_send(msg);
@@ -336,11 +352,7 @@ int qrild_link_set_up(char* dev_ifname) {
 	return QRILD_STATE_DONE;
 }
 
-/*
- * FIXME: configure the subnet mask too, for some reason it works fine
- * even when it's 0, maybe an rmnet specific quirk though.
- */
-int qrild_link_configure(struct in_addr *addr, struct in_addr *gateway) {
+int qrild_link_configure(struct in_addr *addr, struct in_addr *mask, struct in_addr *gateway) {
 	int rc;
 	uint32_t ipa0_index;
 
@@ -351,7 +363,7 @@ int qrild_link_configure(struct in_addr *addr, struct in_addr *gateway) {
 	rc = qrild_link_add_link("rmnet_data0", ipa0_index, 1);
 
 	printf("before qrild_link_set_addr\n");
-	rc = rc ?: qrild_link_set_addr("rmnet_data0", addr, gateway);
+	rc = rc ?: qrild_link_set_addr("rmnet_data0", addr, mask);
 
 	printf("before qrild_link_set_up\n");
 	rc = rc ?: qrild_link_set_up("rmnet_ipa0");
@@ -359,7 +371,7 @@ int qrild_link_configure(struct in_addr *addr, struct in_addr *gateway) {
 	rc = rc ?: qrild_link_set_up("rmnet_data0");
 
 	printf("before qrild_link_add_default_route\n");
-	rc = rc ?: qrild_link_add_default_route("rmnet_data0");
+	rc = rc ?: qrild_link_add_default_route("rmnet_data0", gateway);
 
 	if (rc < 0) {
 		fprintf(stderr, "Failed to configure netlink\n");

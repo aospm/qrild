@@ -269,6 +269,7 @@ struct rild_state {
 	struct qrild_msg *resp_pending;
 
 	bool started;
+	bool no_configure_inet;
 
 	// Available QMI services
 	struct list_head services;
