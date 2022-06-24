@@ -6,7 +6,7 @@
 #include "libqrtr.h"
 
 #include "util.h"
-#include "qrild_qrtr.h"
+#include "qrild_msg.h"
 
 static uint8_t to_hex(uint8_t ch)
 {
@@ -60,13 +60,6 @@ void print_hex_dump(const char *prefix, const void *buf, size_t len)
 
 		printf("%s\n\n", line, linelen);
 	}
-}
-
-void *zalloc(size_t size)
-{
-	void *buf = malloc(size);
-	memset(buf, 0, size);
-	return buf;
 }
 
 struct bytearray *ba_init(size_t size) {

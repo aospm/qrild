@@ -34,13 +34,14 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #include "libqrtr.h"
 #include "logging.h"
 
 #include "qrild.h"
 #include "qrild_link.h"
-#include "qrild_qrtr.h"
+#include "qrild_msg.h"
 #include "qrild_qmi.h"
 #include "util.h"
 
@@ -97,9 +98,25 @@ static int process_pending(struct rild_state *state) {
 		state->state++;
 		printf("[STATE] switch to state %d\n", state->state);
 		break;
+	default:
+		fprintf(stderr, "[STATE] ERROR: Invalid status %d\n", rc);
+		return rc;
 	}
 
 	return 0;
+}
+
+void msg_loop(struct rild_state *state) {
+	int rc;
+	while (!state->exit) {
+		rc = qrtr_poll(state->sock, 500);
+		if (rc < 0 && errno == EINTR)
+			continue;
+		if (rc < 0)
+			PLOGE_AND_EXIT("Failed to poll");
+
+		qrild_qrtr_recv(&state);
+	}
 }
 
 void usage() {
@@ -134,9 +151,13 @@ int main(int argc, char **argv) {
 	state.sock = -1;
 	state.txn = 4;
 	list_init(&state.services);
-	list_init(&state.resp_queue);
+	list_init(&state.pending_rx);
 	state.started = false;
 	state.no_configure_inet = false;
+	state.exit = false;
+
+	state.msg_mutex = PTHREAD_MUTEX_INITIALIZER;
+	state.rx_msg = PTHREAD_COND_INITIALIZER;
 
 	while ((opt = getopt(argc, argv, "hni:g:")) != -1) {
 		switch (opt) {

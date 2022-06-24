@@ -6,8 +6,8 @@
 #endif
 
 #ifndef container_of
-#define container_of(ptr, type, member) \
-  ((type *)((char *)(ptr) - offsetof(type, member)))
+#define container_of(ptr, type, member)                                        \
+	((type *)((char *)(ptr)-offsetof(type, member)))
 #endif
 
 // The list has a head and a tail, each list item
@@ -23,8 +23,7 @@ struct list_head {
 	};
 };
 
-#define list_entry(ptr, type, member) \
-	container_of(ptr, type, member)
+#define list_entry(ptr, type, member) container_of(ptr, type, member)
 
 static inline void list_init(struct list_head *list)
 {
@@ -67,7 +66,6 @@ static inline struct list_head *list_first(struct list_head *list)
 	return list->head;
 }
 
-
 static inline struct list_head *list_next(struct list_head *item)
 {
 	return item->next;
@@ -75,27 +73,28 @@ static inline struct list_head *list_next(struct list_head *item)
 
 #define list_push list_append
 
-#define list_for_each(_list, _iter) \
-  for (_iter = (_list)->head; (_iter) != 0; _iter = (_iter)->next)
+#define list_for_each(_list, _iter)                                            \
+	for (_iter = (_list)->head; (_iter) != 0; _iter = (_iter)->next)
 
-#define list_for_each_after(_node, _iter) \
-  for (_iter = (_node)->next; (_iter) != 0; _iter = (_iter)->next)
+#define list_for_each_after(_node, _iter)                                      \
+	for (_iter = (_node)->next; (_iter) != 0; _iter = (_iter)->next)
 
-#define list_for_each_safe(_list, _iter, _bkup) \
-  for (_iter = (_list)->head; (_iter) != 0 && ((_bkup = (_iter)->next) || 1); _iter = (_bkup))
+#define list_for_each_safe(_list, _iter, _bkup)                                \
+	for (_iter = (_list)->head;                                            \
+	     (_iter) != 0 && ((_bkup = (_iter)->next) || 1); _iter = (_bkup))
 
-#define list_for_each_safe_after(_node, _iter, _bkup) \
-  for (_iter = (_node)->next; (_iter) != 0 && ((_bkup = (_iter)->next) || 1); _iter = (_bkup))
+#define list_for_each_safe_after(_node, _iter, _bkup)                          \
+	for (_iter = (_node)->next;                                            \
+	     (_iter) != 0 && ((_bkup = (_iter)->next) || 1); _iter = (_bkup))
 
-#define list_entry_first(list, type, member) \
+#define list_entry_first(list, type, member)                                   \
 	container_of((list)->head, type, member)
 
-#define list_entry_next(item, member) \
+#define list_entry_next(item, member)                                          \
 	container_of((item)->member.next, typeof(*(item)), member)
 
-#define list_for_each_entry(item, list, member) \
-	for (item = list_entry_first(list, typeof(*(item)), member); \
-	     &item->member != list; \
-	     item = list_entry_next(item, member))
+#define list_for_each_entry(item, list, member)                                \
+	for (item = list_entry_first(list, typeof(*(item)), member);           \
+	     &item->member != list; item = list_entry_next(item, member))
 
 #endif

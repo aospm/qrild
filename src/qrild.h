@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "list.h"
 #include "qmi_uim.h"
@@ -231,7 +232,7 @@ enum qrild_pending_action {
 	QRILD_ACTION_MUX_DATA_PORT,
 	QRILD_ACTION_START_NET_IFACES,
 	QRILD_ACTION_GET_RUNTIME_SETTINGS,
-//	QRILD_ACTION_NETLINK,
+	//	QRILD_ACTION_NETLINK,
 	QRILD_ACTION_HALT,
 	QRILD_ACTION_EXIT,
 };
@@ -245,12 +246,12 @@ enum qrild_pending_action {
 struct qrild_msg {
 	uint16_t txn;
 	uint32_t msg_id;
-	struct qmi_service_info *service;
 
 	void *buf;
 	size_t buf_len;
 
 	struct list_head li;
+	pthread_mutex_t *mut;
 };
 
 struct rild_state {
@@ -265,36 +266,34 @@ struct rild_state {
 	// 	bool req_sent;
 	// } pending;
 
-	struct list_head resp_queue;
-	struct qrild_msg *resp_pending;
+	struct list_head pending_rx;
+	struct list_head pending_tx;
+	pthread_mutex_t msg_mutex;
+	/* Set when a message is received */
+	pthread_cond_t rx_msg;
+
+	volatile bool exit;
 
 	bool started;
 	bool no_configure_inet;
 
 	// Available QMI services
 	struct list_head services;
+	pthread_mutex_t services;
 
 	struct uim_card_status *card_status;
 };
 
-#define qmi_service_get(list, _s)                                              \
-	({                                                                     \
-		struct qmi_service_info *svc, *out = NULL;                     \
-		list_for_each_entry(svc, (list), li)                           \
-		{                                                              \
-			if (svc->type == _s) {                                 \
-				out = svc;                                     \
-				break;                                         \
-			};                                                     \
-		}                                                              \
-		out;                                                           \
-	})
-
-#define qmi_service_get_port(_i, _s)                                           \
-	({                                                                     \
-		struct qmi_service_info *svc = qmi_service_get(_i, _s);        \
-		svc ? svc->port : -1;                                          \
-	})
+/**
+ * @brief Return if a service hasn't been discovered yet
+ *
+ * @_l: service list to search
+ * @_s: enum qmi_service to find
+ * @_r: return value to use if the service can't be found
+ */
+#define QMI_SERVICE_OR_RETURN(_l, _s, _r)                                      \
+	if (!qmi_service_get((_l), _s))                                        \
+	return _r
 
 // message state handling
 #define qrild_msg_get_by_txn(list, _txn)                                       \

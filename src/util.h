@@ -9,7 +9,7 @@
 
 void print_hex_dump(const char *prefix, const void *buf, size_t len);
 
-void* zalloc(size_t size);
+#define zalloc(size) calloc(1, (size))
 
 struct bytearray {
 	size_t len;

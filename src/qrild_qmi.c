@@ -17,64 +17,14 @@
 #include "qrild.h"
 #include "qrild_link.h"
 #include "qrild_qmi.h"
-#include "qrild_qrtr.h"
+#include "qrild_msg.h"
 
+#include "qmi_tlv.h"
 #include "qmi_uim.h"
 #include "qmi_dpm.h"
 #include "qmi_dms.h"
 #include "qmi_wda.h"
 #include "qmi_wds.h"
-
-struct qmi_result {
-	uint16_t result;
-	uint16_t error;
-};
-
-/**
- * qmux_add_header() - add a qmux header to a QMI packet
- *
- * @service: the QMI service to send the data to
- * @client: the client ID
- * @data: the encoded QMI packet
- * @len: length of data
- *
- * @return: a pointer to the QMI packet with the QMUX header prepended
- *
- * This function frees data and replaces it with
- * a new pointer with the QMUX header prepended.
- * len is updated to the new length of the buffer.
- */
-// uint8_t *qmi_qmux_add_header(struct qmi_service_info *service, uint8_t *data,
-// 			     size_t *len)
-// {
-// 	uint8_t *buf = (uint8_t *)malloc(*len + sizeof(struct qmux_header));
-// 	struct qmux_header *header = (struct qmux_header *)buf;
-
-// 	memset(buf, 0, sizeof(struct qmux_header));
-// 	memcpy(buf + sizeof(struct qmux_header), data, *len);
-
-// 	*len += sizeof(struct qmux_header);
-
-// 	free(data);
-
-// 	header->tf = 1;
-// 	header->len = *len - 1;
-// 	header->ctrl_flag = 0;
-// 	header->service = service->type;
-// 	header->client = service->client_id;
-
-// 	return buf;
-// }
-
-static struct qmi_result *qmi_get_result(void *tlv, char *prefix)
-{
-	struct qmi_result *res = qmi_tlv_get((struct qmi_tlv *)tlv, 2, NULL);
-	if (prefix)
-		printf("%s: result: %u, error: %u\n", prefix, res->result,
-		       res->error);
-
-	return res;
-}
 
 static bool qrild_msg_is_pending(struct list_head *list, uint32_t msg_id)
 {
@@ -93,37 +43,20 @@ static bool qrild_msg_is_pending(struct list_head *list, uint32_t msg_id)
 	return false;
 }
 
-// int qrild_qmi_ctl_allocate_cid(struct rild_state *state) {
-// 	size_t len;
-// 	int rc;
-// 	struct qmi_service_info *uim_service =
-// 	    qmi_service_get(&state->services, QMI_SERVICE_UIM);
-// 	struct qrild_svc_ctl_allocate_cid_req *req =
-// 	    qrild_svc_ctl_allocate_cid_req_alloc(state->txn);
-// 	qrild_svc_ctl_allocate_cid_req_set_service(req, QMI_SERVICE_CTL);
-
-// 	if (!uim_service) {
-// 		LOGW("Can't find UIM service!\n");
-// 		return -1;
-// 	}
-
-// 	uint8_t *buf =
-// 	    (uint8_t *)qrild_svc_ctl_allocate_cid_req_encode(req, &len);
-// 	//buf = qmi_qmux_add_header(uim_service, buf, &len);
-// 	print_hex_dump("allocate CID", buf, len);
-
-// 	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_CTL, (void *)buf,
-// 					len);
-// 	if (rc < 0) {
-// 		uim_service->client_id = 1;
-// 	}
-
-// 	return rc;
-// }
-
-static void dms_get_operating_mode_request(struct rild_state *state)
+/**
+ * @brief Synchronously get the modem operating modem
+ * 
+ * @state: RIL state object
+ * 
+ * @returns DMS_OPERATING_MODE or < 0 on error
+ */
+static int dms_get_operating_mode(struct rild_state *state)
 {
 	struct dms_get_operating_mode_req *req;
+	struct qrild_msg *resp_msg = NULL;
+	struct dms_get_operating_mode_resp *resp;
+	uint8_t mode = 0, hw_restricted = 0;
+	int rc;
 	void *buf;
 	size_t len;
 
@@ -132,46 +65,45 @@ static void dms_get_operating_mode_request(struct rild_state *state)
 	req = dms_get_operating_mode_req_alloc(state->txn);
 	buf = dms_get_operating_mode_req_encode(req, &len);
 
-	qrild_qrtr_send_to_service(state, QMI_SERVICE_DMS, buf, len);
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_DMS, buf, len, TIMEOUT_DEFAULT, resp_msg);
 	dms_get_operating_mode_req_free(req);
+	if (rc < 0 || !resp_msg)
+		return QRILD_STATE_ERROR;
+
+	resp = dms_get_operating_mode_resp_parse(resp_msg->buf, resp_msg->buf_len, NULL);
+
+	dms_get_operating_mode_resp_get_mode(resp, &mode);
+	dms_get_operating_mode_resp_get_hardware_restricted(resp, &hw_restricted);
+	LOGD("Operating mode:\n"
+	       "\tmode: %u\n"
+	       "\thw_restriced: %s\n",
+	       mode, hw_restricted ? "Yes" : "No");
+
+	dms_get_operating_mode_resp_free(resp);
+
+	qrild_msg_free(state, resp_msg);
+
+	return mode;
 }
 
-/*
- * check if the pending message is one of the msg_ids passed. The last argument
- * must always be 0
- *
- * returns 0 on success, -1 if it doesn't match or -2 if there is no
- * pending response
- *
- * Example:
- * qrild_qmi_get_msg_if_match(state, msg, QMI_DMS_GET_OPERATING_MODE, QMI_DMS_SET_OPERATING_MODE, 0);
+/**
+ * @brief synchronously set the operating mode
+ * 
+ * @state: RIL state object
+ * @mode: mode to set
  */
-int qrild_qmi_get_msg_if_match(struct rild_state *state, struct qrild_msg **msg,
-			       ...)
+static int dms_set_operating_mode(struct rild_state *state, uint8_t mode)
 {
-	va_list ap;
-	uint32_t msg_id;
+	struct dms_set_operating_mode_req *req;
+	void *buf;
+	size_t len;
 
-	if (!state->resp_pending)
-		return -2;
+	req = dms_set_operating_mode_req_alloc(state->txn);
+	dms_set_operating_mode_req_set_mode(req, mode);
 
-	va_start(ap, msg);
-	msg_id = va_arg(ap, int);
-	while (msg_id) {
-		printf("Checking for id %u\n", msg_id);
-		if (msg_id == state->resp_pending->msg_id) {
-			*msg = state->resp_pending;
-			state->resp_pending = NULL;
-			list_remove(&(*msg)->li);
-			va_end(ap);
-			printf("Got response for {msg_id: %u, txn: %u}\n", msg_id, (*msg)->txn);
-			return 0;
-		}
-		msg_id = va_arg(ap, int);
-	}
+	buf = dms_set_operating_mode_req_encode(req, &len);
 
-	va_end(ap);
-	return -1;
+	return qrild_msg_send_resp_check(state, QMI_SERVICE_DMS, buf, len, TIMEOUT_DEFAULT);
 }
 
 /*
@@ -184,72 +116,18 @@ int qrild_qmi_get_msg_if_match(struct rild_state *state, struct qrild_msg **msg,
  */
 int qrild_qmi_powerup(struct rild_state *state)
 {
-	struct dms_set_operating_mode_req *req;
-	struct dms_get_operating_mode_resp *resp;
 	struct qrild_msg *msg = NULL;
 	struct qmi_result *res;
+	int mode;
 	void *buf;
 	size_t len;
-	uint8_t mode = 0, hw_restricted = 0;
 	uint32_t txn;
 	int rc;
 
 	if (!qmi_service_get(&state->services, QMI_SERVICE_DMS))
 		return QRILD_STATE_PENDING;
 
-	printf("before get_msg_if_match\n");
-	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_DMS_GET_OPERATING_MODE,
-					QMI_DMS_SET_OPERATING_MODE, 0);
-	printf("Got rc=%d\n", rc);
-	switch (rc) {
-	case -1: // some other request is pending, some other handler should deal with it
-	case -2: // no pending response, so we should be sending a request
-		if (!qrild_msg_is_pending(&state->resp_queue,
-					  QMI_DMS_GET_OPERATING_MODE)) {
-			dms_get_operating_mode_request(state);
-		}
-		return QRILD_STATE_PENDING;
-	case 0:
-	default:
-		break;
-	}
-
-	printf("Handling pending msg {id: %u, txn: %u}\n", msg->msg_id, msg->txn);
-
-	if (!msg->buf) {
-		fprintf(stderr, "msg pending but no buf!!!\n");
-		return QRILD_STATE_ERROR;
-	}
-	// This could be parsing the respone for a SET or GET, it doesn't matter
-	// as if it's a SET we're only going to read the result which is
-	// common to both
-	resp = dms_get_operating_mode_resp_parse(msg->buf, msg->buf_len, &txn);
-	printf("Got response txn %u\n", txn);
-
-	if (txn != msg->txn) {
-		fprintf(stderr,
-			"[QMI] %s: mismatched txn, should NOT happen!\n",
-			__func__);
-		return QRILD_STATE_ERROR;
-	}
-
-	res = qmi_get_result((void *)resp, "DMS Operating Mode");
-
-	if (msg->msg_id == QMI_DMS_SET_OPERATING_MODE && res->result == 0) {
-		printf("Modem powerup success!");
-		free(msg->buf);
-		free(msg);
-		return QRILD_STATE_DONE;
-	}
-
-	dms_get_operating_mode_resp_get_mode(resp, &mode);
-	dms_get_operating_mode_resp_get_hardware_restricted(resp, &mode);
-	printf("Operating mode:\n"
-	       "\tmode: %u\n"
-	       "\thw_restriced: %s\n",
-	       mode, hw_restricted ? "Yes" : "No");
-
-	dms_get_operating_mode_resp_free(resp);
+	mode = dms_get_operating_mode(state);
 
 	switch (mode) {
 	case QMI_DMS_OPERATING_MODE_ONLINE:
@@ -264,14 +142,9 @@ int qrild_qmi_powerup(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 	}
 
-	req = dms_set_operating_mode_req_alloc(state->txn);
-	dms_set_operating_mode_req_set_mode(req, QMI_DMS_OPERATING_MODE_ONLINE);
+	dms_set_operating_mode(state, QMI_DMS_OPERATING_MODE_ONLINE);
 
-	buf = dms_set_operating_mode_req_encode(req, &len);
-
-	qrild_qrtr_send_to_service(state, QMI_SERVICE_DMS, buf, len);
-
-	return QRILD_STATE_PENDING;
+	return QRILD_STATE_DONE;
 }
 
 static void dump_card_status(struct uim_card_status *cs)
@@ -337,78 +210,57 @@ static void dump_card_status(struct uim_card_status *cs)
 	printf("\n");
 }
 
-static int uim_get_card_status_request(struct rild_state *state)
-{
-	size_t len;
-	int rc;
-	struct uim_get_card_status_req *req;
-
-	if (!qmi_service_get(&state->services, QMI_SERVICE_UIM))
-		return -1;
-
-	req = uim_get_card_status_req_alloc(state->txn);
-
-	void *buf = uim_get_card_status_req_encode(req, &len);
-
-	print_hex_dump("Get card status", (uint8_t *)buf, len);
-
-	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_UIM, buf, len);
-
-	uim_get_card_status_req_free(req);
-
-	return rc;
-}
-
 int qrild_qmi_uim_get_card_status(struct rild_state *state)
 {
-	size_t buf_sz;
 	struct qrild_msg *msg = NULL;
 	uint32_t txn;
 	struct uim_get_card_status_resp *resp;
+	int rc;
 
-	switch (qrild_qmi_get_msg_if_match(state, &msg, QMI_UIM_GET_CARD_STATUS,
-					   0)) {
-	case -1: // some other request is pending, some other handler should deal with it
-	case -2: // no pending response, so we should be sending a request
-		// but only if we haven't already
-		if (!qrild_msg_is_pending(&state->resp_queue,
-					  QMI_UIM_GET_CARD_STATUS))
-			uim_get_card_status_request(state);
-		return QRILD_STATE_PENDING;
-	case 0:
-	default:
-		break;
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_UIM, QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_UIM, QMI_UIM_GET_CARD_STATUS, msg);
+	if (rc < 0 || !msg) {
+		fprintf(stderr, "%s: didn't get a response or timed out!\n");
+		return QRILD_STATE_ERROR;
 	}
 
 	resp = uim_get_card_status_resp_parse(msg->buf, msg->buf_len, &txn);
-
-	qmi_get_result((void *)resp, "UIM get card status");
-
-	uint8_t *ptr = qmi_tlv_get((struct qmi_tlv *)resp, 16, &buf_sz);
-	print_hex_dump("UIM card status resp", ptr, buf_sz);
+	if (!qrild_qmi_result_success((struct qmi_tlv *)resp)) {
+		qrild_qmi_result_print((struct qmi_tlv *)resp);
+		return QRILD_STATE_ERROR;
+	}
 
 	state->card_status = uim_get_card_status_resp_get_status(resp);
 
 	dump_card_status(state->card_status);
 
-	free(msg->buf);
-	free(msg);
+	qrild_msg_free(msg);
 
 	return QRILD_STATE_DONE;
 }
 
-static int qrild_uim_change_provisioning_send_req(struct rild_state *state) {
+int qrild_qmi_uim_set_provisioning(struct rild_state *state)
+{
 	struct uim_provisioning_session_change change;
 	struct uim_provisioning_session_application application;
 	struct card_status_cards_applications *appn = NULL;
 	struct uim_change_provisioning_session_req *req;
+	struct qmi_result res;
 	int rc, i = 0;
 	void *buf;
 	size_t buf_sz;
+	int rc;
+
+	if (!state->card_status) {
+		fprintf(stderr, "Card status not set!\n");
+		return QRILD_STATE_PENDING;
+	}
 
 	while (!appn && i < state->card_status->cards_n) {
 		if (state->card_status->cards[i].applications)
 			appn = state->card_status->cards[i].applications;
+		i++;
 	}
 
 	if (!appn) {
@@ -431,124 +283,63 @@ static int qrild_uim_change_provisioning_send_req(struct rild_state *state) {
 
 	buf = uim_change_provisioning_session_req_encode(req, &buf_sz);
 
-	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_UIM, buf, buf_sz);
+	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_UIM, buf, buf_sz, TIMEOUT_DEFAULT, &res);
 
 	uim_change_provisioning_session_req_free(req);
 
-	return rc;
-}
-
-int qrild_qmi_uim_set_provisioning(struct rild_state *state)
-{
-	struct uim_change_provisioning_session_resp *resp;
-	struct qmi_result *res;
-	uint32_t txn;
-	struct qrild_msg *msg;
-	int rc;
-
-	if (!state->card_status) {
-		fprintf(stderr, "Card status not set!\n");
+	if (rc < 0) {
+		LOGE("Failed to set provisioning\n");
+		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
 
-	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_UIM_CHANGE_PROVISIONING_SESSION,
-					   0);
-	printf("got RC=%d\n", rc);
-
-	switch (rc) {
-	case -1: // some other request is pending, some other handler should deal with it
-	case -2: // no pending response, so we should be sending a request
-		// but only if we haven't already
-		if (!qrild_msg_is_pending(&state->resp_queue,
-					  QMI_UIM_CHANGE_PROVISIONING_SESSION))
-			qrild_uim_change_provisioning_send_req(state);
-		return QRILD_STATE_PENDING;
-	case 0:
-	default:
-		break;
-	}
-
-	resp = uim_change_provisioning_session_resp_parse(msg->buf, msg->buf_len, &txn);
-
-	res = qmi_get_result((void *)resp, "UIM set provisioning");
-
-	free(msg->buf);
-	free(msg);
-
-	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+	return QRILD_STATE_DONE;
 }
 
-static int qrild_qmi_dpm_open_port_send_req(struct rild_state *state) {
+int qrild_qmi_dpm_open_port(struct rild_state *state) {
 	struct dpm_open_port_req *req;
 	struct dpm_control_port port;
-	int rc;
+	struct qmi_result res;
 	void *buf;
 	size_t buf_sz;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DPM, QRILD_STATE_PENDING);
+
+	printf("Opening default port!\n");
 
 	port.ep_type = 4;
 	port.iface_id = 1;
 	port.consumer_pipe_num = 2;
 	port.producer_pipe_num = 10;
 
-	printf("Opening port!\n");
-
 	req = dpm_open_port_req_alloc(state->txn);
 	dpm_open_port_req_set_port_list(req, &port, 1);
 
 	buf = dpm_open_port_req_encode(req, &buf_sz);
 
-	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_DPM, buf, buf_sz);
+	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_DPM, buf, buf_sz, TIMEOUT_DEFAULT, &res);
 
 	dpm_open_port_req_free(req);
 
-	return rc;
-}
-
-int qrild_qmi_dpm_open_port(struct rild_state *state) {
-	struct dpm_open_port_resp *resp;
-	struct qmi_result *res;
-	uint32_t txn;
-	struct qrild_msg *msg;
-	int rc;
-
-	if (!state->card_status) {
-		fprintf(stderr, "Card status not set!\n");
+	if (rc < 0) {
+		LOGE("Failed to open port:\n");
+		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
 
-	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_DPM_OPEN_PORT,
-					   0);
-	printf("got RC=%d\n", rc);
-
-	switch (rc) {
-	case -1: // some other request is pending, some other handler should deal with it
-	case -2: // no pending response, so we should be sending a request
-		// but only if we haven't already
-		if (!qrild_msg_is_pending(&state->resp_queue,
-					  QMI_DPM_OPEN_PORT))
-			qrild_qmi_dpm_open_port_send_req(state);
-		return QRILD_STATE_PENDING;
-	case 0:
-	default:
-		break;
-	}
-
-	resp = dpm_open_port_resp_parse(msg->buf, msg->buf_len, &txn);
-
-	res = qmi_get_result((void *)resp, "DPM open port");
-
-	free(msg->buf);
-	free(msg);
-
-	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+	return QRILD_STATE_DONE;
 }
 
-static int qrild_qmi_wda_set_data_format_send_req(struct rild_state *state) {
+int qrild_qmi_wda_set_data_format(struct rild_state *state) {
 	struct wda_set_data_format_req *req;
 	struct wda_ep_type_iface_id ep_type;
-	int rc;
 	void *buf;
 	size_t buf_sz;
+	struct qmi_result res;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_WDA, QRILD_STATE_PENDING);
 
 	printf("Setting data format!\n");
 
@@ -566,57 +357,26 @@ static int qrild_qmi_wda_set_data_format_send_req(struct rild_state *state) {
 
 	buf = wda_set_data_format_req_encode(req, &buf_sz);
 
-	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_WDA, buf, buf_sz);
+	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_WDA, buf, buf_sz, TIMEOUT_DEFAULT, &res);
 
 	wda_set_data_format_req_free(req);
-
-	return rc;
-}
-
-int qrild_qmi_wda_set_data_format(struct rild_state *state) {
-	struct wda_set_data_format_resp *resp;
-	struct qmi_result *res;
-	uint32_t txn;
-	struct qrild_msg *msg;
-	int rc;
-
-	if (!state->card_status) {
-		fprintf(stderr, "Card status not set!\n");
+	if (rc < 0) {
+		LOGE("Failed to set data format:\n");
+		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
 
-	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_WDA_SET_DATA_FORMAT,
-					   0);
-	printf("got RC=%d\n", rc);
-
-	switch (rc) {
-	case -1: // some other request is pending, some other handler should deal with it
-	case -2: // no pending response, so we should be sending a request
-		// but only if we haven't already
-		if (!qrild_msg_is_pending(&state->resp_queue,
-					  QMI_WDA_SET_DATA_FORMAT))
-			qrild_qmi_wda_set_data_format_send_req(state);
-		return QRILD_STATE_PENDING;
-	case 0:
-	default:
-		break;
-	}
-
-	resp = wda_set_data_format_resp_parse(msg->buf, msg->buf_len, &txn);
-
-	res = qmi_get_result((void *)resp, "WDA Set data format");
-
-	free(msg->buf);
-	free(msg);
-
-	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+	return QRILD_STATE_DONE;
 }
 
-static int qrild_qmi_wds_bind_subscription_send_req(struct rild_state *state) {
+int qrild_qmi_wds_bind_subscription(struct rild_state *state) {
 	struct wds_bind_subscription_req *req;
-	int rc;
+	struct qmi_result res;
 	void *buf;
 	size_t buf_sz;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_WDS, QRILD_STATE_PENDING);
 
 	printf("Binding subscription!\n");
 
@@ -628,48 +388,16 @@ static int qrild_qmi_wds_bind_subscription_send_req(struct rild_state *state) {
 
 	rc = qrild_qrtr_send_to_service(state, QMI_SERVICE_WDS, buf, buf_sz);
 
+	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_WDA, buf, buf_sz, TIMEOUT_DEFAULT, &res);
+
 	wds_bind_subscription_req_free(req);
-
-	return rc;
-}
-
-int qrild_qmi_wds_bind_subscription(struct rild_state *state) {
-	struct wds_bind_subscription_resp *resp;
-	struct qmi_result *res;
-	uint32_t txn;
-	struct qrild_msg *msg;
-	int rc;
-
-	if (!state->card_status) {
-		fprintf(stderr, "Card status not set!\n");
+	if (rc < 0) {
+		LOGE("Failed to bind subscription:\n");
+		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
 
-	rc = qrild_qmi_get_msg_if_match(state, &msg, QMI_WDS_BIND_SUBSCRIPTION,
-					   0);
-	printf("got RC=%d\n", rc);
-
-	switch (rc) {
-	case -1: // some other request is pending, some other handler should deal with it
-	case -2: // no pending response, so we should be sending a request
-		// but only if we haven't already
-		if (!qrild_msg_is_pending(&state->resp_queue,
-					  QMI_WDS_BIND_SUBSCRIPTION))
-			qrild_qmi_wds_bind_subscription_send_req(state);
-		return QRILD_STATE_PENDING;
-	case 0:
-	default:
-		break;
-	}
-
-	resp = wds_bind_subscription_resp_parse(msg->buf, msg->buf_len, &txn);
-
-	res = qmi_get_result((void *)resp, "WDS Bind subscription");
-
-	free(msg->buf);
-	free(msg);
-
-	return res->result == 0 ? QRILD_STATE_DONE : QRILD_STATE_ERROR;
+	return QRILD_STATE_DONE;
 }
 
 static int qrild_qmi_wds_bind_mux_data_port_send_req(struct rild_state *state) {
@@ -717,7 +445,7 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state) {
 	case -1: // some other request is pending, some other handler should deal with it
 	case -2: // no pending response, so we should be sending a request
 		// but only if we haven't already
-		if (!qrild_msg_is_pending(&state->resp_queue,
+		if (!qrild_msg_is_pending(&state->pending_tx,
 					  QMI_WDS_BIND_MUX_DATA_PORT))
 			qrild_qmi_wds_bind_mux_data_port_send_req(state);
 		return QRILD_STATE_PENDING;
@@ -788,7 +516,7 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state) {
 	case -1: // some other request is pending, some other handler should deal with it
 	case -2: // no pending response, so we should be sending a request
 		// but only if we haven't already
-		if (!qrild_msg_is_pending(&state->resp_queue,
+		if (!qrild_msg_is_pending(&state->pending_tx,
 					  QMI_WDS_START_NETWORK_INTERFACE))
 			qrild_qmi_wds_start_network_interface_send_req(state);
 		return QRILD_STATE_PENDING;
@@ -861,7 +589,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state) {
 	case -1: // some other request is pending, some other handler should deal with it
 	case -2: // no pending response, so we should be sending a request
 		// but only if we haven't already
-		if (!qrild_msg_is_pending(&state->resp_queue,
+		if (!qrild_msg_is_pending(&state->pending_tx,
 					  QMI_WDS_GET_CURRENT_SETTINGS))
 			qrild_qmi_wds_get_current_settings_send_req(state);
 		return QRILD_STATE_PENDING;
