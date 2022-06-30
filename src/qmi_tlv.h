@@ -6,7 +6,7 @@ struct qmi_result {
 	uint16_t error;
 };
 
-extern struct qmi_tlv;
+struct qmi_tlv;
 
 struct qmi_tlv *qmi_tlv_init(unsigned txn, unsigned msg_id, unsigned msg_type);
 void *qmi_tlv_encode(struct qmi_tlv *tlv, size_t *len);

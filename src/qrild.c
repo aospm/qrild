@@ -90,6 +90,7 @@ static int process_pending(struct rild_state *state) {
 
 	switch(rc) {
 	case QRILD_STATE_PENDING:
+		usleep(TIMEOUT_DEFAULT * 450);
 		break;
 	case QRILD_STATE_ERROR:
 		fprintf(stderr, "ERROR: failed in state %d\n", state->state);
@@ -106,17 +107,41 @@ static int process_pending(struct rild_state *state) {
 	return 0;
 }
 
-void msg_loop(struct rild_state *state) {
+void *msg_loop(void *x) {
+	struct rild_state *state = (struct rild_state *)x;
 	int rc;
+
+	state->sock = qrtr_open(0);
+	if (state->sock < 0) {
+		LOGE("Failed to open QRTR socket: %d", state->sock);
+		return EXIT_FAILURE;
+	}
+
+	// Find all QRTR services
+	qrild_qrtr_do_lookup(state);
+
 	while (!state->exit) {
-		rc = qrtr_poll(state->sock, 500);
+		rc = qrild_qrtr_send_queued(state);
+		if (rc < 0) {
+			LOGE("Failed to send queued messages! %d\n", rc);
+			state->exit = true;
+			break;
+		}
+		rc = qrtr_poll(state->sock, 50);
 		if (rc < 0 && errno == EINTR)
 			continue;
 		if (rc < 0)
 			PLOGE_AND_EXIT("Failed to poll");
 
-		qrild_qrtr_recv(&state);
+		if (rc > 0)
+			qrild_qrtr_recv(state);
+		qrild_qmi_process_indications(state);
 	}
+
+	printf("Quitting loop!\n");
+	qrtr_close(state->sock);
+
+	return NULL;
 }
 
 void usage() {
@@ -140,6 +165,9 @@ int main(int argc, char **argv) {
 	const char *progname = basename(argv[0]);
 	const char *ip_str = NULL, *gateway_str = NULL;
 	struct in_addr ip, mask, gateway;
+	pthread_mutexattr_t mattr;
+	pthread_condattr_t cattr;
+	pthread_t msg_thread;
 
 	(void)argc;
 
@@ -152,12 +180,18 @@ int main(int argc, char **argv) {
 	state.txn = 4;
 	list_init(&state.services);
 	list_init(&state.pending_rx);
-	state.started = false;
+	list_init(&state.pending_tx);
 	state.no_configure_inet = false;
 	state.exit = false;
 
-	state.msg_mutex = PTHREAD_MUTEX_INITIALIZER;
-	state.rx_msg = PTHREAD_COND_INITIALIZER;
+	pthread_mutexattr_init(&mattr);
+	pthread_condattr_init(&cattr);
+
+	pthread_mutex_init(&state.services_mutex, &mattr);
+	pthread_mutex_init(&state.msg_mutex, &mattr);
+	pthread_cond_init(&state.msg_change, &cattr);
+	pthread_mutex_init(&state.connection_status_mutex, &mattr);
+	pthread_cond_init(&state.connection_status_change, &cattr);
 
 	while ((opt = getopt(argc, argv, "hni:g:")) != -1) {
 		switch (opt) {
@@ -206,25 +240,20 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
-	state.sock = qrtr_open(0);
-	if (state.sock < 0) {
-		LOGE("Failed to open QRTR socket: %d", state.sock);
-		return EXIT_FAILURE;
+	if (pthread_create(&msg_thread, NULL, msg_loop, &state)) {
+		LOGE("Failed to create msg thread!\n");
+		return 1;
 	}
 
-	// Find all QRTR services
-	qrild_qrtr_do_lookup(&state);
+	while (state.state != QRILD_ACTION_EXIT && !state.exit) {
+		// rc = qrtr_poll(state.sock, 500);
+		// if (rc < 0)
+		// 	PLOGE_AND_EXIT("Failed to poll");
 
-	while (state.state != QRILD_ACTION_EXIT) {
-		rc = qrtr_poll(state.sock, 500);
-		if (rc < 0)
-			PLOGE_AND_EXIT("Failed to poll");
-
-		if (rc)
-			qrild_qrtr_recv(&state);
-		else
-			printf("Pending...\n");
-
+		// if (rc)
+		// 	qrild_qrtr_recv(&state);
+		// else
+		// 	printf("Pending...\n");
 		if (process_pending(&state) < 0)
 			break;
 
@@ -243,7 +272,10 @@ int main(int argc, char **argv) {
 		// 	state.buf_invalidate = true;
 	}
 
-	qrtr_close(state.sock);
+	state.exit = true;
+	pthread_join(msg_thread, NULL);
+
+	
 
 	return 0;
 }

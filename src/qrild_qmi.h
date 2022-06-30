@@ -16,4 +16,6 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state);
 
 const char* qmi_service_to_string(enum qmi_service service, bool short_name);
 
+int qrild_qmi_process_indications(struct rild_state *state);
+
 #endif

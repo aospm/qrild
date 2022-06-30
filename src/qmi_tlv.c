@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "qmi_tlv.h"
+
 // FIXME: use struct qmi_header when it's move to libqrtr.h
 // for now uses a slightly different format to allow accessing
 // the data

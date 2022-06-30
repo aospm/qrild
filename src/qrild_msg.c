@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/time.h>
-#include <linux/time.h>
 
 #include "libqrtr.h"
 #include "logging.h"
@@ -31,8 +30,89 @@ void print_service(struct qmi_service_info *pkt)
 }
 
 /**
- * @brief send a QMI message and optionally block until a reply
- * for that message is received.
+ * @brief: Send a qrild_msg and free it
+ * NOTE: Must be called with msg_mutex locked!
+ * 
+ * @state: RIL state object
+ * @msg: The message to send
+ */
+static int qrild_qrtr_send_msg(struct rild_state *state, struct qrild_msg *msg)
+{
+	struct qmi_service_info *service;
+	int rc;
+
+	pthread_mutex_lock(&state->services_mutex);
+	service = qmi_service_get(&state->services, msg->svc);
+	if (!service) {
+		LOGE("Failed to find service %d (%s)", msg->svc,
+		     qmi_service_to_string(msg->svc, false));
+		return -1;
+	}
+
+	printf("Sending to service '%s'\n", service->name);
+	print_hex_dump("QRTR TX", msg->buf, msg->buf_len);
+
+	rc = qrtr_sendto(state->sock, service->node, service->port, msg->buf, msg->buf_len);
+	if (rc < 0) {
+		free(msg);
+		return rc;
+	}
+
+	pthread_mutex_unlock(&state->services_mutex);
+
+	/* Free the buffer allocated by qrild_qrtr_send_to_service */
+	free(msg->buf);
+
+	return 0;
+}
+
+/**
+ * @brief: send all the unsent messages in the pending_tx queue
+ * 
+ * @state: RIL state object
+ */
+int qrild_qrtr_send_queued(struct rild_state *state)
+{
+	struct qrild_msg *msg;
+
+	pthread_mutex_lock(&state->msg_mutex);
+	list_for_each_entry(msg, &state->pending_tx, li) {
+		if (!msg->sent) {
+			qrild_qrtr_send_msg(state, msg);
+			msg->sent = true;
+		} else {
+			/* 
+			 * If we find an already sent message
+			 * then there won't be any unsent messages
+			 * after it.
+			 */
+			break;
+		}
+	}
+	pthread_mutex_unlock(&state->msg_mutex);
+
+	return 0;
+}
+
+static void timespec_add(struct timespec *ts, int ms)
+{
+	// 1000000000
+	time_t seconds = ms / 1000;
+	long int nsec = (ms % 1000) * 1000000;
+	long int ns_diff = ts->tv_nsec - nsec;
+
+	if (ns_diff < 0)
+		ts->tv_nsec = 0;
+	if (nsec != 0)
+		ts->tv_nsec += nsec + ns_diff;
+
+	ts->tv_sec += seconds;
+
+}
+
+/**
+ * @brief Build a QMI message and add is to the pending_tx list
+ * to be sent by the msg thread.
  * 
  * @state: RIL state object
  * @svc_id: ID of the QMI service to send the message to
@@ -46,11 +126,11 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 			       enum qmi_service svc_id, const void *data,
 			       size_t sz, bool sync, int timeout_ms)
 {
-	struct qrild_msg *msg;
-	struct qmi_service_info *service;
+	struct qrild_msg *msg, *msg2;
 	const struct qmi_header *qmi;
 	struct timespec timeout; // = {0, 1000000 * timeout_ms};
-	int rc;
+	int rc = 0;
+	bool found = false;
 
 	if (svc_id == QMI_SERVICE_CTL) {
 		LOGW("CTL service not supported by QRTR");
@@ -59,46 +139,52 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 
 	qmi = (const struct qmi_header *)data;
 
-	service = qmi_service_get(&state->services, svc_id);
-	if (!service) {
-		LOGE("Failed to find service %d (%s)", svc_id,
-		     qmi_service_to_string(svc_id, false));
-		return -1;
-	}
-
 	msg = qrild_msg_new(state->txn, qmi->msg_id, &state->msg_mutex);
+	msg->svc = svc_id;
+	/* Copy the message buffer so the sender can safely free data */
+	msg->buf = malloc(sz);
+	memcpy(msg->buf, data, sz);
+	msg->buf_len = sz;
 
 	// The transaction ID is encoded in the QMI packet, it must be incremented for
 	// every transmit so we can map a response to a request
 	state->txn++;
 
-	printf("Sending to service '%s'\n", service->name);
-	print_hex_dump("QRTR TX", data, sz);
-
-	rc = qrtr_sendto(state->sock, service->node, service->port, data, sz);
-	if (rc < 0) {
-		free(msg);
-		return rc;
-	}
-
-	list_append(&state->pending_tx, &msg->li);
+	/* Queue the message to be sent by the msg thread */
+	pthread_mutex_lock(&state->msg_mutex);
+	list_prepend(&state->pending_tx, &msg->li);
 	/* for async just return */
-	if (!sync)
-		return rc;
+	if (!sync) {
+		goto unlock_out;
+	}
 
 	/*
 	 * wait for a response with the right txn_id otherwise
 	 * timeout
 	 */
 	clock_gettime(CLOCK_REALTIME, &timeout);
-	timeout.tv_nsec += 1000000 * timeout_ms;
-	pthread_mutex_lock(&state->msg_mutex);
-	while (!qrild_msg_get_by_txn(&state->pending_rx, msg->txn))
-		rc = pthread_cond_timedwait(&state->rx_msg, &state->msg_mutex,
-					    &timeout);
-	pthread_mutex_unlock(&state->msg_mutex);
-	printf("Got response or timeout for message %u (%u) (rc: %d)\n", msg->msg_id, msg->txn, rc);
+	timespec_add(&timeout, timeout_ms);
+	// Check in case the msg thread somehow beat us to it and handled the response
+	// before we got here
+	msg2 = qrild_msg_get_by_txn(&state->pending_rx, msg->txn);
+	found = msg2 && msg2->msg_id == msg->msg_id;
+	while (rc != ETIMEDOUT && !found) {
+		//printf("Before timedwait (%d)\n", rc);
+		rc = pthread_cond_timedwait(&state->msg_change, &state->msg_mutex,
+					&timeout);
+		msg2 = qrild_msg_get_by_txn(&state->pending_rx, msg->txn);
+		found = msg2 && msg2->msg_id == msg->msg_id;
+	}
+	if (rc > 0 && !found) {
+		LOGE("Failed waiting for response: %d (%s)\n", rc, strerror(rc));
+		rc = QRILD_STATE_ERROR;
+		goto unlock_out;
+	}
+	printf("Got response for msg {id: 0x%x, txn: %u}: {id: 0x%x, txn: %u} (rc: %d)\n",
+		msg->msg_id, msg->txn, msg2->msg_id, msg2->txn, rc);
 
+unlock_out:
+	pthread_mutex_unlock(&state->msg_mutex);
 	return rc;
 }
 
@@ -115,10 +201,12 @@ void qrild_qrtr_recv(struct rild_state *state)
 
 	ret = recvfrom(state->sock, buf, 256, 0, (void *)&sq, &sl);
 	if (ret < 0) {
-		if (errno == ENETRESET)
-			LOGE("[QRTR] received ENETRESET, please retry\n");
-		else
-			LOGE("[QRTR] recvfrom failed\n");
+		if (errno == ENETRESET || errno == EAGAIN) {
+			LOGE("[QRTR] recvfrom got %d (%s)\n", ret, strerror(errno));
+			return;
+		} else {
+			LOGE("[QRTR] recvfrom failed: %d (%s)\n", errno, strerror(errno));
+		}
 		exit(1);
 	}
 
@@ -134,7 +222,6 @@ void qrild_qrtr_recv(struct rild_state *state)
 			break;
 
 		service = zalloc(sizeof(*service));
-		list_init(&service->li);
 
 		service->type = pkt.service;
 		service->node = pkt.node;
@@ -142,11 +229,13 @@ void qrild_qrtr_recv(struct rild_state *state)
 		service->major = pkt.instance & 0xff;
 		service->minor = pkt.instance >> 8;
 		service->name = qmi_service_to_string(service->type, false);
+		service->mut = &state->services_mutex;
 
-		printf("Found new service:\n");
 		print_service(service);
 
+		pthread_mutex_lock(&state->services_mutex);
 		list_append(&state->services, &service->li);
+		pthread_mutex_unlock(&state->services_mutex);
 		break;
 	case QRTR_TYPE_DEL_SERVER:
 		service = qmi_service_get(&state->services, pkt.service);
@@ -170,6 +259,7 @@ void qrild_qrtr_recv(struct rild_state *state)
 			fprintf(stderr, "[QRTR] Failed to get QMI header!\n");
 			return;
 		}
+		pthread_mutex_lock(&state->msg_mutex);
 		msg = qrild_msg_get_by_txn(&state->pending_tx, qmi->txn_id);
 		if (!msg) {
 			if (qmi->type == QMI_RESPONSE)
@@ -177,7 +267,7 @@ void qrild_qrtr_recv(struct rild_state *state)
 			msg = qrild_msg_new(qmi->txn_id, qmi->msg_id, &state->msg_mutex);
 		} else {
 			// Remove the message from the pending_tx list
-			list_remove(msg);
+			list_remove(&msg->li);
 		}
 
 		list_append(&state->pending_rx, &msg->li);
@@ -188,14 +278,21 @@ void qrild_qrtr_recv(struct rild_state *state)
 
 		msg->buf = pkt.data;
 		msg->buf_len = pkt.data_len;
+		msg->type = qmi->type;
 
-		printf("[QRTR] data packet from port %d, msg_id: 0x%2x, txn: %d\n",
-		       sq.sq_port, msg->msg_id, msg->txn);
+		printf("[QRTR] data packet from port %d, msg_id: 0x%2x, txn: %d, type: %u\n",
+		       sq.sq_port, msg->msg_id, msg->txn, msg->type);
 
 		print_hex_dump("QRTR RX", pkt.data, pkt.data_len);
 
 		// Notify other threads of the received message
-		pthread_cond_broadcast(&state->rx_msg);
+		pthread_cond_broadcast(&state->msg_change);
+		pthread_mutex_unlock(&state->msg_mutex);
+		break;
+	default:
+		printf("Unsupported pkt type %u\n", pkt.type);
+		print_hex_dump("QRTR RX", pkt.data, pkt.data_len);
+		break;
 	};
 }
 
@@ -219,13 +316,13 @@ bool qrild_qrtr_do_lookup(struct rild_state *state)
 	return true;
 }
 
-inline struct qmi_result *qrild_qmi_get_result(struct qmi_tlv *tlv)
+struct qmi_result *qrild_qmi_get_result(struct qmi_tlv *tlv)
 {
 	struct qmi_result *res = qmi_tlv_get(tlv, 2, NULL);
 	return res;
 }
 
-inline void qrild_qmi_result_print(struct qmi_result *res)
+void qrild_qmi_result_print(struct qmi_result *res)
 {
 	fprintf(stderr, "Result: %u, error: %u\n", res->result, res->error);
 }
@@ -238,31 +335,32 @@ inline void qrild_qmi_result_print(struct qmi_result *res)
  * @data: encoded QMI message
  * @sz: size of buffer
  * @timeout_ms: maximum time to wait in ms (defaults to 500ms if less than 0)
- * @resp: The response message or NULL on error
+ * @resp: Pointer to reponse to return, set to NULL to ignore response
  * 
  * @returns 0 on success, < 0 on error
  */
 int qrild_msg_send_sync(struct rild_state *state, enum qmi_service svc_id,
 			void *data, size_t sz, int timeout_ms,
-			struct qrild_msg *resp)
+			struct qrild_msg **resp)
 {
 	struct qrtr_packet pkt;
 	unsigned short txn_id;
 	int rc = qrild_qrtr_send_to_service(state, svc_id, data, sz, true,
 					    timeout_ms);
 	if (rc < 0)
-		return NULL;
+		return rc;
 
 	/* Find the response message */
 	pkt.data = data;
 	pkt.data_len = sz;
-	qmi_decode_header2(&pkt, NULL, NULL, txn_id);
+	qmi_decode_header2(&pkt, NULL, NULL, &txn_id);
 
-	resp = qrild_msg_get_by_txn(&state->pending_rx, txn_id);
+	if (resp)
+		*resp = qrild_msg_get_by_txn(&state->pending_rx, txn_id);
 	return 0;
 }
 
-inline int qrild_msg_send_async(struct rild_state *state,
+int qrild_msg_send_async(struct rild_state *state,
 				enum qmi_service svc_id, void *data, size_t sz)
 {
 	return qrild_qrtr_send_to_service(state, svc_id, data, sz, false, 0);
@@ -282,16 +380,16 @@ inline int qrild_msg_send_async(struct rild_state *state,
  *
  * @returns 0 on success or < 0 on failure
  */
-inline int qrild_msg_send_resp_check(struct rild_state *state,
+int qrild_msg_send_resp_check(struct rild_state *state,
 				     enum qmi_service svc_id, void *data,
 				     size_t sz, int timeout_ms, struct qmi_result *res)
 {
 	struct qmi_tlv *tlv;
-	struct qrild_msg *resp;
+	struct qrild_msg *resp = NULL;
 	struct qmi_result *_res;
 	int rc;
 
-	rc = qrild_msg_send_sync(state, svc_id, data, sz, timeout_ms, resp);
+	rc = qrild_msg_send_sync(state, svc_id, data, sz, timeout_ms, &resp);
 	if (rc < 0)
 		return rc;
 
@@ -319,7 +417,7 @@ inline int qrild_msg_send_resp_check(struct rild_state *state,
  * @resp: The response to fill if the request is synchronous, unused for async
  * @sync: Should we wait for the response message?
  */
-static inline int qrild_qmi_send_basic_request(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id, struct qrild_msg *resp, bool sync)
+static inline int qrild_qmi_send_basic_request(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id, struct qrild_msg **resp, bool sync)
 {
 	void *buf;
 	size_t buf_sz;
@@ -345,9 +443,9 @@ static inline int qrild_qmi_send_basic_request(struct rild_state *state, enum qm
  * @msg_id: The message ID of the request
  * @resp: The response to fill.
  */
-inline int qrild_qmi_send_basic_request_sync(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id, struct qrild_msg *resp)
+int qrild_qmi_send_basic_request_sync(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id, struct qrild_msg **resp)
 {
-	qrild_qmi_send_basic_request(state, svc_id, msg_id, resp, true);
+	return qrild_qmi_send_basic_request(state, svc_id, msg_id, resp, true);
 }
 
 /**
@@ -357,9 +455,9 @@ inline int qrild_qmi_send_basic_request_sync(struct rild_state *state, enum qmi_
  * @svc_id: The QMI service to send the request to
  * @msg_id: The message ID of the request
  */
-inline int qrild_qmi_send_basic_request_async(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id)
+int qrild_qmi_send_basic_request_async(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id)
 {
-	qrild_qmi_send_basic_request(state, svc_id, msg_id, NULL, false);
+	return qrild_qmi_send_basic_request(state, svc_id, msg_id, NULL, false);
 }
 
 /**
@@ -379,34 +477,42 @@ struct qrild_msg *qrild_msg_new(uint16_t txn, uint32_t msg_id,
 	msg->txn = txn;
 	msg->msg_id = msg_id;
 	msg->mut = shared_mutex;
-	list_init(&msg->li);
 
 	return msg;
 }
 
 /**
  * @brief remove a message from it's pending list and free it
+ * NOTE: requires that msg->mut be locked!
  * 
  * @state: RIL state object
  * @msg: the message to free
  */
-void qrild_msg_free(struct qrild_msg *msg)
+void qrild_msg_free_locked(struct qrild_msg *msg)
 {
-	pthread_mutex_t *mut = msg->mut;
 	if (!msg) {
 		fprintf(stderr, "%s called for NULL msg\n", __func__);
 		return;
 	}
-	pthread_mutex_lock(mut);
 	list_remove(&msg->li);
 	if (msg->buf)
 		free(msg->buf);
 	free(msg);
+}
+
+void qrild_msg_free(struct qrild_msg *msg)
+{
+	pthread_mutex_t *mut = msg->mut;
+	pthread_mutex_lock(mut);
+
+	qrild_msg_free_locked(msg);
+
 	pthread_mutex_unlock(mut);
 }
 
 /**
  * @brief Get the qmi_service_info for a particular service
+ * NOTE: Must be called with services_mutex locked!
  * 
  * @list: The list of services to search
  * @svc: The service ID
@@ -428,7 +534,7 @@ struct qmi_service_info *qmi_service_get(struct list_head *list,
 	return out;
 }
 
-inline int qmi_service_get_port(struct list_head *list, enum qmi_service svc)
+int qmi_service_get_port(struct list_head *list, enum qmi_service svc)
 {
 	struct qmi_service_info *service = qmi_service_get(list, svc);
 	return service ? service->port : -1;

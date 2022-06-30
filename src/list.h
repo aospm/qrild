@@ -1,6 +1,9 @@
 #ifndef _LIST_H_
 #define _LIST_H_
 
+#include <pthread.h>
+#include <memory.h>
+
 #ifndef offsetof
 #define offsetof(type, md) ((unsigned long)&((type *)0)->md)
 #endif
@@ -23,8 +26,6 @@ struct list_head {
 	};
 };
 
-#define list_entry(ptr, type, member) container_of(ptr, type, member)
-
 static inline void list_init(struct list_head *list)
 {
 	list->head = list->tail = list;
@@ -38,6 +39,18 @@ static inline void list_append(struct list_head *list, struct list_head *item)
 	item->prev = tail;
 
 	tail->next = list->prev = item;
+}
+
+static inline void list_prepend(struct list_head *list, struct list_head *item)
+{
+	struct list_head *head = list->head;
+
+	list->head = item;
+
+	item->next = head;
+	item->prev = list;
+
+	head->prev = list->next = item;
 }
 
 static inline void list_remove(struct list_head *item)
@@ -86,6 +99,8 @@ static inline struct list_head *list_next(struct list_head *item)
 #define list_for_each_safe_after(_node, _iter, _bkup)                          \
 	for (_iter = (_node)->next;                                            \
 	     (_iter) != 0 && ((_bkup = (_iter)->next) || 1); _iter = (_bkup))
+
+#define list_entry(ptr, type, member) container_of(ptr, type, member)
 
 #define list_entry_first(list, type, member)                                   \
 	container_of((list)->head, type, member)

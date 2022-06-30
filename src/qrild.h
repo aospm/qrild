@@ -216,6 +216,7 @@ struct qmi_service_info {
 	uint16_t port;
 	const char *name;
 	struct list_head li;
+	pthread_mutex_t *mut;
 };
 
 #define QRILD_STATE_PENDING 1
@@ -246,6 +247,15 @@ enum qrild_pending_action {
 struct qrild_msg {
 	uint16_t txn;
 	uint32_t msg_id;
+	enum qmi_service svc;
+	bool sent;
+	/*
+	 * QMI msg type:
+	 * 0: request
+	 * 2: response
+	 * 4: indication
+	 */
+	uint8_t type;
 
 	void *buf;
 	size_t buf_len;
@@ -254,6 +264,10 @@ struct qrild_msg {
 	pthread_mutex_t *mut;
 };
 
+#define THREADED_PROP(name)                                                    \
+	pthread_mutex_t name##_mutex;                                          \
+	pthread_cond_t name##_change
+
 struct rild_state {
 	// The QRTR socket
 	int sock;
@@ -261,28 +275,46 @@ struct rild_state {
 	unsigned int txn;
 	// state machine
 	enum qrild_pending_action state;
-	// struct {
-	// 	unsigned int state;
-	// 	bool req_sent;
-	// } pending;
 
 	struct list_head pending_rx;
 	struct list_head pending_tx;
-	pthread_mutex_t msg_mutex;
-	/* Set when a message is received */
-	pthread_cond_t rx_msg;
+	THREADED_PROP(msg);
+
+	/* Mobile data connection */
+	uint8_t connection_status;
+	THREADED_PROP(connection_status);
 
 	volatile bool exit;
 
-	bool started;
 	bool no_configure_inet;
 
 	// Available QMI services
 	struct list_head services;
-	pthread_mutex_t services;
+	pthread_mutex_t services_mutex;
 
 	struct uim_card_status *card_status;
 };
+
+/**
+ * @brief block until the condition is true, assumes the condition was set up
+ * like connection_status is above.
+ * 
+ * @obj: the object the condition is waiting on
+ * @cond: the condition to wait on
+ */
+#define THREAD_WAIT(obj, cond)                                                 \
+	({                                                                     \
+		int rc;                                                        \
+		struct timespec ts = { 0, 5000000 };                           \
+		pthread_mutex_lock(&(obj)->cond##_mutex);                      \
+		while (!(obj)->cond) {                                         \
+			rc = pthread_cond_timedwait(&(obj)->cond##_change,     \
+						    &(obj)->cond##_mutex,      \
+						    &ts);                      \
+		}                                                              \
+		pthread_mutex_unlock(&(obj)->cond##_mutex);                    \
+		rc;                                                            \
+	})
 
 /**
  * @brief Return if a service hasn't been discovered yet

@@ -58,7 +58,7 @@ void print_hex_dump(const char *prefix, const void *buf, size_t len)
 
 		line[li] = '\0';
 
-		printf("%s\n\n", line, linelen);
+		printf("%s\n\n", line);
 	}
 }
 
@@ -77,7 +77,7 @@ void ba_free(struct bytearray *ba) {
 }
 
 void ba_set_size(struct bytearray *ba, size_t newsize) {
-	size_t oldsize = ba->len;
+	//size_t oldsize = ba->len;
 	if (newsize > 4096) {
 		printf("can't resize larger than 4096\n");
 	}
