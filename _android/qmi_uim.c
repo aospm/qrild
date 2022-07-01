@@ -65,6 +65,7 @@ struct uim_qmi_result *uim_get_card_status_resp_get_result(struct uim_get_card_s
 int uim_get_card_status_resp_set_status(struct uim_get_card_status_resp *get_card_status_resp, struct uim_card_status *val)
 {
 	size_t len = 0;
+	int rc;
 	// FIXME: use realloc dynamically instead
 	void *ptr = malloc(1024);
 	memset(ptr, 0, 1014);
@@ -126,7 +127,9 @@ int uim_get_card_status_resp_set_status(struct uim_get_card_status_resp *get_car
 			len += 1;
 		}
 	}
-	return qmi_tlv_set((struct qmi_tlv*)get_card_status_resp, 16, ptr, len);
+	rc = qmi_tlv_set((struct qmi_tlv*)get_card_status_resp, 16, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 struct uim_card_status *uim_get_card_status_resp_get_status(struct uim_get_card_status_resp *get_card_status_resp)
@@ -230,6 +233,7 @@ struct uim_provisioning_session_change *uim_change_provisioning_session_req_get_
 int uim_change_provisioning_session_req_set_application_information(struct uim_change_provisioning_session_req *change_provisioning_session_req, struct uim_provisioning_session_application *val)
 {
 	size_t len = 0;
+	int rc;
 	// FIXME: use realloc dynamically instead
 	void *ptr = malloc(1024);
 	memset(ptr, 0, 1014);
@@ -241,7 +245,9 @@ int uim_change_provisioning_session_req_set_application_information(struct uim_c
 		*((uint8_t*)(ptr + len)) = val->application_identifier_value[i];
 		len += 1;
 	}
-	return qmi_tlv_set((struct qmi_tlv*)change_provisioning_session_req, 16, ptr, len);
+	rc = qmi_tlv_set((struct qmi_tlv*)change_provisioning_session_req, 16, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 struct uim_provisioning_session_application *uim_change_provisioning_session_req_get_application_information(struct uim_change_provisioning_session_req *change_provisioning_session_req)

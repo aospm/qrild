@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
 	len += _sz; \
@@ -135,4 +139,7 @@ void uim_change_provisioning_session_resp_free(struct uim_change_provisioning_se
 int uim_change_provisioning_session_resp_set_result(struct uim_change_provisioning_session_resp *change_provisioning_session_resp, struct uim_qmi_result *val);
 struct uim_qmi_result *uim_change_provisioning_session_resp_get_result(struct uim_change_provisioning_session_resp *change_provisioning_session_resp);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

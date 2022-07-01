@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
 	len += _sz; \
@@ -102,4 +106,7 @@ void dms_set_operating_mode_resp_free(struct dms_set_operating_mode_resp *set_op
 int dms_set_operating_mode_resp_set_res(struct dms_set_operating_mode_resp *set_operating_mode_resp, struct dms_qmi_result *val);
 struct dms_qmi_result *dms_set_operating_mode_resp_get_res(struct dms_set_operating_mode_resp *set_operating_mode_resp);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
