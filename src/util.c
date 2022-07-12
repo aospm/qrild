@@ -1,6 +1,8 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
+#include <errno.h>
 
 #include "logging.h"
 #include "libqrtr.h"
@@ -62,7 +64,8 @@ void print_hex_dump(const char *prefix, const void *buf, size_t len)
 	}
 }
 
-struct bytearray *ba_init(size_t size) {
+struct bytearray *ba_init(size_t size)
+{
 	struct bytearray *arr = zalloc(sizeof(struct bytearray));
 	arr->len = size;
 	arr->data = zalloc(4096);
@@ -71,12 +74,14 @@ struct bytearray *ba_init(size_t size) {
 	return arr;
 }
 
-void ba_free(struct bytearray *ba) {
+void ba_free(struct bytearray *ba)
+{
 	free(ba->data);
 	free(ba);
 }
 
-void ba_set_size(struct bytearray *ba, size_t newsize) {
+void ba_set_size(struct bytearray *ba, size_t newsize)
+{
 	//size_t oldsize = ba->len;
 	if (newsize > 4096) {
 		printf("can't resize larger than 4096\n");
@@ -88,4 +93,24 @@ void ba_set_size(struct bytearray *ba, size_t newsize) {
 	// printf("resized to %u\n", ba->len);
 
 	// memset(ba->data + oldsize, 0, newsize - oldsize);
+}
+
+int msleep(long ms)
+{
+	struct timespec ts;
+	int ret;
+
+	if (ms < 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	ts.tv_sec = ms / 1000;
+	ts.tv_nsec = (ms % 1000) * 1000000;
+
+	do {
+		ret = nanosleep(&ts, &ts);
+	} while (ret && errno == EINTR);
+
+	return ret;
 }

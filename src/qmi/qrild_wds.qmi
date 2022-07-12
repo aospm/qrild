@@ -27,8 +27,8 @@ request start_network_interface_req {
 	optional string apn_name = 0x14;
 	optional u32 apn_type = 0x38;
 	optional u8 ip_family_preference = 0x19;
-	optional ep_type_iface_id ep_type = 59;
-	optional u8 bring_up_by_apn_name = 60;
+	optional ep_type_iface_id ep_type = 0x3B;
+	optional u8 bring_up_by_apn_name = 0x3C;
 	optional u8 call_type = 0x35;
 	optional u8 profile_index = 0x31;
 } = 0x20;

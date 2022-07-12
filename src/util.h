@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+__BEGIN_DECLS
+
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
@@ -20,4 +22,7 @@ struct bytearray *ba_init(size_t size);
 void ba_set_size(struct bytearray *ba, size_t newsize);
 void ba_free(struct bytearray *ba);
 
+int msleep(long ms);
+
+__END_DECLS
 #endif

@@ -51,6 +51,11 @@ static int process_pending(struct rild_state *state) {
 	case QRILD_ACTION_POWERUP:
 		rc = qrild_qmi_powerup(state);
 		break;
+	case QRILD_ACTION_REGISTER_INDICATIONS:
+		rc = qrild_qmi_nas_register_indications(state);
+		// Will actually end up in state QRILD_ACTION_HALT
+		//state->state = QRILD_ACTION_GET_RUNTIME_SETTINGS;
+		break;
 	case QRILD_ACTION_SLOT_STATUS:
 		rc = qrild_qmi_uim_get_card_status(state);
 		break;
@@ -68,6 +73,9 @@ static int process_pending(struct rild_state *state) {
 		break;
 	case QRILD_ACTION_MUX_DATA_PORT:
 		rc = qrild_qmi_wds_bind_mux_data_port(state);
+		break;
+	case QRILD_ACTION_GET_SIGNAL_STRENGTH:
+		rc = qrild_qmi_nas_get_signal_strength(state);
 		break;
 	case QRILD_ACTION_START_NET_IFACES:
 		rc = qrild_qmi_wds_start_network_interface(state);
@@ -114,7 +122,7 @@ void *msg_loop(void *x) {
 	state->sock = qrtr_open(0);
 	if (state->sock < 0) {
 		LOGE("Failed to open QRTR socket: %d", state->sock);
-		return EXIT_FAILURE;
+		return NULL;
 	}
 
 	// Find all QRTR services

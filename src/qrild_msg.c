@@ -19,6 +19,8 @@
 #include "qmi_uim.h"
 #include "qmi_tlv.h"
 
+static uint16_t txn = 0;
+
 void print_service(struct qmi_service_info *pkt)
 {
 	if (!pkt)
@@ -92,6 +94,13 @@ int qrild_qrtr_send_queued(struct rild_state *state)
 	pthread_mutex_unlock(&state->msg_mutex);
 
 	return 0;
+}
+
+int qrild_next_transaction_id()
+{
+	if (txn > 6000)
+		txn = 0;
+	return txn++;
 }
 
 static void timespec_add(struct timespec *ts, int ms)
@@ -197,6 +206,7 @@ void qrild_qrtr_recv(struct rild_state *state)
 	int ret;
 	struct qmi_service_info *service;
 	const struct qmi_header *qmi;
+	struct qmi_tlv *tlv;
 	struct qrild_msg *msg;
 
 	ret = recvfrom(state->sock, buf, 256, 0, (void *)&sq, &sl);
@@ -284,6 +294,11 @@ void qrild_qrtr_recv(struct rild_state *state)
 		       sq.sq_port, msg->msg_id, msg->txn, msg->type);
 
 		print_hex_dump("QRTR RX", pkt.data, pkt.data_len);
+		tlv = qmi_tlv_decode(msg->buf, msg->buf_len, NULL, 2);
+		if (tlv) {
+			qmi_tlv_dump(tlv);
+			free(tlv);
+		}
 
 		// Notify other threads of the received message
 		pthread_cond_broadcast(&state->msg_change);

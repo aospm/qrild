@@ -7,6 +7,8 @@
 
 #define TIMEOUT_DEFAULT 5000
 
+__BEGIN_DECLS
+
 void print_service(struct qmi_service_info *pkt);
 
 int qrild_qrtr_send_queued(struct rild_state *state);
@@ -37,5 +39,7 @@ void qrild_msg_free_locked(struct qrild_msg *msg);
 
 struct qmi_service_info *qmi_service_get(struct list_head *list,
 					 enum qmi_service svc);
+
+__END_DECLS
 
 #endif

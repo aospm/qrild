@@ -1,0 +1,84 @@
+package nas;
+
+const QMI_RESULT_SUCCESS = 0;
+const QMI_RESULT_FAILURE = 1;
+
+const QMI_NAS_EVENT_REPORT = 0x02;
+const QMI_NAS_REGISTER_INDICATIONS = 0x03;
+
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_NONE       = 0;
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSSI       = 1;
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_ECIO       = 2;
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_IO         = 4;
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_SINR       = 8;
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_ERROR_RATE = 16;
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSRQ       = 32;
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR    = 64;
+const QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_RSRP   = 128;
+
+const QMI_NAS_GET_SIGNAL_STRENGTH = 0x20;
+
+struct qmi_result {
+	u16 result;
+	u16 error;
+};
+
+# The strength for the requested interface ??
+struct signal_strength {
+	u8 strength;
+	u8 interface;
+};
+
+# Strength list for all supported interfaces ??
+struct signal_strength_list {
+	u8 interfaces_n;
+	struct {
+		u8 strength;
+		u8 interface;
+	} *interfaces;
+};
+
+struct network_reject_info {
+	u8 enable_network_reject_indications;
+	u8 suppress_system_info_indications;
+};
+
+request register_indications_req {
+	required u8 system_selection_preference = 0x10;
+	required u8 ddtm_events = 0x12;
+	required u8 serving_system_events = 0x13;
+	required u8 dual_standby_preference = 0x14;
+	required u8 subscription_info = 0x15;
+	required u8 network_time = 0x17;
+	required u8 system_info = 0x18;
+	required u8 signal_info = 0x19;
+	required u8 error_rate = 0x1A;
+	required u8 hdr_new_uati_assigned = 0x1B;
+	required u8 hdr_session_closed = 0x1C;
+	required u8 managed_roaming = 0x1D;
+	required u8 current_plmn_name = 0x1E;
+	required u8 embms_status = 0x1F;
+	required u8 rf_band_information = 0x20;
+	required network_reject_info network_reject_information = 0x21;
+} = 0x03;
+
+request get_signal_strength_req {
+	required u16 mask = 0x10;
+} = 0x20;
+
+response get_signal_strength_resp {
+	required qmi_result res = 0x02;
+	required signal_strength strength = 0x01;
+	optional signal_strength_list strength_list = 0x10;
+	optional u16 lte_snr = 0x17;
+	optional u16 lte_rsrp = 0x18;
+} = 0x002D;
+
+request set_operating_mode_req {
+	required u8 mode = 0x01;
+} = 0x002E;
+
+request set_operating_mode_resp {
+	required qmi_result res = 0x02;
+} = 0x002E;
+

@@ -8,6 +8,8 @@
 #include "list.h"
 #include "qmi_uim.h"
 
+__BEGIN_DECLS
+
 #define NUMARGS(...) (sizeof((int[]){ __VA_ARGS__ }) / sizeof(int))
 
 struct enum_value {
@@ -224,13 +226,20 @@ struct qmi_service_info {
 #define QRILD_STATE_DONE    0
 
 enum qrild_pending_action {
+	/* Power up the modem */
 	QRILD_ACTION_POWERUP = 0,
+	/* Register for network status/event indications */
+	QRILD_ACTION_REGISTER_INDICATIONS,
+	/* Get the SIM card slot status */
 	QRILD_ACTION_SLOT_STATUS,
+	/* Provision the SIM card and application */
 	QRILD_ACTION_PROVISION,
 	QRILD_ACTION_OPEN_PORT,
 	QRILD_ACTION_SET_DATA_FORMAT,
 	QRILD_ACTION_BIND_SUBSCRIPTION,
 	QRILD_ACTION_MUX_DATA_PORT,
+	QRILD_ACTION_GET_SIGNAL_STRENGTH,
+	/* Start the network interfaces on the modem */
 	QRILD_ACTION_START_NET_IFACES,
 	QRILD_ACTION_GET_RUNTIME_SETTINGS,
 	//	QRILD_ACTION_NETLINK,
@@ -355,4 +364,5 @@ struct rild_state {
 #define rild_state_waiting(state)	 ({ (state)->pending.req_sent; })
 */
 
+__END_DECLS
 #endif

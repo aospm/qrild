@@ -3,7 +3,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 
+#include "util.h"
 #include "qmi_tlv.h"
 
 // FIXME: use struct qmi_header when it's move to libqrtr.h
@@ -237,4 +239,24 @@ int qmi_tlv_set_array(struct qmi_tlv *tlv, unsigned id, unsigned len_size,
 	memcpy(ptr, buf, array_size);
 
 	return 0;
+}
+
+void qmi_tlv_dump(struct qmi_tlv *tlv) {
+	struct qmi_tlv_item *item;
+	struct qmi_packet *pkt;
+	unsigned offset = 0;
+	void *pkt_data;
+	int i = 0;
+
+	pkt = tlv->buf;
+	pkt_data = pkt->data;
+
+	printf("<<< TLVs:\n");
+	while (offset < tlv->size - sizeof(struct qmi_packet)) {
+		item = pkt_data + offset;
+		printf("<<< TLV %d: key = 0x%2x, len = 0x%2x\n", i, item->key, item->len);
+		print_hex_dump("DATA", item->data, item->len);
+		offset += sizeof(struct qmi_tlv_item) + item->len;
+		i++;
+	}
 }

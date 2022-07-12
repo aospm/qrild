@@ -3,6 +3,7 @@ qmic = find_program('qmic')
 qmi_srcs = [
   'qrild_dms.qmi',
   'qrild_dpm.qmi',
+  'qrild_nas.qmi',
   'qrild_uim.qmi',
   'qrild_wda.qmi',
   'qrild_wds.qmi',

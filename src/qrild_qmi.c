@@ -23,6 +23,7 @@
 #include "qmi_uim.h"
 #include "qmi_dpm.h"
 #include "qmi_dms.h"
+#include "qmi_nas.h"
 #include "qmi_wda.h"
 #include "qmi_wds.h"
 
@@ -59,8 +60,6 @@ static int dms_get_operating_mode(struct rild_state *state)
 	int rc;
 	void *buf;
 	size_t len;
-
-	printf("sending dms_get_operating_mode_request\n");
 
 	req = dms_get_operating_mode_req_alloc(state->txn);
 	buf = dms_get_operating_mode_req_encode(req, &len);
@@ -152,6 +151,53 @@ int qrild_qmi_powerup(struct rild_state *state)
 	}
 
 	dms_set_operating_mode(state, QMI_DMS_OPERATING_MODE_ONLINE);
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_nas_register_indications(struct rild_state *state)
+{
+	struct nas_register_indications_req *req;
+	struct nas_network_reject_info reject_info;
+	struct qmi_result res;
+	int rc;
+	void *buf;
+	size_t buf_len;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS,
+			      QRILD_STATE_PENDING);
+
+	req = nas_register_indications_req_alloc(state->txn);
+
+	nas_register_indications_req_set_system_selection_preference(req, true);
+	nas_register_indications_req_set_ddtm_events(req, true);
+	nas_register_indications_req_set_serving_system_events(req, true);
+	nas_register_indications_req_set_dual_standby_preference(req, true);
+	nas_register_indications_req_set_subscription_info(req, true);
+	nas_register_indications_req_set_network_time(req, true);
+	nas_register_indications_req_set_system_info(req, true);
+	nas_register_indications_req_set_signal_info(req, true);
+	nas_register_indications_req_set_error_rate(req, true);
+	nas_register_indications_req_set_hdr_new_uati_assigned(req, true);
+	nas_register_indications_req_set_hdr_session_closed(req, true);
+	nas_register_indications_req_set_managed_roaming(req, true);
+	nas_register_indications_req_set_current_plmn_name(req, true);
+	nas_register_indications_req_set_embms_status(req, true);
+	nas_register_indications_req_set_rf_band_information(req, true);
+	reject_info.enable_network_reject_indications = true;
+	reject_info.suppress_system_info_indications = false;
+	nas_register_indications_req_set_network_reject_information(req, &reject_info);
+
+	buf = nas_register_indications_req_encode(req, &buf_len);
+
+	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_NAS, buf, buf_len,
+				       TIMEOUT_DEFAULT, &res);
+	nas_register_indications_req_free(req);
+	if (rc < 0) {
+		LOGE("Failed to register network indications\n");
+		qrild_qmi_result_print(&res);
+		return QRILD_STATE_ERROR;
+	}
 
 	return QRILD_STATE_DONE;
 }
@@ -464,13 +510,48 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state)
 	return QRILD_STATE_DONE;
 }
 
+int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
+{
+	struct nas_get_signal_strength_req *req;
+	struct nas_network_reject_info reject_info;
+	struct qmi_result res;
+	int rc;
+	void *buf;
+	size_t buf_len;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS,
+			      QRILD_STATE_PENDING);
+
+	req = nas_get_signal_strength_req_alloc(state->txn);
+
+	nas_get_signal_strength_req_set_mask(req, QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR);
+
+	buf = nas_get_signal_strength_req_encode(req, &buf_len);
+
+	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_NAS, buf, buf_len,
+				       TIMEOUT_DEFAULT, &res);
+	nas_get_signal_strength_req_free(req);
+	if (rc < 0) {
+		LOGE("Failed to get signal strength\n");
+		qrild_qmi_result_print(&res);
+		return QRILD_STATE_ERROR;
+	}
+
+	return QRILD_STATE_DONE;
+}
+
+/*
+ * This can fail if data signal is weak, should be retried.
+ * error 14: ERR_CALL_FAILED
+ */
 int qrild_qmi_wds_start_network_interface(struct rild_state *state)
 {
 	struct wds_start_network_interface_req *req;
+	struct qmi_header *qmi;
 	struct qmi_result res;
 	void *buf;
 	size_t buf_sz;
-	int rc;
+	int rc, i;
 	char *apn_name = "three.co.uk";
 
 	if (!state->card_status) {
@@ -487,9 +568,22 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state)
 	wds_start_network_interface_req_set_ip_family_preference(req, 4);
 
 	buf = wds_start_network_interface_req_encode(req, &buf_sz);
+	qmi = (struct qmi_header*)buf;
 
-	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_WDS, buf, buf_sz, TIMEOUT_DEFAULT,
-				       &res);
+	for(i = 0; i < 10; i++) {
+		rc = qrild_msg_send_resp_check(state, QMI_SERVICE_WDS, buf, buf_sz, TIMEOUT_DEFAULT,
+					&res);
+		if (rc < 0) {
+			if (res.error != 14)
+				break;
+			LOGD("Failed to start network interface, retry %d\n", i);
+			qrild_qmi_result_print(&res);
+			qmi->txn_id = state->txn;
+		} else {
+			break;
+		}
+		msleep(250);
+	}
 	wds_start_network_interface_req_free(req);
 	if (rc < 0) {
 		LOGE("Failed to start network interface:\n");
