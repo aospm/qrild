@@ -154,3 +154,11 @@ family dst_len src_len tos   table proto scope type  flags
 nlmsghdr
 28:00:00:00:14:00:01:06:00:00:00:00:00:00:00:00  :02:1e:00:00:05:00:00:00:08:00:02:00:0a:25:4a:7c:08:00:01:00:0a:25:4a:7c
 28:00:00:00:14:00:01:06:00:00:00:00:00:00:00:00  :02:21:00:00:06:00:00:00:08:00:02:00:0a:25:4a:7c:08:00:01:00:0a:25:4a:7c
+
+## NDC
+
+```
+ndc network create lte
+ndc network interface add rmnet_ipa0
+ndc network interface add rmnet_data0
+```
