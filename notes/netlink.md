@@ -148,7 +148,6 @@ family dst_len src_len tos   table proto scope type  flags
 02     :00     :00     :00   :fe   :03   :00   :01   :00:00:00:00
 :08:00:05:00:0a:25:4a:7d:08:00:04:00:06:00:00:00
 
-
 ### link set address
 
 nlmsghdr
@@ -157,8 +156,19 @@ nlmsghdr
 
 ## NDC
 
-```
-ndc network create lte
-ndc network interface add rmnet_ipa0
-ndc network interface add rmnet_data0
+```sh
+IP=100.83.68.97
+GW=100.83.68.98
+MASK=30
+
+ndc network create 100
+ndc network interface add 100 rmnet_ipa0
+ndc network interface add 100 rmnet_data0
+
+ip a add $GW/$MASK dev rmnet_ipa0
+ndc network route add 100 rmnet_data0 0.0.0.0/0 $IP
+ndc network route add 100 rmnet_ipa0 0.0.0.0/0 $GW
+ndc network route add 100 rmnet_data0 $IP/$MASK $GW #don't seem to work? not needed?
+ndc network route add 100 rmnet_data0 $IP $GW
+ndc network default set 100
 ```
