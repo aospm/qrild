@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #include <arpa/inet.h>
 
@@ -26,23 +27,6 @@
 #include "qmi_nas.h"
 #include "qmi_wda.h"
 #include "qmi_wds.h"
-
-static bool qrild_msg_is_pending(struct list_head *list, uint32_t msg_id)
-{
-	struct qrild_msg *msg;
-	if (!list->head)
-		return false;
-	list_for_each_entry(msg, (list), li)
-	{
-		if (!msg)
-			continue;
-		if (msg->msg_id == msg_id) {
-			printf("found pending msg msg_id: %u\n", msg_id);
-			return true;
-		}
-	}
-	return false;
-}
 
 /**
  * @brief Synchronously get the modem operating modem
@@ -119,13 +103,7 @@ static int dms_set_operating_mode(struct rild_state *state, uint8_t mode)
  */
 int qrild_qmi_powerup(struct rild_state *state)
 {
-	struct qrild_msg *msg = NULL;
-	struct qmi_result *res;
 	int mode;
-	void *buf;
-	size_t len;
-	uint32_t txn;
-	int rc;
 
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS,
 			      QRILD_STATE_PENDING);
@@ -169,24 +147,25 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 
 	req = nas_register_indications_req_alloc(state->txn);
 
-	nas_register_indications_req_set_system_selection_preference(req, true);
-	nas_register_indications_req_set_ddtm_events(req, true);
-	nas_register_indications_req_set_serving_system_events(req, true);
-	nas_register_indications_req_set_dual_standby_preference(req, true);
+	nas_register_indications_req_set_system_selection_preference(req, false);
+	nas_register_indications_req_set_ddtm_events(req, false);
+	nas_register_indications_req_set_serving_system_events(req, false);
+	nas_register_indications_req_set_dual_standby_preference(req, false);
 	nas_register_indications_req_set_subscription_info(req, true);
-	nas_register_indications_req_set_network_time(req, true);
-	nas_register_indications_req_set_system_info(req, true);
+	nas_register_indications_req_set_network_time(req, false);
+	nas_register_indications_req_set_system_info(req, false);
 	nas_register_indications_req_set_signal_info(req, true);
-	nas_register_indications_req_set_error_rate(req, true);
-	nas_register_indications_req_set_hdr_new_uati_assigned(req, true);
-	nas_register_indications_req_set_hdr_session_closed(req, true);
-	nas_register_indications_req_set_managed_roaming(req, true);
-	nas_register_indications_req_set_current_plmn_name(req, true);
-	nas_register_indications_req_set_embms_status(req, true);
-	nas_register_indications_req_set_rf_band_information(req, true);
+	nas_register_indications_req_set_error_rate(req, false);
+	nas_register_indications_req_set_hdr_new_uati_assigned(req, false);
+	nas_register_indications_req_set_hdr_session_closed(req, false);
+	nas_register_indications_req_set_managed_roaming(req, false);
+	nas_register_indications_req_set_current_plmn_name(req, false);
+	nas_register_indications_req_set_embms_status(req, false);
+	nas_register_indications_req_set_rf_band_information(req, false);
 	reject_info.enable_network_reject_indications = true;
-	reject_info.suppress_system_info_indications = false;
-	nas_register_indications_req_set_network_reject_information(req, &reject_info);
+	reject_info.suppress_system_info_indications = true;
+	nas_register_indications_req_set_network_reject_information(
+		req, &reject_info);
 
 	buf = nas_register_indications_req_encode(req, &buf_len);
 
@@ -279,7 +258,8 @@ int qrild_qmi_uim_get_card_status(struct rild_state *state)
 	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_UIM,
 					       QMI_UIM_GET_CARD_STATUS, &msg);
 	if (rc < 0 || !msg) {
-		fprintf(stderr, "%s: didn't get a response or timed out!\n", __func__);
+		fprintf(stderr, "%s: didn't get a response or timed out!\n",
+			__func__);
 		return QRILD_STATE_ERROR;
 	}
 
@@ -290,7 +270,6 @@ int qrild_qmi_uim_get_card_status(struct rild_state *state)
 		qrild_qmi_result_print(res);
 		return QRILD_STATE_ERROR;
 	}
-
 
 	state->card_status = uim_get_card_status_resp_get_status(resp);
 
@@ -336,7 +315,7 @@ int qrild_qmi_uim_set_provisioning(struct rild_state *state)
 	change.session_type = QMI_UIM_SESSION_TYPE_PRIMARY_GW_PROVISIONING;
 	change.activate = true;
 
-	application.slot = i;
+	application.slot = 0;
 	application.application_identifier_value_n =
 		appn->application_identifier_value_n;
 	application.application_identifier_value =
@@ -355,7 +334,7 @@ int qrild_qmi_uim_set_provisioning(struct rild_state *state)
 	uim_change_provisioning_session_req_free(req);
 
 	if (rc < 0) {
-		LOGE("Failed to set provisioning\n");
+		LOGE("Failed to set provisioning, is your SIM inserted?\n");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
@@ -513,9 +492,14 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state)
 int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
 {
 	struct nas_get_signal_strength_req *req;
-	struct nas_network_reject_info reject_info;
-	struct qmi_result res;
-	int rc;
+	struct nas_get_signal_strength_resp *resp;
+	struct nas_signal_strength *strength;
+	struct nas_signal_strength_list *strength_list;
+	struct signal_strength_list_interfaces *le;
+	int8_t lte_snr;
+	struct qmi_result *res;
+	struct qrild_msg *msg;
+	int rc, i;
 	void *buf;
 	size_t buf_len;
 
@@ -524,17 +508,42 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
 
 	req = nas_get_signal_strength_req_alloc(state->txn);
 
-	nas_get_signal_strength_req_set_mask(req, QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR);
+	nas_get_signal_strength_req_set_mask(
+		req, QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR);
 
 	buf = nas_get_signal_strength_req_encode(req, &buf_len);
 
-	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_NAS, buf, buf_len,
-				       TIMEOUT_DEFAULT, &res);
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_NAS, buf, buf_len,
+				 TIMEOUT_DEFAULT, &msg);
 	nas_get_signal_strength_req_free(req);
-	if (rc < 0) {
+
+	resp = nas_get_signal_strength_resp_parse(msg->buf, msg->buf_len, NULL);
+
+	res = qrild_qmi_get_result(resp);
+	if (res->result > 0) {
 		LOGE("Failed to get signal strength\n");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
+	}
+
+	strength = nas_get_signal_strength_resp_get_strength(resp);
+	if (strength)
+		printf("Signal strength:\n"
+		       "  interface: %d, strength: %d\n",
+		       strength->interface, strength->strength);
+
+	rc = nas_get_signal_strength_resp_get_lte_snr(resp, &lte_snr);
+	if (rc == 0)
+		printf("LTE SNR: %d\n", lte_snr);
+
+	strength_list = nas_get_signal_strength_resp_get_strength_list(resp);
+	if (strength_list) {
+		printf("Strength_list (%d): \n");
+		for (i = 0; i < strength_list->interfaces_n; i++) {
+			le = &strength_list->interfaces[i];
+			printf("  interface: %d, strength: %d\n", le->interface,
+			       le->strength);
+		}
 	}
 
 	return QRILD_STATE_DONE;
@@ -568,20 +577,22 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state)
 	wds_start_network_interface_req_set_ip_family_preference(req, 4);
 
 	buf = wds_start_network_interface_req_encode(req, &buf_sz);
-	qmi = (struct qmi_header*)buf;
+	qmi = (struct qmi_header *)buf;
 
-	for(i = 0; i < 10; i++) {
-		rc = qrild_msg_send_resp_check(state, QMI_SERVICE_WDS, buf, buf_sz, TIMEOUT_DEFAULT,
-					&res);
+	for (i = 0; i < 10; i++) {
+		// When connection is weak this can take a while, hence the longer timeout
+		rc = qrild_msg_send_resp_check(state, QMI_SERVICE_WDS, buf,
+					       buf_sz, 60000, &res);
 		if (rc < 0) {
 			if (res.error != 14)
 				break;
-			LOGD("Failed to start network interface, retry %d\n", i);
+			LOGD("Failed to start network interface, retry %d\n",
+			     i);
 			qrild_qmi_result_print(&res);
 			qmi->txn_id = state->txn;
-		} else {
+		} else
 			break;
-		}
+
 		msleep(250);
 	}
 	wds_start_network_interface_req_free(req);
@@ -623,13 +634,15 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state)
 
 	buf = wds_get_current_settings_req_encode(req, &buf_sz);
 
-	rc = qrild_msg_send_sync(state, QMI_SERVICE_WDS, buf, buf_sz, TIMEOUT_DEFAULT, &msg);
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_WDS, buf, buf_sz,
+				 TIMEOUT_DEFAULT, &msg);
 	wds_get_current_settings_req_free(req);
 	if (rc < 0 || !msg) {
 		LOGE("Failed to send wds_get_current_settings request!\n");
-		list_for_each_entry(msg, &state->pending_rx, li) {
-			printf("msg {id: %x, txn: %d, type: %u}\n", msg->msg_id, msg->txn,
-				msg->type);
+		list_for_each_entry(msg, &state->pending_rx, li)
+		{
+			printf("msg {id: %x, txn: %d, type: %u}\n", msg->msg_id,
+			       msg->txn, msg->type);
 		}
 		return QRILD_STATE_ERROR;
 	}
@@ -723,6 +736,20 @@ static int qrild_qmi_handle_wds_pkt_srvc(struct rild_state *state,
 }
 
 /**
+ * @brief: Do idle actions like polling for signal strength
+ *
+ * @state: the RIL state object
+ */
+int qrild_qmi_idle(struct rild_state *state)
+{
+	qrild_qmi_nas_get_signal_strength(state);
+
+	usleep(6000 * 1000);
+
+	return QRILD_STATE_PENDING;
+}
+
+/**
  * @brief: Process any pending indication messages from the modem.
  * 
  * @state: the RIL state object
@@ -742,8 +769,12 @@ int qrild_qmi_process_indications(struct rild_state *state)
 		case QMI_WDS_PKT_SRVC_STATUS:
 			qrild_qmi_handle_wds_pkt_srvc(state, msg);
 			break;
+		case QMI_NAS_SUBSCRIPTION_INFO_REPORT:
+		case QMI_NAS_ERROR_RATE_REPORT:
+		case QMI_NAS_RF_BAND_INFO_REPORT:
+			printf("Undocumented QMI NAS indication\n");
 		default:
-			LOGW("Dropping unknown message {id: %u, txn: %u}\n",
+			LOGW("Dropping unknown message {id: %x, txn: %u}",
 			     msg->msg_id, msg->txn);
 			print_hex_dump("Unknown msg", msg->buf, msg->buf_len);
 			break;

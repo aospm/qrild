@@ -243,7 +243,7 @@ enum qrild_pending_action {
 	QRILD_ACTION_START_NET_IFACES,
 	QRILD_ACTION_GET_RUNTIME_SETTINGS,
 	//	QRILD_ACTION_NETLINK,
-	QRILD_ACTION_HALT,
+	QRILD_ACTION_IDLE,
 	QRILD_ACTION_EXIT,
 };
 
@@ -349,20 +349,6 @@ struct rild_state {
 		}                                                              \
 		out;                                                           \
 	})
-
-/*
-#define rild_state_next(state)                                                 \
-	({                                                                     \
-		(state)->pending.state++;                                      \
-		(state)->pending.req_sent = false;                             \
-	})
-
-#define rild_state_req_sent(state)	 ({ (state)->pending.req_sent = true; })
-
-#define rild_state_pending_action(state) ({ (state)->pending.state; })
-
-#define rild_state_waiting(state)	 ({ (state)->pending.req_sent; })
-*/
 
 __END_DECLS
 #endif

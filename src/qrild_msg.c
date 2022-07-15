@@ -176,13 +176,13 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 	// Check in case the msg thread somehow beat us to it and handled the response
 	// before we got here
 	msg2 = qrild_msg_get_by_txn(&state->pending_rx, msg->txn);
-	found = msg2 && msg2->msg_id == msg->msg_id;
+	found = msg2 && msg2->txn == msg->txn;
 	while (rc != ETIMEDOUT && !found) {
 		//printf("Before timedwait (%d)\n", rc);
 		rc = pthread_cond_timedwait(&state->msg_change, &state->msg_mutex,
 					&timeout);
 		msg2 = qrild_msg_get_by_txn(&state->pending_rx, msg->txn);
-		found = msg2 && msg2->msg_id == msg->msg_id;
+		found = msg2 && msg2->txn == msg->txn;
 	}
 	if (rc > 0 && !found) {
 		LOGE("Failed waiting for response: %d (%s)\n", rc, strerror(rc));
@@ -294,6 +294,8 @@ void qrild_qrtr_recv(struct rild_state *state)
 		       sq.sq_port, msg->msg_id, msg->txn, msg->type);
 
 		print_hex_dump("QRTR RX", pkt.data, pkt.data_len);
+		// Only dump responses to avoid some noise
+		//                                                 qmi->type
 		tlv = qmi_tlv_decode(msg->buf, msg->buf_len, NULL, 2);
 		if (tlv) {
 			qmi_tlv_dump(tlv);
@@ -372,6 +374,7 @@ int qrild_msg_send_sync(struct rild_state *state, enum qmi_service svc_id,
 
 	if (resp)
 		*resp = qrild_msg_get_by_txn(&state->pending_rx, txn_id);
+
 	return 0;
 }
 
@@ -509,6 +512,7 @@ void qrild_msg_free_locked(struct qrild_msg *msg)
 		fprintf(stderr, "%s called for NULL msg\n", __func__);
 		return;
 	}
+	LOGD("Freeing msg {id: %x, txn: %d}", msg->msg_id, msg->txn);
 	list_remove(&msg->li);
 	if (msg->buf)
 		free(msg->buf);

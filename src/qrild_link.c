@@ -35,7 +35,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/netlink.h>
 #include <linux/if_addr.h>
-#define __USE_MISC
+//#define __USE_MISC
 #include <net/if.h>
 #include <net/if_arp.h>
 
@@ -155,11 +155,11 @@ static int qrild_link_open() {
 static int qrild_link_send(nlmessage *msg) {
 	struct sockaddr_nl dest_addr;
 	struct msghdr skmsg;
-	struct nlmsghdr *hdr;
+	//struct nlmsghdr *hdr;
 	struct iovec iov, resp;
 	
 	uint8_t *buf;
-	size_t recv_len;
+	//size_t recv_len;
 
 	memset(&dest_addr, 0, sizeof(dest_addr));
 	dest_addr.nl_family = AF_NETLINK;
@@ -212,7 +212,6 @@ int qrild_link_add_link(char* ifname, uint32_t base_ifindex, uint16_t mux_id) {
 	struct rtattr *link, *data;
 	struct ifinfomsg *ifi;
 	struct ifla_rmnet_flags  flags;
-	uint32_t link_off, mux_off;
 
 	//printf("Before create msg\n");
 	msg = nl_message_new(RTM_NEWLINK, NLM_F_CREATE | NLM_F_EXCL, sizeof(struct ifinfomsg));
