@@ -6,10 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
 	len += _sz; \
@@ -85,7 +81,4 @@ void wda_set_data_format_resp_free(struct wda_set_data_format_resp *set_data_for
 int wda_set_data_format_resp_set_r(struct wda_set_data_format_resp *set_data_format_resp, struct wda_qmi_result *val);
 struct wda_qmi_result *wda_set_data_format_resp_get_r(struct wda_set_data_format_resp *set_data_format_resp);
 
-#ifdef __cplusplus
-}
-#endif
 #endif

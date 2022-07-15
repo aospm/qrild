@@ -68,7 +68,7 @@ int uim_get_card_status_resp_set_status(struct uim_get_card_status_resp *get_car
 	int rc;
 	// FIXME: use realloc dynamically instead
 	void *ptr = malloc(1024);
-	memset(ptr, 0, 1014);
+	memset(ptr, 0, 1024);
 	*((uint16_t*)(ptr + len)) = val->index_gw_primary;
 	len += 2;
 	*((uint16_t*)(ptr + len)) = val->index_1x_primary;
@@ -236,7 +236,7 @@ int uim_change_provisioning_session_req_set_application_information(struct uim_c
 	int rc;
 	// FIXME: use realloc dynamically instead
 	void *ptr = malloc(1024);
-	memset(ptr, 0, 1014);
+	memset(ptr, 0, 1024);
 	*((uint8_t*)(ptr + len)) = val->slot;
 	len += 1;
 	*((uint8_t*)(ptr + len)) = val->application_identifier_value_n;

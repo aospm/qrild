@@ -6,10 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
 	len += _sz; \
@@ -36,6 +32,9 @@ int qmi_tlv_set_array(struct qmi_tlv *tlv, unsigned id, unsigned len_size, void 
 #define QMI_RESULT_FAILURE 1
 #define QMI_NAS_EVENT_REPORT 2
 #define QMI_NAS_REGISTER_INDICATIONS 3
+#define QMI_NAS_SUBSCRIPTION_INFO_REPORT 72
+#define QMI_NAS_ERROR_RATE_REPORT 83
+#define QMI_NAS_RF_BAND_INFO_REPORT 102
 #define QMI_NAS_SIGNAL_STRENGTH_REQUEST_NONE 0
 #define QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSSI 1
 #define QMI_NAS_SIGNAL_STRENGTH_REQUEST_ECIO 2
@@ -53,15 +52,15 @@ struct nas_qmi_result {
 };
 
 struct nas_signal_strength {
-	uint8_t strength;
-	uint8_t interface;
+	int8_t strength;
+	int8_t interface;
 };
 
 struct nas_signal_strength_list {
 	uint8_t interfaces_n;
 	struct signal_strength_list_interfaces {
-		uint8_t strength;
-		uint8_t interface;
+		int8_t strength;
+		int8_t interface;
 	} *interfaces;
 };
 
@@ -154,17 +153,17 @@ void nas_get_signal_strength_resp_free(struct nas_get_signal_strength_resp *get_
 int nas_get_signal_strength_resp_set_res(struct nas_get_signal_strength_resp *get_signal_strength_resp, struct nas_qmi_result *val);
 struct nas_qmi_result *nas_get_signal_strength_resp_get_res(struct nas_get_signal_strength_resp *get_signal_strength_resp);
 
+int nas_get_signal_strength_resp_set_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t val);
+int nas_get_signal_strength_resp_get_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t *val);
+
+int nas_get_signal_strength_resp_set_lte_rsrp(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t val);
+int nas_get_signal_strength_resp_get_lte_rsrp(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t *val);
+
 int nas_get_signal_strength_resp_set_strength(struct nas_get_signal_strength_resp *get_signal_strength_resp, struct nas_signal_strength *val);
 struct nas_signal_strength *nas_get_signal_strength_resp_get_strength(struct nas_get_signal_strength_resp *get_signal_strength_resp);
 
 int nas_get_signal_strength_resp_set_strength_list(struct nas_get_signal_strength_resp *get_signal_strength_resp, struct nas_signal_strength_list *val);
 struct nas_signal_strength_list *nas_get_signal_strength_resp_get_strength_list(struct nas_get_signal_strength_resp *get_signal_strength_resp);
-
-int nas_get_signal_strength_resp_set_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint16_t val);
-int nas_get_signal_strength_resp_get_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint16_t *val);
-
-int nas_get_signal_strength_resp_set_lte_rsrp(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint16_t val);
-int nas_get_signal_strength_resp_get_lte_rsrp(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint16_t *val);
 
 /*
  * nas_set_operating_mode_req message
@@ -188,7 +187,4 @@ void nas_set_operating_mode_resp_free(struct nas_set_operating_mode_resp *set_op
 int nas_set_operating_mode_resp_set_res(struct nas_set_operating_mode_resp *set_operating_mode_resp, struct nas_qmi_result *val);
 struct nas_qmi_result *nas_set_operating_mode_resp_get_res(struct nas_set_operating_mode_resp *set_operating_mode_resp);
 
-#ifdef __cplusplus
-}
-#endif
 #endif

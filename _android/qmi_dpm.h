@@ -6,10 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
 	len += _sz; \
@@ -72,7 +68,4 @@ void dpm_open_port_resp_free(struct dpm_open_port_resp *open_port_resp);
 int dpm_open_port_resp_set_r(struct dpm_open_port_resp *open_port_resp, struct dpm_qmi_result *val);
 struct dpm_qmi_result *dpm_open_port_resp_get_r(struct dpm_open_port_resp *open_port_resp);
 
-#ifdef __cplusplus
-}
-#endif
 #endif

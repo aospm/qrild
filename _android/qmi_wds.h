@@ -6,10 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
 	len += _sz; \
@@ -222,7 +218,4 @@ void wds_bind_subscription_resp_free(struct wds_bind_subscription_resp *bind_sub
 int wds_bind_subscription_resp_set_r(struct wds_bind_subscription_resp *bind_subscription_resp, struct wds_qmi_result *val);
 struct wds_qmi_result *wds_bind_subscription_resp_get_r(struct wds_bind_subscription_resp *bind_subscription_resp);
 
-#ifdef __cplusplus
-}
-#endif
 #endif

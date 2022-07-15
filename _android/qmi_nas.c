@@ -438,6 +438,48 @@ struct nas_qmi_result *nas_get_signal_strength_resp_get_res(struct nas_get_signa
 	return ptr;
 }
 
+int nas_get_signal_strength_resp_set_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)get_signal_strength_resp, 23, &val, sizeof(int16_t));
+}
+
+int nas_get_signal_strength_resp_get_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t *val)
+{
+	int16_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 23, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(int16_t))
+		return -EINVAL;
+
+	*val = *(int16_t*)ptr;
+	return 0;
+}
+
+int nas_get_signal_strength_resp_set_lte_rsrp(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)get_signal_strength_resp, 24, &val, sizeof(int16_t));
+}
+
+int nas_get_signal_strength_resp_get_lte_rsrp(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t *val)
+{
+	int16_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 24, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(int16_t))
+		return -EINVAL;
+
+	*val = *(int16_t*)ptr;
+	return 0;
+}
+
 int nas_get_signal_strength_resp_set_strength(struct nas_get_signal_strength_resp *get_signal_strength_resp, struct nas_signal_strength *val)
 {
 	return qmi_tlv_set((struct qmi_tlv*)get_signal_strength_resp, 1, val, sizeof(struct nas_signal_strength));
@@ -464,13 +506,13 @@ int nas_get_signal_strength_resp_set_strength_list(struct nas_get_signal_strengt
 	int rc;
 	// FIXME: use realloc dynamically instead
 	void *ptr = malloc(1024);
-	memset(ptr, 0, 1014);
+	memset(ptr, 0, 1024);
 	*((uint8_t*)(ptr + len)) = val->interfaces_n;
 	len += 1;
 	for(size_t i = 0; i < val->interfaces_n; i++) {
-		*((uint8_t*)(ptr + len)) = val->interfaces[i].strength;
+		*((int8_t*)(ptr + len)) = val->interfaces[i].strength;
 		len += 1;
-		*((uint8_t*)(ptr + len)) = val->interfaces[i].interface;
+		*((int8_t*)(ptr + len)) = val->interfaces[i].interface;
 		len += 1;
 	}
 	rc = qmi_tlv_set((struct qmi_tlv*)get_signal_strength_resp, 16, ptr, len);
@@ -493,8 +535,8 @@ struct nas_signal_strength_list *nas_get_signal_strength_resp_get_strength_list(
 	size_t interfaces_sz = sizeof(struct signal_strength_list_interfaces);
 	out->interfaces = malloc(interfaces_sz * out->interfaces_n);
 	for(size_t i = 0; i < out->interfaces_n; i++) {
-		out->interfaces[i].strength = get_next(uint8_t, 1);
-		out->interfaces[i].interface = get_next(uint8_t, 1);
+		out->interfaces[i].strength = get_next(int8_t, 1);
+		out->interfaces[i].interface = get_next(int8_t, 1);
 	}
 
 	return out;
@@ -503,48 +545,6 @@ err_wrong_len:
 	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
 	free(out);
 	return NULL;
-}
-
-int nas_get_signal_strength_resp_set_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint16_t val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)get_signal_strength_resp, 23, &val, sizeof(uint16_t));
-}
-
-int nas_get_signal_strength_resp_get_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint16_t *val)
-{
-	uint16_t *ptr;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 23, &len);
-	if (!ptr)
-		return -ENOENT;
-
-	if (len != sizeof(uint16_t))
-		return -EINVAL;
-
-	*val = *(uint16_t*)ptr;
-	return 0;
-}
-
-int nas_get_signal_strength_resp_set_lte_rsrp(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint16_t val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)get_signal_strength_resp, 24, &val, sizeof(uint16_t));
-}
-
-int nas_get_signal_strength_resp_get_lte_rsrp(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint16_t *val)
-{
-	uint16_t *ptr;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 24, &len);
-	if (!ptr)
-		return -ENOENT;
-
-	if (len != sizeof(uint16_t))
-		return -EINVAL;
-
-	*val = *(uint16_t*)ptr;
-	return 0;
 }
 
 struct nas_set_operating_mode_req *nas_set_operating_mode_req_alloc(unsigned txn)
