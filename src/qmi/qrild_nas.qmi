@@ -5,6 +5,11 @@ const QMI_RESULT_FAILURE = 1;
 
 const QMI_NAS_EVENT_REPORT = 0x02;
 const QMI_NAS_REGISTER_INDICATIONS = 0x03;
+# https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/gobi-api/GobiAPI_2013-07-31-1347/Core/QMIEnum.h#L474
+const QMI_NAS_SUBSCRIPTION_INFO_REPORT = 0x48;
+const QMI_NAS_ERROR_RATE_REPORT = 0x53;
+const QMI_NAS_RF_BAND_INFO_REPORT = 0x66;
+
 
 const QMI_NAS_SIGNAL_STRENGTH_REQUEST_NONE       = 0;
 const QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSSI       = 1;
@@ -25,16 +30,16 @@ struct qmi_result {
 
 # The strength for the requested interface ??
 struct signal_strength {
-	u8 strength;
-	u8 interface;
+	i8 strength;
+	i8 interface;
 };
 
 # Strength list for all supported interfaces ??
 struct signal_strength_list {
 	u8 interfaces_n;
 	struct {
-		u8 strength;
-		u8 interface;
+		i8 strength;
+		i8 interface;
 	} *interfaces;
 };
 
@@ -68,10 +73,10 @@ request get_signal_strength_req {
 
 response get_signal_strength_resp {
 	required qmi_result res = 0x02;
+	required i16 lte_snr = 0x17;
+	required i16 lte_rsrp = 0x18;
 	required signal_strength strength = 0x01;
-	optional signal_strength_list strength_list = 0x10;
-	optional u16 lte_snr = 0x17;
-	optional u16 lte_rsrp = 0x18;
+	required signal_strength_list strength_list = 0x10;
 } = 0x002D;
 
 request set_operating_mode_req {
