@@ -247,6 +247,12 @@ enum qrild_pending_action {
 	QRILD_ACTION_EXIT,
 };
 
+struct rild_state;
+struct qrild_msg;
+
+typedef int (*async_msg_handler_t)(struct rild_state *state,
+		       struct qrild_msg *msg);
+
 /*
  * the qrild_msg struct is used to track
  * a QMI message from when the request is sent
@@ -271,6 +277,11 @@ struct qrild_msg {
 
 	struct list_head li;
 	pthread_mutex_t *mut;
+
+	/*
+	 * For async messages this is the function handler
+	 */
+	async_msg_handler_t handler;
 };
 
 #define THREADED_PROP(name)                                                    \
@@ -280,8 +291,6 @@ struct qrild_msg {
 struct rild_state {
 	// The QRTR socket
 	int sock;
-	// Transaction counter
-	unsigned int txn;
 	// state machine
 	enum qrild_pending_action state;
 
@@ -292,6 +301,8 @@ struct rild_state {
 	/* Mobile data connection */
 	uint8_t connection_status;
 	THREADED_PROP(connection_status);
+
+	uint32_t wds_pkt_data_handle;
 
 	volatile bool exit;
 

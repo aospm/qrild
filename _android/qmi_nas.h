@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <libqrtr.h>
+
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
 	len += _sz; \
@@ -13,23 +15,6 @@
 	*(_type*)buf; \
 })
 
-struct qmi_tlv;
-
-struct qmi_tlv *qmi_tlv_init(unsigned txn, unsigned msg_id, unsigned type);
-struct qmi_tlv *qmi_tlv_init_ctl(unsigned txn, unsigned msg_id, unsigned type);
-struct qmi_tlv *qmi_tlv_decode(void *buf, size_t len, unsigned *txn, unsigned type);
-struct qmi_tlv *qmi_tlv_decode_ctl(void *buf, size_t len, unsigned *txn, unsigned type);
-void *qmi_tlv_encode(struct qmi_tlv *tlv, size_t *len);
-void *qmi_tlv_encode_ctl(struct qmi_tlv *tlv, size_t *len);
-void qmi_tlv_free(struct qmi_tlv *tlv);
-
-void *qmi_tlv_get(struct qmi_tlv *tlv, unsigned id, size_t *len);
-void *qmi_tlv_get_array(struct qmi_tlv *tlv, unsigned id, unsigned len_size, size_t *len, size_t *size);
-int qmi_tlv_set(struct qmi_tlv *tlv, unsigned id, void *buf, size_t len);
-int qmi_tlv_set_array(struct qmi_tlv *tlv, unsigned id, unsigned len_size, void *buf, size_t len, size_t size);
-
-#define QMI_RESULT_SUCCESS 0
-#define QMI_RESULT_FAILURE 1
 #define QMI_NAS_EVENT_REPORT 2
 #define QMI_NAS_REGISTER_INDICATIONS 3
 #define QMI_NAS_SUBSCRIPTION_INFO_REPORT 72
@@ -45,11 +30,6 @@ int qmi_tlv_set_array(struct qmi_tlv *tlv, unsigned id, unsigned len_size, void 
 #define QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR 64
 #define QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_RSRP 128
 #define QMI_NAS_GET_SIGNAL_STRENGTH 32
-
-struct nas_qmi_result {
-	uint16_t result;
-	uint16_t error;
-};
 
 struct nas_signal_strength {
 	int8_t strength;
@@ -79,7 +59,7 @@ struct nas_set_operating_mode_resp;
  * nas_register_indications_req message
  */
 struct nas_register_indications_req *nas_register_indications_req_alloc(unsigned txn);
-struct nas_register_indications_req *nas_register_indications_req_parse(void *buf, size_t len, unsigned *txn);
+struct nas_register_indications_req *nas_register_indications_req_parse(void *buf, size_t len);
 void *nas_register_indications_req_encode(struct nas_register_indications_req *register_indications_req, size_t *len);
 void nas_register_indications_req_free(struct nas_register_indications_req *register_indications_req);
 
@@ -135,7 +115,7 @@ struct nas_network_reject_info *nas_register_indications_req_get_network_reject_
  * nas_get_signal_strength_req message
  */
 struct nas_get_signal_strength_req *nas_get_signal_strength_req_alloc(unsigned txn);
-struct nas_get_signal_strength_req *nas_get_signal_strength_req_parse(void *buf, size_t len, unsigned *txn);
+struct nas_get_signal_strength_req *nas_get_signal_strength_req_parse(void *buf, size_t len);
 void *nas_get_signal_strength_req_encode(struct nas_get_signal_strength_req *get_signal_strength_req, size_t *len);
 void nas_get_signal_strength_req_free(struct nas_get_signal_strength_req *get_signal_strength_req);
 
@@ -146,12 +126,9 @@ int nas_get_signal_strength_req_get_mask(struct nas_get_signal_strength_req *get
  * nas_get_signal_strength_resp message
  */
 struct nas_get_signal_strength_resp *nas_get_signal_strength_resp_alloc(unsigned txn);
-struct nas_get_signal_strength_resp *nas_get_signal_strength_resp_parse(void *buf, size_t len, unsigned *txn);
+struct nas_get_signal_strength_resp *nas_get_signal_strength_resp_parse(void *buf, size_t len);
 void *nas_get_signal_strength_resp_encode(struct nas_get_signal_strength_resp *get_signal_strength_resp, size_t *len);
 void nas_get_signal_strength_resp_free(struct nas_get_signal_strength_resp *get_signal_strength_resp);
-
-int nas_get_signal_strength_resp_set_res(struct nas_get_signal_strength_resp *get_signal_strength_resp, struct nas_qmi_result *val);
-struct nas_qmi_result *nas_get_signal_strength_resp_get_res(struct nas_get_signal_strength_resp *get_signal_strength_resp);
 
 int nas_get_signal_strength_resp_set_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t val);
 int nas_get_signal_strength_resp_get_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t *val);
@@ -169,7 +146,7 @@ struct nas_signal_strength_list *nas_get_signal_strength_resp_get_strength_list(
  * nas_set_operating_mode_req message
  */
 struct nas_set_operating_mode_req *nas_set_operating_mode_req_alloc(unsigned txn);
-struct nas_set_operating_mode_req *nas_set_operating_mode_req_parse(void *buf, size_t len, unsigned *txn);
+struct nas_set_operating_mode_req *nas_set_operating_mode_req_parse(void *buf, size_t len);
 void *nas_set_operating_mode_req_encode(struct nas_set_operating_mode_req *set_operating_mode_req, size_t *len);
 void nas_set_operating_mode_req_free(struct nas_set_operating_mode_req *set_operating_mode_req);
 
@@ -180,11 +157,8 @@ int nas_set_operating_mode_req_get_mode(struct nas_set_operating_mode_req *set_o
  * nas_set_operating_mode_resp message
  */
 struct nas_set_operating_mode_resp *nas_set_operating_mode_resp_alloc(unsigned txn);
-struct nas_set_operating_mode_resp *nas_set_operating_mode_resp_parse(void *buf, size_t len, unsigned *txn);
+struct nas_set_operating_mode_resp *nas_set_operating_mode_resp_parse(void *buf, size_t len);
 void *nas_set_operating_mode_resp_encode(struct nas_set_operating_mode_resp *set_operating_mode_resp, size_t *len);
 void nas_set_operating_mode_resp_free(struct nas_set_operating_mode_resp *set_operating_mode_resp);
-
-int nas_set_operating_mode_resp_set_res(struct nas_set_operating_mode_resp *set_operating_mode_resp, struct nas_qmi_result *val);
-struct nas_qmi_result *nas_set_operating_mode_resp_get_res(struct nas_set_operating_mode_resp *set_operating_mode_resp);
 
 #endif

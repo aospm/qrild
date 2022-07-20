@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-// FIXME: add these headers for building on Linux too
-#ifdef ANDROID
-#include <telephony/ril.h>
-#endif
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -45,55 +41,46 @@
 #include "qrild_qmi.h"
 #include "util.h"
 
+#include "qrild_android.h"
+
 static int process_pending(struct rild_state *state) {
 	int rc = QRILD_STATE_PENDING;
 
 	switch (state->state) {
 	case QRILD_ACTION_POWERUP:
 		rc = qrild_qmi_powerup(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_REGISTER_INDICATIONS:
 		rc = qrild_qmi_nas_register_indications(state);
 		// Will actually end up in state QRILD_ACTION_HALT
 		//state->state = QRILD_ACTION_GET_RUNTIME_SETTINGS;
-		state->state++;
 		break;
 	case QRILD_ACTION_SLOT_STATUS:
 		rc = qrild_qmi_uim_get_card_status(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_PROVISION:
 		rc = qrild_qmi_uim_set_provisioning(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_OPEN_PORT:
 		rc = qrild_qmi_dpm_open_port(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_SET_DATA_FORMAT:
 		rc = qrild_qmi_wda_set_data_format(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_BIND_SUBSCRIPTION:
 		rc = qrild_qmi_wds_bind_subscription(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_MUX_DATA_PORT:
 		rc = qrild_qmi_wds_bind_mux_data_port(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_GET_SIGNAL_STRENGTH:
 		rc = qrild_qmi_nas_get_signal_strength(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_START_NET_IFACES:
 		rc = qrild_qmi_wds_start_network_interface(state);
-		state->state++;
 		break;
 	case QRILD_ACTION_GET_RUNTIME_SETTINGS:
 		rc = qrild_qmi_wds_get_current_settings(state);
-		state->state++;
 		break;
 	// case QRILD_ACTION_NETLINK:
 	// 	rc = qrild_qmi_wds_get_current_settings(state);
@@ -109,13 +96,13 @@ static int process_pending(struct rild_state *state) {
 
 	switch(rc) {
 	case QRILD_STATE_PENDING:
-		// TIMEOUT_DEFAULT is ms, sleep for just less than half the timeout
-		usleep(TIMEOUT_DEFAULT * 450);
+		msleep(TIMEOUT_DEFAULT / 3);
 		break;
 	case QRILD_STATE_ERROR:
 		fprintf(stderr, "[STATE] ERROR: failed in state %d\n", state->state);
 		return rc;
 	case QRILD_STATE_DONE:
+		state->state++;
 		LOGD("[STATE] In state state %d\n", state->state);
 		break;
 	default:
@@ -163,6 +150,14 @@ void *msg_loop(void *x) {
 	return NULL;
 }
 
+void main_loop(struct rild_state *state)
+{
+	while (state->state != QRILD_ACTION_EXIT && !state->exit) {
+		if (process_pending(state) < 0)
+			break;
+	}
+}
+
 void usage() {
 	fprintf(stderr, "qrild: QRTR modem interface / RIL\n");
 	fprintf(stderr, "--------------------------------------\n");
@@ -196,7 +191,6 @@ int main(int argc, char **argv) {
 	memset(&state, 0, sizeof(state));
 
 	state.sock = -1;
-	state.txn = 4;
 	list_init(&state.services);
 	list_init(&state.pending_rx);
 	list_init(&state.pending_tx);
@@ -263,34 +257,11 @@ int main(int argc, char **argv) {
 		LOGE("Failed to create msg thread!\n");
 		return 1;
 	}
-
-	while (state.state != QRILD_ACTION_EXIT && !state.exit) {
-		// rc = qrtr_poll(state.sock, 500);
-		// if (rc < 0)
-		// 	PLOGE_AND_EXIT("Failed to poll");
-
-		// if (rc)
-		// 	qrild_qrtr_recv(&state);
-		// else
-		// 	printf("Pending...\n");
-		if (process_pending(&state) < 0)
-			break;
-
-		// // If we haven't receieved any packets and
-		// // nothing will process the one we do have
-		// // then just dump it
-		// if (state.buf_invalidate && state.buf) {
-		// 	printf("Dumping QMI message with ID %d\n", state.msg_id);
-		// 	free(state.buf);
-		// 	state.msg_id = 0;
-		// 	state.buf_invalidate = false;
-		// }
-
-		// // Mark the current message to be invalidated on the next loop
-		// if (state.msg_id)
-		// 	state.buf_invalidate = true;
-	}
-
+#ifdef ANDROID
+	qrild_android_main(&state);
+#else
+	main_loop(&state);
+#endif
 	state.exit = true;
 	pthread_join(msg_thread, NULL);
 

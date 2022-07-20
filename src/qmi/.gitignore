@@ -1,3 +1,0 @@
-# ignore generated files, and everything that isn't qmi or meson
-*.c
-*.h

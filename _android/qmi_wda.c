@@ -7,9 +7,9 @@ struct wda_set_data_format_req *wda_set_data_format_req_alloc(unsigned txn)
 	return (struct wda_set_data_format_req*)qmi_tlv_init(txn, 32, 0);
 }
 
-struct wda_set_data_format_req *wda_set_data_format_req_parse(void *buf, size_t len, unsigned *txn)
+struct wda_set_data_format_req *wda_set_data_format_req_parse(void *buf, size_t len)
 {
-	return (struct wda_set_data_format_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct wda_set_data_format_req*)qmi_tlv_decode(buf, len);
 }
 
 void *wda_set_data_format_req_encode(struct wda_set_data_format_req *set_data_format_req, size_t *len)
@@ -152,9 +152,9 @@ struct wda_set_data_format_resp *wda_set_data_format_resp_alloc(unsigned txn)
 	return (struct wda_set_data_format_resp*)qmi_tlv_init(txn, 32, 2);
 }
 
-struct wda_set_data_format_resp *wda_set_data_format_resp_parse(void *buf, size_t len, unsigned *txn)
+struct wda_set_data_format_resp *wda_set_data_format_resp_parse(void *buf, size_t len)
 {
-	return (struct wda_set_data_format_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct wda_set_data_format_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *wda_set_data_format_resp_encode(struct wda_set_data_format_resp *set_data_format_resp, size_t *len)
@@ -165,25 +165,5 @@ void *wda_set_data_format_resp_encode(struct wda_set_data_format_resp *set_data_
 void wda_set_data_format_resp_free(struct wda_set_data_format_resp *set_data_format_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)set_data_format_resp);
-}
-
-int wda_set_data_format_resp_set_r(struct wda_set_data_format_resp *set_data_format_resp, struct wda_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)set_data_format_resp, 2, val, sizeof(struct wda_qmi_result));
-}
-
-struct wda_qmi_result *wda_set_data_format_resp_get_r(struct wda_set_data_format_resp *set_data_format_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)set_data_format_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct wda_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 

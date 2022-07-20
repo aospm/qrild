@@ -4,11 +4,6 @@ const QMI_WDA_SERVICE = 26;
 
 const QMI_WDA_SET_DATA_FORMAT = 0x20;
 
-struct qmi_result {
-	u16 result;
-	u16 error;
-};
-
 struct ep_type_iface_id {
 	u32 ep_type;
 	u32 iface_id;
@@ -24,5 +19,5 @@ request set_data_format_req {
 } = 0x20;
 
 response set_data_format_resp {
-	required qmi_result r = 2;
+	required qmi_response_type_v01 res = 2;
 } = 0x20;

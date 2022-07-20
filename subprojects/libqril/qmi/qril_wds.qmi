@@ -8,10 +8,12 @@ const QMI_WDS_GET_CURRENT_SETTINGS = 0x2d;
 const QMI_WDS_BIND_MUX_DATA_PORT = 162;
 const QMI_WDS_BIND_SUBSCRIPTION = 175;
 
-struct qmi_result {
-	u16 result;
-	u16 error;
-};
+const QMI_WDS_CONNECTION_STATUS_UNKNOWN        = 0;
+const QMI_WDS_CONNECTION_STATUS_DISCONNECTED   = 1;
+const QMI_WDS_CONNECTION_STATUS_CONNECTED      = 2;
+const QMI_WDS_CONNECTION_STATUS_SUSPENDED      = 3;
+const QMI_WDS_CONNECTION_STATUS_AUTHENTICATING = 4;
+
 
 struct ep_type_iface_id {
 	u32 ep_type;
@@ -39,7 +41,7 @@ struct call_end_reason_ext {
 };
 
 response start_network_interface_resp {
-	required qmi_result r = 2;
+	required qmi_response_type_v01 res = 2;
 	required u32 pkt_data_handle = 1;
 	optional u16 call_end_reason = 0x10;
 	optional call_end_reason_ext ext = 0x11;
@@ -58,7 +60,7 @@ request get_current_settings_req {
 } = 0x2d;
 
 response get_current_settings_resp {
-	required qmi_result r = 0x2;
+	required qmi_response_type_v01 res = 0x2;
 	optional u32 ipv4_address_preference = 0x1e;
 	optional u32 ipv4_gateway_addr = 0x20;
 	optional u32 ipv4_subnet_mask = 0x21;
@@ -72,7 +74,7 @@ request bind_mux_data_port_req {
 } = 162;
 
 response bind_mux_data_port_resp {
-	required qmi_result r = 2;
+	required qmi_response_type_v01 res = 2;
 } = 162;
 
 request bind_subscription_req {
@@ -80,5 +82,5 @@ request bind_subscription_req {
 } = 175;
 
 response bind_subscription_resp {
-	required qmi_result r = 2;
+	required qmi_response_type_v01 res = 2;
 } = 175;

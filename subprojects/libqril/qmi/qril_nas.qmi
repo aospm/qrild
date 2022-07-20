@@ -1,8 +1,5 @@
 package nas;
 
-const QMI_RESULT_SUCCESS = 0;
-const QMI_RESULT_FAILURE = 1;
-
 const QMI_NAS_EVENT_REPORT = 0x02;
 const QMI_NAS_REGISTER_INDICATIONS = 0x03;
 # https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/gobi-api/GobiAPI_2013-07-31-1347/Core/QMIEnum.h#L474
@@ -22,11 +19,6 @@ const QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR    = 64;
 const QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_RSRP   = 128;
 
 const QMI_NAS_GET_SIGNAL_STRENGTH = 0x20;
-
-struct qmi_result {
-	u16 result;
-	u16 error;
-};
 
 # The strength for the requested interface ??
 struct signal_strength {
@@ -72,7 +64,7 @@ request get_signal_strength_req {
 } = 0x20;
 
 response get_signal_strength_resp {
-	required qmi_result res = 0x02;
+	required qmi_response_type_v01 res = 0x02;
 	required i16 lte_snr = 0x17;
 	required i16 lte_rsrp = 0x18;
 	required signal_strength strength = 0x01;
@@ -84,6 +76,6 @@ request set_operating_mode_req {
 } = 0x002E;
 
 request set_operating_mode_resp {
-	required qmi_result res = 0x02;
+	required qmi_response_type_v01 res = 0x02;
 } = 0x002E;
 

@@ -7,9 +7,9 @@ struct nas_register_indications_req *nas_register_indications_req_alloc(unsigned
 	return (struct nas_register_indications_req*)qmi_tlv_init(txn, 3, 0);
 }
 
-struct nas_register_indications_req *nas_register_indications_req_parse(void *buf, size_t len, unsigned *txn)
+struct nas_register_indications_req *nas_register_indications_req_parse(void *buf, size_t len)
 {
-	return (struct nas_register_indications_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct nas_register_indications_req*)qmi_tlv_decode(buf, len);
 }
 
 void *nas_register_indications_req_encode(struct nas_register_indications_req *register_indications_req, size_t *len)
@@ -362,9 +362,9 @@ struct nas_get_signal_strength_req *nas_get_signal_strength_req_alloc(unsigned t
 	return (struct nas_get_signal_strength_req*)qmi_tlv_init(txn, 32, 0);
 }
 
-struct nas_get_signal_strength_req *nas_get_signal_strength_req_parse(void *buf, size_t len, unsigned *txn)
+struct nas_get_signal_strength_req *nas_get_signal_strength_req_parse(void *buf, size_t len)
 {
-	return (struct nas_get_signal_strength_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct nas_get_signal_strength_req*)qmi_tlv_decode(buf, len);
 }
 
 void *nas_get_signal_strength_req_encode(struct nas_get_signal_strength_req *get_signal_strength_req, size_t *len)
@@ -403,9 +403,9 @@ struct nas_get_signal_strength_resp *nas_get_signal_strength_resp_alloc(unsigned
 	return (struct nas_get_signal_strength_resp*)qmi_tlv_init(txn, 45, 2);
 }
 
-struct nas_get_signal_strength_resp *nas_get_signal_strength_resp_parse(void *buf, size_t len, unsigned *txn)
+struct nas_get_signal_strength_resp *nas_get_signal_strength_resp_parse(void *buf, size_t len)
 {
-	return (struct nas_get_signal_strength_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct nas_get_signal_strength_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *nas_get_signal_strength_resp_encode(struct nas_get_signal_strength_resp *get_signal_strength_resp, size_t *len)
@@ -416,26 +416,6 @@ void *nas_get_signal_strength_resp_encode(struct nas_get_signal_strength_resp *g
 void nas_get_signal_strength_resp_free(struct nas_get_signal_strength_resp *get_signal_strength_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)get_signal_strength_resp);
-}
-
-int nas_get_signal_strength_resp_set_res(struct nas_get_signal_strength_resp *get_signal_strength_resp, struct nas_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)get_signal_strength_resp, 2, val, sizeof(struct nas_qmi_result));
-}
-
-struct nas_qmi_result *nas_get_signal_strength_resp_get_res(struct nas_get_signal_strength_resp *get_signal_strength_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct nas_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 
 int nas_get_signal_strength_resp_set_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t val)
@@ -552,9 +532,9 @@ struct nas_set_operating_mode_req *nas_set_operating_mode_req_alloc(unsigned txn
 	return (struct nas_set_operating_mode_req*)qmi_tlv_init(txn, 46, 0);
 }
 
-struct nas_set_operating_mode_req *nas_set_operating_mode_req_parse(void *buf, size_t len, unsigned *txn)
+struct nas_set_operating_mode_req *nas_set_operating_mode_req_parse(void *buf, size_t len)
 {
-	return (struct nas_set_operating_mode_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct nas_set_operating_mode_req*)qmi_tlv_decode(buf, len);
 }
 
 void *nas_set_operating_mode_req_encode(struct nas_set_operating_mode_req *set_operating_mode_req, size_t *len)
@@ -593,9 +573,9 @@ struct nas_set_operating_mode_resp *nas_set_operating_mode_resp_alloc(unsigned t
 	return (struct nas_set_operating_mode_resp*)qmi_tlv_init(txn, 46, 0);
 }
 
-struct nas_set_operating_mode_resp *nas_set_operating_mode_resp_parse(void *buf, size_t len, unsigned *txn)
+struct nas_set_operating_mode_resp *nas_set_operating_mode_resp_parse(void *buf, size_t len)
 {
-	return (struct nas_set_operating_mode_resp*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct nas_set_operating_mode_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *nas_set_operating_mode_resp_encode(struct nas_set_operating_mode_resp *set_operating_mode_resp, size_t *len)
@@ -606,25 +586,5 @@ void *nas_set_operating_mode_resp_encode(struct nas_set_operating_mode_resp *set
 void nas_set_operating_mode_resp_free(struct nas_set_operating_mode_resp *set_operating_mode_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)set_operating_mode_resp);
-}
-
-int nas_set_operating_mode_resp_set_res(struct nas_set_operating_mode_resp *set_operating_mode_resp, struct nas_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)set_operating_mode_resp, 2, val, sizeof(struct nas_qmi_result));
-}
-
-struct nas_qmi_result *nas_set_operating_mode_resp_get_res(struct nas_set_operating_mode_resp *set_operating_mode_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)set_operating_mode_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct nas_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 

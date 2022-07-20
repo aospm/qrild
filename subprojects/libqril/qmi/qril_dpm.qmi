@@ -4,10 +4,6 @@ const QMI_DPM_SERVICE = 47;
 
 const QMI_DPM_OPEN_PORT = 0x20;
 
-struct qmi_result {
-	u16 result;
-	u16 error;
-};
 
 struct control_port {
 	u32 ep_type;
@@ -21,5 +17,5 @@ request open_port_req {
 } = 0x20;
 
 response open_port_resp {
-	required qmi_result r = 2;
+	required qmi_response_type_v01 res = 2;
 } = 0x20;

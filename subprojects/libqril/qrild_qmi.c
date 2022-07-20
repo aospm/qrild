@@ -20,7 +20,6 @@
 #include "qrild_qmi.h"
 #include "qrild_msg.h"
 
-#include "qmi_tlv.h"
 #include "qmi_uim.h"
 #include "qmi_dpm.h"
 #include "qmi_dms.h"
@@ -45,7 +44,7 @@ static int dms_get_operating_mode(struct rild_state *state)
 	void *buf;
 	size_t len;
 
-	req = dms_get_operating_mode_req_alloc(state->txn);
+	req = dms_get_operating_mode_req_alloc(qrild_next_transaction_id());
 	buf = dms_get_operating_mode_req_encode(req, &len);
 
 	rc = qrild_msg_send_sync(state, QMI_SERVICE_DMS, buf, len,
@@ -55,7 +54,7 @@ static int dms_get_operating_mode(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 
 	resp = dms_get_operating_mode_resp_parse(resp_msg->buf,
-						 resp_msg->buf_len, NULL);
+						 resp_msg->buf_len);
 
 	dms_get_operating_mode_resp_get_mode(resp, &mode);
 	dms_get_operating_mode_resp_get_hardware_restricted(resp,
@@ -84,7 +83,7 @@ static int dms_set_operating_mode(struct rild_state *state, uint8_t mode)
 	void *buf;
 	size_t len;
 
-	req = dms_set_operating_mode_req_alloc(state->txn);
+	req = dms_set_operating_mode_req_alloc(qrild_next_transaction_id());
 	dms_set_operating_mode_req_set_mode(req, mode);
 
 	buf = dms_set_operating_mode_req_encode(req, &len);
@@ -109,7 +108,7 @@ int qrild_qmi_powerup(struct rild_state *state)
 			      QRILD_STATE_PENDING);
 	mode = dms_get_operating_mode(state);
 	if (mode < 0) {
-		LOGE("Failed to get operating mode!\n");
+		LOGE("Failed to get operating mode!");
 		return QRILD_STATE_ERROR;
 	}
 	printf("Modem state: %d\n", mode);
@@ -124,7 +123,7 @@ int qrild_qmi_powerup(struct rild_state *state)
 		printf("Turning on modem\n");
 		break;
 	default:
-		LOGE("Unknown modem state!\n");
+		LOGE("Unknown modem state!");
 		return QRILD_STATE_ERROR;
 	}
 
@@ -137,7 +136,7 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 {
 	struct nas_register_indications_req *req;
 	struct nas_network_reject_info reject_info;
-	struct qmi_result res;
+	struct qmi_response_type_v01 res;
 	int rc;
 	void *buf;
 	size_t buf_len;
@@ -145,9 +144,10 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS,
 			      QRILD_STATE_PENDING);
 
-	req = nas_register_indications_req_alloc(state->txn);
+	req = nas_register_indications_req_alloc(qrild_next_transaction_id());
 
-	nas_register_indications_req_set_system_selection_preference(req, false);
+	nas_register_indications_req_set_system_selection_preference(req,
+								     false);
 	nas_register_indications_req_set_ddtm_events(req, false);
 	nas_register_indications_req_set_serving_system_events(req, false);
 	nas_register_indications_req_set_dual_standby_preference(req, false);
@@ -173,7 +173,7 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 				       TIMEOUT_DEFAULT, &res);
 	nas_register_indications_req_free(req);
 	if (rc < 0) {
-		LOGE("Failed to register network indications\n");
+		LOGE("Failed to register network indications");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
@@ -247,9 +247,8 @@ static void dump_card_status(struct uim_card_status *cs)
 int qrild_qmi_uim_get_card_status(struct rild_state *state)
 {
 	struct qrild_msg *msg = NULL;
-	uint32_t txn;
 	struct uim_get_card_status_resp *resp;
-	struct qmi_result *res;
+	struct qmi_response_type_v01 *res;
 	int rc;
 
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_UIM,
@@ -263,10 +262,10 @@ int qrild_qmi_uim_get_card_status(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 	}
 
-	resp = uim_get_card_status_resp_parse(msg->buf, msg->buf_len, &txn);
-	res = qrild_qmi_get_result((void *)resp);
+	resp = uim_get_card_status_resp_parse(msg->buf, msg->buf_len);
+	res = qmi_tlv_get_result((void *)resp);
 	if (res->result) {
-		LOGE("Failed to get card status:\n");
+		LOGE("Failed to get card status:");
 		qrild_qmi_result_print(res);
 		return QRILD_STATE_ERROR;
 	}
@@ -286,7 +285,7 @@ int qrild_qmi_uim_set_provisioning(struct rild_state *state)
 	struct uim_provisioning_session_application application;
 	struct card_status_cards_applications *appn = NULL;
 	struct uim_change_provisioning_session_req *req;
-	struct qmi_result res;
+	struct qmi_response_type_v01 res;
 	int rc, i = 0;
 	void *buf;
 	size_t buf_sz;
@@ -315,13 +314,14 @@ int qrild_qmi_uim_set_provisioning(struct rild_state *state)
 	change.session_type = QMI_UIM_SESSION_TYPE_PRIMARY_GW_PROVISIONING;
 	change.activate = true;
 
-	application.slot = 0;
+	application.slot = i;
 	application.application_identifier_value_n =
 		appn->application_identifier_value_n;
 	application.application_identifier_value =
 		appn->application_identifier_value;
 
-	req = uim_change_provisioning_session_req_alloc(state->txn);
+	req = uim_change_provisioning_session_req_alloc(
+		qrild_next_transaction_id());
 	uim_change_provisioning_session_req_set_session_change(req, &change);
 	uim_change_provisioning_session_req_set_application_information(
 		req, &application);
@@ -334,7 +334,7 @@ int qrild_qmi_uim_set_provisioning(struct rild_state *state)
 	uim_change_provisioning_session_req_free(req);
 
 	if (rc < 0) {
-		LOGE("Failed to set provisioning, is your SIM inserted?\n");
+		LOGE("Failed to set provisioning, is your SIM inserted?");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
@@ -346,7 +346,7 @@ int qrild_qmi_dpm_open_port(struct rild_state *state)
 {
 	struct dpm_open_port_req *req;
 	struct dpm_control_port port;
-	struct qmi_result res;
+	struct qmi_response_type_v01 res;
 	void *buf;
 	size_t buf_sz;
 	int rc;
@@ -361,7 +361,7 @@ int qrild_qmi_dpm_open_port(struct rild_state *state)
 	port.consumer_pipe_num = 2;
 	port.producer_pipe_num = 10;
 
-	req = dpm_open_port_req_alloc(state->txn);
+	req = dpm_open_port_req_alloc(qrild_next_transaction_id());
 	dpm_open_port_req_set_port_list(req, &port, 1);
 
 	buf = dpm_open_port_req_encode(req, &buf_sz);
@@ -372,7 +372,7 @@ int qrild_qmi_dpm_open_port(struct rild_state *state)
 	dpm_open_port_req_free(req);
 
 	if (rc < 0) {
-		LOGE("Failed to open port:\n");
+		LOGE("Failed to open port:");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
@@ -386,7 +386,7 @@ int qrild_qmi_wda_set_data_format(struct rild_state *state)
 	struct wda_ep_type_iface_id ep_type;
 	void *buf;
 	size_t buf_sz;
-	struct qmi_result res;
+	struct qmi_response_type_v01 res;
 	int rc;
 
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_WDA,
@@ -394,7 +394,7 @@ int qrild_qmi_wda_set_data_format(struct rild_state *state)
 
 	printf("Setting data format!\n");
 
-	req = wda_set_data_format_req_alloc(state->txn);
+	req = wda_set_data_format_req_alloc(qrild_next_transaction_id());
 	wda_set_data_format_req_set_link_prot(req, 2);
 	wda_set_data_format_req_set_ul_data_aggregation_protocol(req, 8);
 	wda_set_data_format_req_set_dl_data_aggregation_protocol(req, 8);
@@ -413,7 +413,7 @@ int qrild_qmi_wda_set_data_format(struct rild_state *state)
 
 	wda_set_data_format_req_free(req);
 	if (rc < 0) {
-		LOGE("Failed to set data format:\n");
+		LOGE("Failed to set data format:");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
@@ -424,7 +424,7 @@ int qrild_qmi_wda_set_data_format(struct rild_state *state)
 int qrild_qmi_wds_bind_subscription(struct rild_state *state)
 {
 	struct wds_bind_subscription_req *req;
-	struct qmi_result res;
+	struct qmi_response_type_v01 res;
 	void *buf;
 	size_t buf_sz;
 	int rc;
@@ -434,7 +434,7 @@ int qrild_qmi_wds_bind_subscription(struct rild_state *state)
 
 	printf("Binding subscription!\n");
 
-	req = wds_bind_subscription_req_alloc(state->txn);
+	req = wds_bind_subscription_req_alloc(qrild_next_transaction_id());
 
 	wds_bind_subscription_req_set_subscription(req, 0);
 
@@ -445,7 +445,7 @@ int qrild_qmi_wds_bind_subscription(struct rild_state *state)
 
 	wds_bind_subscription_req_free(req);
 	if (rc < 0) {
-		LOGE("Failed to bind subscription:\n");
+		LOGE("Failed to bind subscription:");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
@@ -457,7 +457,7 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state)
 {
 	struct wds_bind_mux_data_port_req *req;
 	struct wds_ep_type_iface_id ep_type;
-	struct qmi_result res;
+	struct qmi_response_type_v01 res;
 	void *buf;
 	size_t buf_sz;
 	int rc;
@@ -467,7 +467,7 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state)
 
 	printf("Muxing data port!\n");
 
-	req = wds_bind_mux_data_port_req_alloc(state->txn);
+	req = wds_bind_mux_data_port_req_alloc(qrild_next_transaction_id());
 
 	ep_type.ep_type = 4;
 	ep_type.iface_id = 1;
@@ -481,7 +481,7 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state)
 
 	wds_bind_mux_data_port_req_free(req);
 	if (rc < 0) {
-		LOGE("Failed to bind data port:\n");
+		LOGE("Failed to bind data port:");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
@@ -496,8 +496,8 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
 	struct nas_signal_strength *strength;
 	struct nas_signal_strength_list *strength_list;
 	struct signal_strength_list_interfaces *le;
-	int8_t lte_snr;
-	struct qmi_result *res;
+	int16_t lte_snr;
+	struct qmi_response_type_v01 *res;
 	struct qrild_msg *msg;
 	int rc, i;
 	void *buf;
@@ -506,7 +506,7 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS,
 			      QRILD_STATE_PENDING);
 
-	req = nas_get_signal_strength_req_alloc(state->txn);
+	req = nas_get_signal_strength_req_alloc(qrild_next_transaction_id());
 
 	nas_get_signal_strength_req_set_mask(
 		req, QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR);
@@ -517,11 +517,11 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
 				 TIMEOUT_DEFAULT, &msg);
 	nas_get_signal_strength_req_free(req);
 
-	resp = nas_get_signal_strength_resp_parse(msg->buf, msg->buf_len, NULL);
+	resp = nas_get_signal_strength_resp_parse(msg->buf, msg->buf_len);
 
-	res = qrild_qmi_get_result(resp);
+	res = qmi_tlv_get_result(resp);
 	if (res->result > 0) {
-		LOGE("Failed to get signal strength\n");
+		LOGE("Failed to get signal strength");
 		qrild_qmi_result_print(&res);
 		return QRILD_STATE_ERROR;
 	}
@@ -549,6 +549,27 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
 	return QRILD_STATE_DONE;
 }
 
+int qrild_qmi_wds_start_network_interface_resp(struct rild_state *state,
+					       struct qrild_msg *msg)
+{
+	struct wds_start_network_interface_resp *resp;
+	struct qmi_response_type_v01 *res;
+
+	resp = wds_start_network_interface_resp_parse(msg->buf, msg->buf_len);
+
+	res = (struct qmi_response_type_v01 *)qmi_tlv_get_result(resp);
+	if (res->result) {
+		LOGE("Failed to start network interface! QMI err: %u",
+		     res->error);
+		state->exit = true;
+	}
+
+	wds_start_network_interface_resp_get_pkt_data_handle(resp, &state->wds_pkt_data_handle);
+	LOGD("Got WDS packet data handle: %u", state->wds_pkt_data_handle);
+
+	return 0;
+}
+
 /*
  * This can fail if data signal is weak, should be retried.
  * error 14: ERR_CALL_FAILED
@@ -557,10 +578,10 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state)
 {
 	struct wds_start_network_interface_req *req;
 	struct qmi_header *qmi;
-	struct qmi_result res;
 	void *buf;
 	size_t buf_sz;
 	int rc, i;
+	uint16_t txn = qrild_next_transaction_id();
 	char *apn_name = "three.co.uk";
 
 	if (!state->card_status) {
@@ -570,7 +591,7 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state)
 
 	printf("Starting net ifaces!\n");
 
-	req = wds_start_network_interface_req_alloc(state->txn);
+	req = wds_start_network_interface_req_alloc(txn);
 
 	wds_start_network_interface_req_set_apn_name(req, apn_name,
 						     strlen(apn_name));
@@ -579,32 +600,16 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state)
 	buf = wds_start_network_interface_req_encode(req, &buf_sz);
 	qmi = (struct qmi_header *)buf;
 
-	for (i = 0; i < 10; i++) {
-		// When connection is weak this can take a while, hence the longer timeout
-		rc = qrild_msg_send_resp_check(state, QMI_SERVICE_WDS, buf,
-					       buf_sz, 60000, &res);
-		if (rc < 0) {
-			if (res.error != 14)
-				break;
-			LOGD("Failed to start network interface, retry %d\n",
-			     i);
-			qrild_qmi_result_print(&res);
-			qmi->txn_id = state->txn;
-		} else
-			break;
-
-		msleep(250);
-	}
+	rc = qrild_msg_send_async(state, QMI_SERVICE_WDS, buf, buf_sz);
 	wds_start_network_interface_req_free(req);
 	if (rc < 0) {
-		LOGE("Failed to start network interface:\n");
-		qrild_qmi_result_print(&res);
+		LOGE("Failed to start network interface:");
 		return QRILD_STATE_ERROR;
 	}
 
 	rc = THREAD_WAIT(state, connection_status);
 	if (rc < 0) {
-		LOGE("Didn't receive connection status indication!\n");
+		LOGE("Didn't receive connection status indication!");
 		return QRILD_STATE_ERROR;
 	}
 
@@ -616,8 +621,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state)
 	struct wds_get_current_settings_req *req;
 	struct wds_get_current_settings_resp *resp;
 	struct qrild_msg *msg = NULL;
-	struct qmi_result *res;
-	uint32_t txn;
+	struct qmi_response_type_v01 *res;
 	struct in_addr ip, brd, sub;
 	uint32_t val;
 	uint8_t val8;
@@ -627,7 +631,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state)
 
 	printf("Getting runtime settings!\n");
 
-	req = wds_get_current_settings_req_alloc(state->txn);
+	req = wds_get_current_settings_req_alloc(qrild_next_transaction_id());
 
 	wds_get_current_settings_req_set_requested_settings(
 		req, 1 << 8 | 1 << 9 | 1 << 13 | 1 << 15);
@@ -638,7 +642,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state)
 				 TIMEOUT_DEFAULT, &msg);
 	wds_get_current_settings_req_free(req);
 	if (rc < 0 || !msg) {
-		LOGE("Failed to send wds_get_current_settings request!\n");
+		LOGE("Failed to send wds_get_current_settings request!");
 		list_for_each_entry(msg, &state->pending_rx, li)
 		{
 			printf("msg {id: %x, txn: %d, type: %u}\n", msg->msg_id,
@@ -647,13 +651,12 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 	}
 
-	resp = wds_get_current_settings_resp_parse(msg->buf, msg->buf_len,
-						   &txn);
+	resp = wds_get_current_settings_resp_parse(msg->buf, msg->buf_len);
 
 	free(msg->buf);
 	free(msg);
 
-	res = qrild_qmi_get_result((void *)resp);
+	res = qmi_tlv_get_result((void *)resp);
 	if (res->result)
 		return QRILD_STATE_ERROR;
 
@@ -719,9 +722,8 @@ const char *qmi_service_to_string(enum qmi_service service, bool short_name)
 static int qrild_qmi_handle_wds_pkt_srvc(struct rild_state *state,
 					 struct qrild_msg *msg)
 {
-	uint32_t txn;
 	struct wds_get_pkt_srvc_status_ind *ind =
-		wds_get_pkt_srvc_status_ind_parse(msg->buf, msg->buf_len, &txn);
+		wds_get_pkt_srvc_status_ind_parse(msg->buf, msg->buf_len);
 	struct wds_pkt_srvc_status *status =
 		wds_get_pkt_srvc_status_ind_get_status(ind);
 
@@ -763,8 +765,6 @@ int qrild_qmi_process_indications(struct rild_state *state)
 		if (msg->type != 0x4)
 			continue;
 
-		printf("msg: {id: 0x%x, txn: %u}\n", msg->msg_id, msg->txn);
-
 		switch (msg->msg_id) {
 		case QMI_WDS_PKT_SRVC_STATUS:
 			qrild_qmi_handle_wds_pkt_srvc(state, msg);
@@ -774,7 +774,7 @@ int qrild_qmi_process_indications(struct rild_state *state)
 		case QMI_NAS_RF_BAND_INFO_REPORT:
 			printf("Undocumented QMI NAS indication\n");
 		default:
-			LOGW("Dropping unknown message {id: %x, txn: %u}",
+			LOGW("Dropping unknown message {id: 0x%x, txn: %u}",
 			     msg->msg_id, msg->txn);
 			print_hex_dump("Unknown msg", msg->buf, msg->buf_len);
 			break;

@@ -7,9 +7,9 @@ struct dms_get_operating_mode_req *dms_get_operating_mode_req_alloc(unsigned txn
 	return (struct dms_get_operating_mode_req*)qmi_tlv_init(txn, 45, 0);
 }
 
-struct dms_get_operating_mode_req *dms_get_operating_mode_req_parse(void *buf, size_t len, unsigned *txn)
+struct dms_get_operating_mode_req *dms_get_operating_mode_req_parse(void *buf, size_t len)
 {
-	return (struct dms_get_operating_mode_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct dms_get_operating_mode_req*)qmi_tlv_decode(buf, len);
 }
 
 void *dms_get_operating_mode_req_encode(struct dms_get_operating_mode_req *get_operating_mode_req, size_t *len)
@@ -27,9 +27,9 @@ struct dms_get_operating_mode_resp *dms_get_operating_mode_resp_alloc(unsigned t
 	return (struct dms_get_operating_mode_resp*)qmi_tlv_init(txn, 45, 2);
 }
 
-struct dms_get_operating_mode_resp *dms_get_operating_mode_resp_parse(void *buf, size_t len, unsigned *txn)
+struct dms_get_operating_mode_resp *dms_get_operating_mode_resp_parse(void *buf, size_t len)
 {
-	return (struct dms_get_operating_mode_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct dms_get_operating_mode_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *dms_get_operating_mode_resp_encode(struct dms_get_operating_mode_resp *get_operating_mode_resp, size_t *len)
@@ -40,26 +40,6 @@ void *dms_get_operating_mode_resp_encode(struct dms_get_operating_mode_resp *get
 void dms_get_operating_mode_resp_free(struct dms_get_operating_mode_resp *get_operating_mode_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)get_operating_mode_resp);
-}
-
-int dms_get_operating_mode_resp_set_res(struct dms_get_operating_mode_resp *get_operating_mode_resp, struct dms_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)get_operating_mode_resp, 2, val, sizeof(struct dms_qmi_result));
-}
-
-struct dms_qmi_result *dms_get_operating_mode_resp_get_res(struct dms_get_operating_mode_resp *get_operating_mode_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_operating_mode_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct dms_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 
 int dms_get_operating_mode_resp_set_mode(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint8_t val)
@@ -130,9 +110,9 @@ struct dms_set_operating_mode_req *dms_set_operating_mode_req_alloc(unsigned txn
 	return (struct dms_set_operating_mode_req*)qmi_tlv_init(txn, 46, 0);
 }
 
-struct dms_set_operating_mode_req *dms_set_operating_mode_req_parse(void *buf, size_t len, unsigned *txn)
+struct dms_set_operating_mode_req *dms_set_operating_mode_req_parse(void *buf, size_t len)
 {
-	return (struct dms_set_operating_mode_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct dms_set_operating_mode_req*)qmi_tlv_decode(buf, len);
 }
 
 void *dms_set_operating_mode_req_encode(struct dms_set_operating_mode_req *set_operating_mode_req, size_t *len)
@@ -171,9 +151,9 @@ struct dms_set_operating_mode_resp *dms_set_operating_mode_resp_alloc(unsigned t
 	return (struct dms_set_operating_mode_resp*)qmi_tlv_init(txn, 46, 0);
 }
 
-struct dms_set_operating_mode_resp *dms_set_operating_mode_resp_parse(void *buf, size_t len, unsigned *txn)
+struct dms_set_operating_mode_resp *dms_set_operating_mode_resp_parse(void *buf, size_t len)
 {
-	return (struct dms_set_operating_mode_resp*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct dms_set_operating_mode_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *dms_set_operating_mode_resp_encode(struct dms_set_operating_mode_resp *set_operating_mode_resp, size_t *len)
@@ -184,25 +164,5 @@ void *dms_set_operating_mode_resp_encode(struct dms_set_operating_mode_resp *set
 void dms_set_operating_mode_resp_free(struct dms_set_operating_mode_resp *set_operating_mode_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)set_operating_mode_resp);
-}
-
-int dms_set_operating_mode_resp_set_res(struct dms_set_operating_mode_resp *set_operating_mode_resp, struct dms_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)set_operating_mode_resp, 2, val, sizeof(struct dms_qmi_result));
-}
-
-struct dms_qmi_result *dms_set_operating_mode_resp_get_res(struct dms_set_operating_mode_resp *set_operating_mode_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)set_operating_mode_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct dms_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 

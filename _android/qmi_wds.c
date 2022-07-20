@@ -7,9 +7,9 @@ struct wds_start_network_interface_req *wds_start_network_interface_req_alloc(un
 	return (struct wds_start_network_interface_req*)qmi_tlv_init(txn, 32, 0);
 }
 
-struct wds_start_network_interface_req *wds_start_network_interface_req_parse(void *buf, size_t len, unsigned *txn)
+struct wds_start_network_interface_req *wds_start_network_interface_req_parse(void *buf, size_t len)
 {
-	return (struct wds_start_network_interface_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct wds_start_network_interface_req*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_start_network_interface_req_encode(struct wds_start_network_interface_req *start_network_interface_req, size_t *len)
@@ -174,9 +174,9 @@ struct wds_start_network_interface_resp *wds_start_network_interface_resp_alloc(
 	return (struct wds_start_network_interface_resp*)qmi_tlv_init(txn, 32, 2);
 }
 
-struct wds_start_network_interface_resp *wds_start_network_interface_resp_parse(void *buf, size_t len, unsigned *txn)
+struct wds_start_network_interface_resp *wds_start_network_interface_resp_parse(void *buf, size_t len)
 {
-	return (struct wds_start_network_interface_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct wds_start_network_interface_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_start_network_interface_resp_encode(struct wds_start_network_interface_resp *start_network_interface_resp, size_t *len)
@@ -187,26 +187,6 @@ void *wds_start_network_interface_resp_encode(struct wds_start_network_interface
 void wds_start_network_interface_resp_free(struct wds_start_network_interface_resp *start_network_interface_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)start_network_interface_resp);
-}
-
-int wds_start_network_interface_resp_set_r(struct wds_start_network_interface_resp *start_network_interface_resp, struct wds_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)start_network_interface_resp, 2, val, sizeof(struct wds_qmi_result));
-}
-
-struct wds_qmi_result *wds_start_network_interface_resp_get_r(struct wds_start_network_interface_resp *start_network_interface_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)start_network_interface_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct wds_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 
 int wds_start_network_interface_resp_set_pkt_data_handle(struct wds_start_network_interface_resp *start_network_interface_resp, uint32_t val)
@@ -276,9 +256,9 @@ struct wds_get_pkt_srvc_status_ind *wds_get_pkt_srvc_status_ind_alloc(unsigned t
 	return (struct wds_get_pkt_srvc_status_ind*)qmi_tlv_init(txn, 34, 4);
 }
 
-struct wds_get_pkt_srvc_status_ind *wds_get_pkt_srvc_status_ind_parse(void *buf, size_t len, unsigned *txn)
+struct wds_get_pkt_srvc_status_ind *wds_get_pkt_srvc_status_ind_parse(void *buf, size_t len)
 {
-	return (struct wds_get_pkt_srvc_status_ind*)qmi_tlv_decode(buf, len, txn, 4);
+	return (struct wds_get_pkt_srvc_status_ind*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_get_pkt_srvc_status_ind_encode(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind, size_t *len)
@@ -379,9 +359,9 @@ struct wds_get_current_settings_req *wds_get_current_settings_req_alloc(unsigned
 	return (struct wds_get_current_settings_req*)qmi_tlv_init(txn, 45, 0);
 }
 
-struct wds_get_current_settings_req *wds_get_current_settings_req_parse(void *buf, size_t len, unsigned *txn)
+struct wds_get_current_settings_req *wds_get_current_settings_req_parse(void *buf, size_t len)
 {
-	return (struct wds_get_current_settings_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct wds_get_current_settings_req*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_get_current_settings_req_encode(struct wds_get_current_settings_req *get_current_settings_req, size_t *len)
@@ -420,9 +400,9 @@ struct wds_get_current_settings_resp *wds_get_current_settings_resp_alloc(unsign
 	return (struct wds_get_current_settings_resp*)qmi_tlv_init(txn, 45, 2);
 }
 
-struct wds_get_current_settings_resp *wds_get_current_settings_resp_parse(void *buf, size_t len, unsigned *txn)
+struct wds_get_current_settings_resp *wds_get_current_settings_resp_parse(void *buf, size_t len)
 {
-	return (struct wds_get_current_settings_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct wds_get_current_settings_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_get_current_settings_resp_encode(struct wds_get_current_settings_resp *get_current_settings_resp, size_t *len)
@@ -433,26 +413,6 @@ void *wds_get_current_settings_resp_encode(struct wds_get_current_settings_resp 
 void wds_get_current_settings_resp_free(struct wds_get_current_settings_resp *get_current_settings_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)get_current_settings_resp);
-}
-
-int wds_get_current_settings_resp_set_r(struct wds_get_current_settings_resp *get_current_settings_resp, struct wds_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)get_current_settings_resp, 2, val, sizeof(struct wds_qmi_result));
-}
-
-struct wds_qmi_result *wds_get_current_settings_resp_get_r(struct wds_get_current_settings_resp *get_current_settings_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_current_settings_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct wds_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 
 int wds_get_current_settings_resp_set_ipv4_address_preference(struct wds_get_current_settings_resp *get_current_settings_resp, uint32_t val)
@@ -565,9 +525,9 @@ struct wds_bind_mux_data_port_req *wds_bind_mux_data_port_req_alloc(unsigned txn
 	return (struct wds_bind_mux_data_port_req*)qmi_tlv_init(txn, 162, 0);
 }
 
-struct wds_bind_mux_data_port_req *wds_bind_mux_data_port_req_parse(void *buf, size_t len, unsigned *txn)
+struct wds_bind_mux_data_port_req *wds_bind_mux_data_port_req_parse(void *buf, size_t len)
 {
-	return (struct wds_bind_mux_data_port_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct wds_bind_mux_data_port_req*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_bind_mux_data_port_req_encode(struct wds_bind_mux_data_port_req *bind_mux_data_port_req, size_t *len)
@@ -626,9 +586,9 @@ struct wds_bind_mux_data_port_resp *wds_bind_mux_data_port_resp_alloc(unsigned t
 	return (struct wds_bind_mux_data_port_resp*)qmi_tlv_init(txn, 162, 2);
 }
 
-struct wds_bind_mux_data_port_resp *wds_bind_mux_data_port_resp_parse(void *buf, size_t len, unsigned *txn)
+struct wds_bind_mux_data_port_resp *wds_bind_mux_data_port_resp_parse(void *buf, size_t len)
 {
-	return (struct wds_bind_mux_data_port_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct wds_bind_mux_data_port_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_bind_mux_data_port_resp_encode(struct wds_bind_mux_data_port_resp *bind_mux_data_port_resp, size_t *len)
@@ -641,34 +601,14 @@ void wds_bind_mux_data_port_resp_free(struct wds_bind_mux_data_port_resp *bind_m
 	qmi_tlv_free((struct qmi_tlv*)bind_mux_data_port_resp);
 }
 
-int wds_bind_mux_data_port_resp_set_r(struct wds_bind_mux_data_port_resp *bind_mux_data_port_resp, struct wds_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)bind_mux_data_port_resp, 2, val, sizeof(struct wds_qmi_result));
-}
-
-struct wds_qmi_result *wds_bind_mux_data_port_resp_get_r(struct wds_bind_mux_data_port_resp *bind_mux_data_port_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)bind_mux_data_port_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct wds_qmi_result))
-		return NULL;
-
-	return ptr;
-}
-
 struct wds_bind_subscription_req *wds_bind_subscription_req_alloc(unsigned txn)
 {
 	return (struct wds_bind_subscription_req*)qmi_tlv_init(txn, 175, 0);
 }
 
-struct wds_bind_subscription_req *wds_bind_subscription_req_parse(void *buf, size_t len, unsigned *txn)
+struct wds_bind_subscription_req *wds_bind_subscription_req_parse(void *buf, size_t len)
 {
-	return (struct wds_bind_subscription_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct wds_bind_subscription_req*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_bind_subscription_req_encode(struct wds_bind_subscription_req *bind_subscription_req, size_t *len)
@@ -707,9 +647,9 @@ struct wds_bind_subscription_resp *wds_bind_subscription_resp_alloc(unsigned txn
 	return (struct wds_bind_subscription_resp*)qmi_tlv_init(txn, 175, 2);
 }
 
-struct wds_bind_subscription_resp *wds_bind_subscription_resp_parse(void *buf, size_t len, unsigned *txn)
+struct wds_bind_subscription_resp *wds_bind_subscription_resp_parse(void *buf, size_t len)
 {
-	return (struct wds_bind_subscription_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct wds_bind_subscription_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *wds_bind_subscription_resp_encode(struct wds_bind_subscription_resp *bind_subscription_resp, size_t *len)
@@ -720,25 +660,5 @@ void *wds_bind_subscription_resp_encode(struct wds_bind_subscription_resp *bind_
 void wds_bind_subscription_resp_free(struct wds_bind_subscription_resp *bind_subscription_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)bind_subscription_resp);
-}
-
-int wds_bind_subscription_resp_set_r(struct wds_bind_subscription_resp *bind_subscription_resp, struct wds_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)bind_subscription_resp, 2, val, sizeof(struct wds_qmi_result));
-}
-
-struct wds_qmi_result *wds_bind_subscription_resp_get_r(struct wds_bind_subscription_resp *bind_subscription_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)bind_subscription_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct wds_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 

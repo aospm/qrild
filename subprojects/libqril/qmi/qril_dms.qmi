@@ -1,8 +1,5 @@
 package dms;
 
-const QMI_RESULT_SUCCESS = 0;
-const QMI_RESULT_FAILURE = 1;
-
 const QMI_DMS_GET_OPERATING_MODE = 0x2D;
 const QMI_DMS_SET_OPERATING_MODE = 0x2E;
 
@@ -16,16 +13,11 @@ const QMI_DMS_OPERATING_MODE_PERSISTENT_LOW_POWER = 6;
 const QMI_DMS_OPERATING_MODE_MODE_ONLY_LOW_POWER = 7;
 const QMI_DMS_OPERATING_MODE_UNKNOWN = 0xFF;
 
-struct qmi_result {
-	u16 result;
-	u16 error;
-};
-
 request get_operating_mode_req {
 } = 0x002D;
 
 response get_operating_mode_resp {
-	required qmi_result res = 0x02;
+	required qmi_response_type_v01 res = 0x02;
 	required u8 mode = 0x01;
 	# Only set if mode is QMI_DMS_OPERATING_MODE_OFFLINE
 	optional u16 offline_reason = 0x10;
@@ -38,6 +30,6 @@ request set_operating_mode_req {
 } = 0x002E;
 
 request set_operating_mode_resp {
-	required qmi_result res = 0x02;
+	required qmi_response_type_v01 res = 0x02;
 } = 0x002E;
 

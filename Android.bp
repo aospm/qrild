@@ -1,13 +1,11 @@
-cc_binary {
-    name: "qrild",
+cc_library {
+    name: "libqril",
     vendor: true,
     srcs: [
-        "src/qrild.c",
-        "src/qrild_qmi.c",
-        "src/qrild_msg.c",
-        "src/qrild_link.cc",
-        "src/qmi_tlv.c",
-        "src/util.c",
+        "subprojects/libqril/qrild_qmi.c",
+        "subprojects/libqril/qrild_msg.c",
+        "subprojects/libqril/qrild_link.cc",
+        "subprojects/libqril/util.c",
         // Generated with qmic
         "_android/qmi_dms.c",
         "_android/qmi_dpm.c",
@@ -16,20 +14,75 @@ cc_binary {
         "_android/qmi_wda.c",
         "_android/qmi_wds.c",
     ],
-    local_include_dirs: [
-        "src",
-        "_android",
-    ],
-    include_dirs: [
-        "hardware/ril/include",
-    ],
     shared_libs: [
         "libqrtr",
         "libril-modem-lib",
         "libcutils",
         "libutils",
     ],
+    cflags: ["-fPIC", "-Wno-error"],
+    export_include_dirs: ["subprojects/libqril"],
+    local_include_dirs: [
+        "subprojects/libqril",
+        "subprojects/libqril/include",
+        "_android",
+    ],
+}
+
+cc_binary {
+    name: "qrild",
+    vendor: true,
+    srcs: [
+        "qrild/qrild.c",
+        "qrild/qrild_android.cc",
+        "qrild/qrild_android_data.cc",
+    ],
+    local_include_dirs: [
+        "qrild",
+        "subprojects/libqril",
+        "_android",
+    ],
+    include_dirs: [
+    ],
+    shared_libs: [
+        "libqril",
+        "libqrtr",
+        "libril-modem-lib",
+        "libbase",
+        "libcutils",
+        "libutils",
+        "libbinder_ndk",
+        "android.hardware.radio-V1-ndk",
+        "android.hardware.radio.config-V1-ndk",
+        "android.hardware.radio.data-V1-ndk",
+        "android.hardware.radio.messaging-V1-ndk",
+        "android.hardware.radio.modem-V1-ndk",
+        "android.hardware.radio.network-V1-ndk",
+        "android.hardware.radio.sim-V1-ndk",
+        "android.hardware.radio.voice-V1-ndk",
+    ],
     init_rc: ["qrild.rc"],
-    relative_install_path: "hw",
+    vintf_fragments: ["android.hardware.radio.xml"],
     overrides: ["rild"],
+}
+
+cc_binary {
+    name: "tlv_dump",
+    vendor: true,
+    srcs: [
+        "tools/tlv_dump.c",
+    ],
+    local_include_dirs: [
+        "subprojects/libqril",
+        "_android",
+    ],
+    include_dirs: [
+    ],
+    shared_libs: [
+        "libqril",
+        "libqrtr",
+        "libbase",
+        "libcutils",
+        "libutils",
+    ],
 }

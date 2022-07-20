@@ -7,9 +7,9 @@ struct uim_get_card_status_req *uim_get_card_status_req_alloc(unsigned txn)
 	return (struct uim_get_card_status_req*)qmi_tlv_init(txn, 47, 0);
 }
 
-struct uim_get_card_status_req *uim_get_card_status_req_parse(void *buf, size_t len, unsigned *txn)
+struct uim_get_card_status_req *uim_get_card_status_req_parse(void *buf, size_t len)
 {
-	return (struct uim_get_card_status_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct uim_get_card_status_req*)qmi_tlv_decode(buf, len);
 }
 
 void *uim_get_card_status_req_encode(struct uim_get_card_status_req *get_card_status_req, size_t *len)
@@ -27,9 +27,9 @@ struct uim_get_card_status_resp *uim_get_card_status_resp_alloc(unsigned txn)
 	return (struct uim_get_card_status_resp*)qmi_tlv_init(txn, 47, 2);
 }
 
-struct uim_get_card_status_resp *uim_get_card_status_resp_parse(void *buf, size_t len, unsigned *txn)
+struct uim_get_card_status_resp *uim_get_card_status_resp_parse(void *buf, size_t len)
 {
-	return (struct uim_get_card_status_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct uim_get_card_status_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *uim_get_card_status_resp_encode(struct uim_get_card_status_resp *get_card_status_resp, size_t *len)
@@ -40,26 +40,6 @@ void *uim_get_card_status_resp_encode(struct uim_get_card_status_resp *get_card_
 void uim_get_card_status_resp_free(struct uim_get_card_status_resp *get_card_status_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)get_card_status_resp);
-}
-
-int uim_get_card_status_resp_set_result(struct uim_get_card_status_resp *get_card_status_resp, struct uim_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)get_card_status_resp, 2, val, sizeof(struct uim_qmi_result));
-}
-
-struct uim_qmi_result *uim_get_card_status_resp_get_result(struct uim_get_card_status_resp *get_card_status_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_card_status_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct uim_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 
 int uim_get_card_status_resp_set_status(struct uim_get_card_status_resp *get_card_status_resp, struct uim_card_status *val)
@@ -195,9 +175,9 @@ struct uim_change_provisioning_session_req *uim_change_provisioning_session_req_
 	return (struct uim_change_provisioning_session_req*)qmi_tlv_init(txn, 56, 0);
 }
 
-struct uim_change_provisioning_session_req *uim_change_provisioning_session_req_parse(void *buf, size_t len, unsigned *txn)
+struct uim_change_provisioning_session_req *uim_change_provisioning_session_req_parse(void *buf, size_t len)
 {
-	return (struct uim_change_provisioning_session_req*)qmi_tlv_decode(buf, len, txn, 0);
+	return (struct uim_change_provisioning_session_req*)qmi_tlv_decode(buf, len);
 }
 
 void *uim_change_provisioning_session_req_encode(struct uim_change_provisioning_session_req *change_provisioning_session_req, size_t *len)
@@ -282,9 +262,9 @@ struct uim_change_provisioning_session_resp *uim_change_provisioning_session_res
 	return (struct uim_change_provisioning_session_resp*)qmi_tlv_init(txn, 56, 2);
 }
 
-struct uim_change_provisioning_session_resp *uim_change_provisioning_session_resp_parse(void *buf, size_t len, unsigned *txn)
+struct uim_change_provisioning_session_resp *uim_change_provisioning_session_resp_parse(void *buf, size_t len)
 {
-	return (struct uim_change_provisioning_session_resp*)qmi_tlv_decode(buf, len, txn, 2);
+	return (struct uim_change_provisioning_session_resp*)qmi_tlv_decode(buf, len);
 }
 
 void *uim_change_provisioning_session_resp_encode(struct uim_change_provisioning_session_resp *change_provisioning_session_resp, size_t *len)
@@ -295,25 +275,5 @@ void *uim_change_provisioning_session_resp_encode(struct uim_change_provisioning
 void uim_change_provisioning_session_resp_free(struct uim_change_provisioning_session_resp *change_provisioning_session_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)change_provisioning_session_resp);
-}
-
-int uim_change_provisioning_session_resp_set_result(struct uim_change_provisioning_session_resp *change_provisioning_session_resp, struct uim_qmi_result *val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)change_provisioning_session_resp, 2, val, sizeof(struct uim_qmi_result));
-}
-
-struct uim_qmi_result *uim_change_provisioning_session_resp_get_result(struct uim_change_provisioning_session_resp *change_provisioning_session_resp)
-{
-	size_t len;
-	void *ptr;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)change_provisioning_session_resp, 2, &len);
-	if (!ptr)
-		return NULL;
-
-	if (len != sizeof(struct uim_qmi_result))
-		return NULL;
-
-	return ptr;
 }
 
