@@ -45,50 +45,70 @@ using namespace aidl::android::hardware::radio::voice;
 
 // clang-format off
 
-class RadioSim : public sim::BnRadioSim {
-	ndk::ScopedAStatus areUiccApplicationsEnabled(int32_t in_serial) override;
-	ndk::ScopedAStatus changeIccPin2ForApp(int32_t in_serial, const std::string& in_oldPin2, const std::string& in_newPin2, const std::string& in_aid) override;
-	ndk::ScopedAStatus changeIccPinForApp(int32_t in_serial, const std::string& in_oldPin, const std::string& in_newPin, const std::string& in_aid) override;
-	ndk::ScopedAStatus enableUiccApplications(int32_t in_serial, bool in_enable) override;
-	ndk::ScopedAStatus getAllowedCarriers(int32_t in_serial) override;
-	ndk::ScopedAStatus getCdmaSubscription(int32_t in_serial) override;
-	ndk::ScopedAStatus getCdmaSubscriptionSource(int32_t in_serial) override;
-	ndk::ScopedAStatus getFacilityLockForApp(int32_t in_serial, const std::string& in_facility, const std::string& in_password, int32_t in_serviceClass, const std::string& in_appId) override;
-	ndk::ScopedAStatus getIccCardStatus(int32_t in_serial) override;
-	ndk::ScopedAStatus getImsiForApp(int32_t in_serial, const std::string& in_aid) override;
-	ndk::ScopedAStatus getSimPhonebookCapacity(int32_t in_serial) override;
-	ndk::ScopedAStatus getSimPhonebookRecords(int32_t in_serial) override;
-	ndk::ScopedAStatus iccCloseLogicalChannel(int32_t in_serial, int32_t in_channelId) override;
-	ndk::ScopedAStatus iccIoForApp(int32_t in_serial, const sim::IccIo& in_iccIo) override;
-	ndk::ScopedAStatus iccOpenLogicalChannel(int32_t in_serial, const std::string& in_aid, int32_t in_p2) override;
-	ndk::ScopedAStatus iccTransmitApduBasicChannel(int32_t in_serial, const sim::SimApdu& in_message) override;
-	ndk::ScopedAStatus iccTransmitApduLogicalChannel(int32_t in_serial, const sim::SimApdu& in_message) override;
-	ndk::ScopedAStatus reportStkServiceIsRunning(int32_t in_serial) override;
-	ndk::ScopedAStatus requestIccSimAuthentication(int32_t in_serial, int32_t in_authContext, const std::string& in_authData, const std::string& in_aid) override;
-	ndk::ScopedAStatus responseAcknowledgement() override;;
-	ndk::ScopedAStatus sendEnvelope(int32_t in_serial, const std::string& in_contents) override;
-	ndk::ScopedAStatus sendEnvelopeWithStatus(int32_t in_serial, const std::string& in_contents) override;
-	ndk::ScopedAStatus sendTerminalResponseToSim(int32_t in_serial, const std::string& in_contents) override;
-	ndk::ScopedAStatus setAllowedCarriers(int32_t in_serial, const sim::CarrierRestrictions& in_carriers, sim::SimLockMultiSimPolicy in_multiSimPolicy) override;
-	ndk::ScopedAStatus setCarrierInfoForImsiEncryption(int32_t in_serial, const sim::ImsiEncryptionInfo& in_imsiEncryptionInfo) override;
-	ndk::ScopedAStatus setCdmaSubscriptionSource(int32_t in_serial, sim::CdmaSubscriptionSource in_cdmaSub) override;
-	ndk::ScopedAStatus setFacilityLockForApp(int32_t in_serial, const std::string& in_facility, bool in_lockState, const std::string& in_password, int32_t in_serviceClass, const std::string& in_appId) override;
-	ndk::ScopedAStatus setResponseFunctions(const std::shared_ptr<sim::IRadioSimResponse>& in_radioSimResponse, const std::shared_ptr<sim::IRadioSimIndication>& in_radioSimIndication) override;
-	ndk::ScopedAStatus setSimCardPower(int32_t in_serial, sim::CardPowerState in_powerUp) override;
-	ndk::ScopedAStatus setUiccSubscription(int32_t in_serial, const sim::SelectUiccSub& in_uiccSub) override;
-	ndk::ScopedAStatus supplyIccPin2ForApp(int32_t in_serial, const std::string& in_pin2, const std::string& in_aid) override;
-	ndk::ScopedAStatus supplyIccPinForApp(int32_t in_serial, const std::string& in_pin, const std::string& in_aid) override;
-	ndk::ScopedAStatus supplyIccPuk2ForApp(int32_t in_serial, const std::string& in_puk2, const std::string& in_pin2, const std::string& in_aid) override;
-	ndk::ScopedAStatus supplyIccPukForApp(int32_t in_serial, const std::string& in_puk, const std::string& in_pin, const std::string& in_aid) override;
-	ndk::ScopedAStatus supplySimDepersonalization(int32_t in_serial, sim::PersoSubstate in_persoType, const std::string& in_controlKey) override;
-	ndk::ScopedAStatus updateSimPhonebookRecords(int32_t in_serial, const sim::PhonebookRecordInfo& in_recordInfo) override;
+class RadioConfig : public config::BnRadioConfig {
+	ndk::ScopedAStatus getHalDeviceCapabilities(int32_t in_serial) override;
+	ndk::ScopedAStatus getNumOfLiveModems(int32_t in_serial) override;
+	ndk::ScopedAStatus getPhoneCapability(int32_t in_serial) override;
+	ndk::ScopedAStatus getSimSlotsStatus(int32_t in_serial) override;
+	ndk::ScopedAStatus setNumOfLiveModems(int32_t in_serial, int8_t in_numOfLiveModems) override;
+	ndk::ScopedAStatus setPreferredDataModem(int32_t in_serial, int8_t in_modemId) override;
+	ndk::ScopedAStatus setResponseFunctions(const std::shared_ptr<config::IRadioConfigResponse> &in_radioConfigResponse, const std::shared_ptr<config::IRadioConfigIndication> &in_radioConfigIndication) override;
+	ndk::ScopedAStatus setSimSlotsMapping(int32_t in_serial, const std::vector<config::SlotPortMapping> &in_slotMap) override;
 
-	std::shared_ptr<sim::BnRadioSimResponse> mRep;
-	std::shared_ptr<sim::BnRadioSimIndication> mInd;
+	std::shared_ptr<config::BnRadioConfigResponse> mRep;
+	std::shared_ptr<config::BnRadioConfigIndication> mInd;
 	struct qrild_state *mState;
 
     public:
-	RadioSim(struct qrild_state *state);
+	RadioConfig(struct qrild_state *state);
+};
+
+class RadioData : public data::BnRadioData {
+	ndk::ScopedAStatus allocatePduSessionId(int32_t in_serial) override;
+	ndk::ScopedAStatus getDataCallList(int32_t in_serial) override;
+	ndk::ScopedAStatus getSlicingConfig(int32_t in_serial) override;
+	ndk::ScopedAStatus releasePduSessionId(int32_t in_serial, int32_t in_id) override;
+	ndk::ScopedAStatus setDataAllowed(int32_t in_serial, bool in_allow) override;
+	ndk::ScopedAStatus setDataProfile(int32_t in_serial, const std::vector<data::DataProfileInfo> &in_profiles) override;
+	ndk::ScopedAStatus setInitialAttachApn(int32_t in_serial, const std::optional<data::DataProfileInfo> &in_dataProfileInfo) override;
+	ndk::ScopedAStatus setResponseFunctions(const std::shared_ptr<data::IRadioDataResponse>& in_radioDataResponse, const std::shared_ptr<data::IRadioDataIndication>& in_radioDataIndication) override;
+	ndk::ScopedAStatus setupDataCall(int32_t in_serial, AccessNetwork in_accessNetwork, const data::DataProfileInfo& in_dataProfileInfo, bool in_roamingAllowed, data::DataRequestReason in_reason, const std::vector<data::LinkAddress>& in_addresses, const std::vector<std::string>& in_dnses, int32_t in_pduSessionId, const std::optional<data::SliceInfo>& in_sliceInfo, bool in_matchAllRuleAllowed) override;
+
+	ndk::ScopedAStatus deactivateDataCall(int32_t in_serial, int32_t in_cid, data::DataRequestReason in_reason) override;
+
+	std::shared_ptr<data::BnRadioDataResponse> mRep;
+	std::shared_ptr<data::BnRadioDataIndication> mInd;
+	struct qrild_state *mState;
+
+    public:
+	RadioData(struct qrild_state *state);
+};
+
+class RadioModem : public modem::BnRadioModem {
+	ndk::ScopedAStatus enableModem(int32_t in_serial, bool in_on) override;
+	ndk::ScopedAStatus getBasebandVersion(int32_t in_serial) override;
+	ndk::ScopedAStatus getDeviceIdentity(int32_t in_serial) override;
+	ndk::ScopedAStatus getHardwareConfig(int32_t in_serial) override;
+	ndk::ScopedAStatus getModemActivityInfo(int32_t in_serial) override;
+	ndk::ScopedAStatus getModemStackStatus(int32_t in_serial) override;
+	ndk::ScopedAStatus getRadioCapability(int32_t in_serial) override;
+	ndk::ScopedAStatus nvReadItem(int32_t in_serial, modem::NvItem in_itemId) override;
+	ndk::ScopedAStatus nvResetConfig(int32_t in_serial, modem::ResetNvType in_resetType) override;
+	ndk::ScopedAStatus nvWriteCdmaPrl(int32_t in_serial, const std::vector<uint8_t> &in_prl) override;
+	ndk::ScopedAStatus nvWriteItem(int32_t in_serial, const modem::NvWriteItem &in_item) override;
+	ndk::ScopedAStatus requestShutdown(int32_t in_serial) override;
+	ndk::ScopedAStatus responseAcknowledgement() override;;
+	ndk::ScopedAStatus sendDeviceState(int32_t in_serial, modem::DeviceStateType in_deviceStateType, bool in_state) override;
+	ndk::ScopedAStatus setRadioCapability(int32_t in_serial, const modem::RadioCapability &in_rc) override;
+	ndk::ScopedAStatus setRadioPower(int32_t in_serial, bool in_powerOn, bool in_forEmergencyCall, bool in_preferredForEmergencyCall) override;
+	ndk::ScopedAStatus setResponseFunctions(const std::shared_ptr< modem::IRadioModemResponse> &in_radioModemResponse, const std::shared_ptr< modem::IRadioModemIndication> &in_radioModemIndication) override;
+
+	std::shared_ptr<modem::BnRadioModemResponse> mRep;
+	std::shared_ptr<modem::BnRadioModemIndication> mInd;
+	struct qrild_state *mState;
+
+    public:
+	RadioModem(struct qrild_state *state);
 };
 
 class RadioNetwork : public network::BnRadioNetwork {
@@ -137,71 +157,52 @@ class RadioNetwork : public network::BnRadioNetwork {
 	RadioNetwork(struct qrild_state *state);
 };
 
-class RadioModem : public modem::BnRadioModem {
-	ndk::ScopedAStatus enableModem(int32_t in_serial, bool in_on) override;
-	ndk::ScopedAStatus getBasebandVersion(int32_t in_serial) override;
-	ndk::ScopedAStatus getDeviceIdentity(int32_t in_serial) override;
-	ndk::ScopedAStatus getHardwareConfig(int32_t in_serial) override;
-	ndk::ScopedAStatus getModemActivityInfo(int32_t in_serial) override;
-	ndk::ScopedAStatus getModemStackStatus(int32_t in_serial) override;
-	ndk::ScopedAStatus getRadioCapability(int32_t in_serial) override;
-	ndk::ScopedAStatus nvReadItem(int32_t in_serial, modem::NvItem in_itemId) override;
-	ndk::ScopedAStatus nvResetConfig(int32_t in_serial, modem::ResetNvType in_resetType) override;
-	ndk::ScopedAStatus nvWriteCdmaPrl(int32_t in_serial, const std::vector<uint8_t> &in_prl) override;
-	ndk::ScopedAStatus nvWriteItem(int32_t in_serial, const modem::NvWriteItem &in_item) override;
-	ndk::ScopedAStatus requestShutdown(int32_t in_serial) override;
+class RadioSim : public sim::BnRadioSim {
+	ndk::ScopedAStatus areUiccApplicationsEnabled(int32_t in_serial) override;
+	ndk::ScopedAStatus changeIccPin2ForApp(int32_t in_serial, const std::string& in_oldPin2, const std::string& in_newPin2, const std::string& in_aid) override;
+	ndk::ScopedAStatus changeIccPinForApp(int32_t in_serial, const std::string& in_oldPin, const std::string& in_newPin, const std::string& in_aid) override;
+	ndk::ScopedAStatus enableUiccApplications(int32_t in_serial, bool in_enable) override;
+	ndk::ScopedAStatus getAllowedCarriers(int32_t in_serial) override;
+	ndk::ScopedAStatus getCdmaSubscription(int32_t in_serial) override;
+	ndk::ScopedAStatus getCdmaSubscriptionSource(int32_t in_serial) override;
+	ndk::ScopedAStatus getFacilityLockForApp(int32_t in_serial, const std::string& in_facility, const std::string& in_password, int32_t in_serviceClass, const std::string& in_appId) override;
+	ndk::ScopedAStatus getIccCardStatus(int32_t in_serial) override;
+	ndk::ScopedAStatus getImsiForApp(int32_t in_serial, const std::string& in_aid) override;
+	ndk::ScopedAStatus getSimPhonebookCapacity(int32_t in_serial) override;
+	ndk::ScopedAStatus getSimPhonebookRecords(int32_t in_serial) override;
+	ndk::ScopedAStatus iccCloseLogicalChannel(int32_t in_serial, int32_t in_channelId) override;
+	ndk::ScopedAStatus iccIoForApp(int32_t in_serial, const sim::IccIo& in_iccIo) override;
+	ndk::ScopedAStatus iccOpenLogicalChannel(int32_t in_serial, const std::string& in_aid, int32_t in_p2) override;
+	ndk::ScopedAStatus iccTransmitApduBasicChannel(int32_t in_serial, const sim::SimApdu& in_message) override;
+	ndk::ScopedAStatus iccTransmitApduLogicalChannel(int32_t in_serial, const sim::SimApdu& in_message) override;
+	ndk::ScopedAStatus reportStkServiceIsRunning(int32_t in_serial) override;
+	ndk::ScopedAStatus requestIccSimAuthentication(int32_t in_serial, int32_t in_authContext, const std::string& in_authData, const std::string& in_aid) override;
 	ndk::ScopedAStatus responseAcknowledgement() override;;
-	ndk::ScopedAStatus sendDeviceState(int32_t in_serial, modem::DeviceStateType in_deviceStateType, bool in_state) override;
-	ndk::ScopedAStatus setRadioCapability(int32_t in_serial, const modem::RadioCapability &in_rc) override;
-	ndk::ScopedAStatus setRadioPower(int32_t in_serial, bool in_powerOn, bool in_forEmergencyCall, bool in_preferredForEmergencyCall) override;
-	ndk::ScopedAStatus setResponseFunctions(const std::shared_ptr< modem::IRadioModemResponse> &in_radioModemResponse, const std::shared_ptr< modem::IRadioModemIndication> &in_radioModemIndication) override;
+	ndk::ScopedAStatus sendEnvelope(int32_t in_serial, const std::string& in_contents) override;
+	ndk::ScopedAStatus sendEnvelopeWithStatus(int32_t in_serial, const std::string& in_contents) override;
+	ndk::ScopedAStatus sendTerminalResponseToSim(int32_t in_serial, const std::string& in_contents) override;
+	ndk::ScopedAStatus setAllowedCarriers(int32_t in_serial, const sim::CarrierRestrictions& in_carriers, sim::SimLockMultiSimPolicy in_multiSimPolicy) override;
+	ndk::ScopedAStatus setCarrierInfoForImsiEncryption(int32_t in_serial, const sim::ImsiEncryptionInfo& in_imsiEncryptionInfo) override;
+	ndk::ScopedAStatus setCdmaSubscriptionSource(int32_t in_serial, sim::CdmaSubscriptionSource in_cdmaSub) override;
+	ndk::ScopedAStatus setFacilityLockForApp(int32_t in_serial, const std::string& in_facility, bool in_lockState, const std::string& in_password, int32_t in_serviceClass, const std::string& in_appId) override;
+	ndk::ScopedAStatus setResponseFunctions(const std::shared_ptr<sim::IRadioSimResponse>& in_radioSimResponse, const std::shared_ptr<sim::IRadioSimIndication>& in_radioSimIndication) override;
+	ndk::ScopedAStatus setSimCardPower(int32_t in_serial, sim::CardPowerState in_powerUp) override;
+	ndk::ScopedAStatus setUiccSubscription(int32_t in_serial, const sim::SelectUiccSub& in_uiccSub) override;
+	ndk::ScopedAStatus supplyIccPin2ForApp(int32_t in_serial, const std::string& in_pin2, const std::string& in_aid) override;
+	ndk::ScopedAStatus supplyIccPinForApp(int32_t in_serial, const std::string& in_pin, const std::string& in_aid) override;
+	ndk::ScopedAStatus supplyIccPuk2ForApp(int32_t in_serial, const std::string& in_puk2, const std::string& in_pin2, const std::string& in_aid) override;
+	ndk::ScopedAStatus supplyIccPukForApp(int32_t in_serial, const std::string& in_puk, const std::string& in_pin, const std::string& in_aid) override;
+	ndk::ScopedAStatus supplySimDepersonalization(int32_t in_serial, sim::PersoSubstate in_persoType, const std::string& in_controlKey) override;
+	ndk::ScopedAStatus updateSimPhonebookRecords(int32_t in_serial, const sim::PhonebookRecordInfo& in_recordInfo) override;
 
-	std::shared_ptr<modem::BnRadioModemResponse> mRep;
-	std::shared_ptr<modem::BnRadioModemIndication> mInd;
+	std::shared_ptr<sim::BnRadioSimResponse> mRep;
+	std::shared_ptr<sim::BnRadioSimIndication> mInd;
 	struct qrild_state *mState;
 
     public:
-	RadioModem(struct qrild_state *state);
+	RadioSim(struct qrild_state *state);
 };
 
-class RadioConfig : public config::BnRadioConfig {
-	ndk::ScopedAStatus getHalDeviceCapabilities(int32_t in_serial) override;
-	ndk::ScopedAStatus getNumOfLiveModems(int32_t in_serial) override;
-	ndk::ScopedAStatus getPhoneCapability(int32_t in_serial) override;
-	ndk::ScopedAStatus getSimSlotsStatus(int32_t in_serial) override;
-	ndk::ScopedAStatus setNumOfLiveModems(int32_t in_serial, int8_t in_numOfLiveModems) override;
-	ndk::ScopedAStatus setPreferredDataModem(int32_t in_serial, int8_t in_modemId) override;
-	ndk::ScopedAStatus setResponseFunctions(const std::shared_ptr<config::IRadioConfigResponse> &in_radioConfigResponse, const std::shared_ptr<config::IRadioConfigIndication> &in_radioConfigIndication) override;
-	ndk::ScopedAStatus setSimSlotsMapping(int32_t in_serial, const std::vector<config::SlotPortMapping> &in_slotMap) override;
-
-	std::shared_ptr<config::BnRadioConfigResponse> mRep;
-	std::shared_ptr<config::BnRadioConfigIndication> mInd;
-	struct qrild_state *mState;
-
-    public:
-	RadioConfig(struct qrild_state *state);
-};
-
-class RadioData : public data::BnRadioData {
-	ndk::ScopedAStatus allocatePduSessionId(int32_t in_serial) override;
-	ndk::ScopedAStatus getDataCallList(int32_t in_serial) override;
-	ndk::ScopedAStatus getSlicingConfig(int32_t in_serial) override;
-	ndk::ScopedAStatus releasePduSessionId(int32_t in_serial, int32_t in_id) override;
-	ndk::ScopedAStatus setDataAllowed(int32_t in_serial, bool in_allow) override;
-	ndk::ScopedAStatus setDataProfile(int32_t in_serial, const std::vector<data::DataProfileInfo> &in_profiles) override;
-	ndk::ScopedAStatus setInitialAttachApn(int32_t in_serial, const std::optional<data::DataProfileInfo> &in_dataProfileInfo) override;
-	ndk::ScopedAStatus setResponseFunctions(const std::shared_ptr<data::IRadioDataResponse>& in_radioDataResponse, const std::shared_ptr<data::IRadioDataIndication>& in_radioDataIndication) override;
-	ndk::ScopedAStatus setupDataCall(int32_t in_serial, AccessNetwork in_accessNetwork, const data::DataProfileInfo& in_dataProfileInfo, bool in_roamingAllowed, data::DataRequestReason in_reason, const std::vector<data::LinkAddress>& in_addresses, const std::vector<std::string>& in_dnses, int32_t in_pduSessionId, const std::optional<data::SliceInfo>& in_sliceInfo, bool in_matchAllRuleAllowed) override;
-
-	ndk::ScopedAStatus deactivateDataCall(int32_t in_serial, int32_t in_cid, data::DataRequestReason in_reason) override;
-
-	std::shared_ptr<data::BnRadioDataResponse> mRep;
-	std::shared_ptr<data::BnRadioDataIndication> mInd;
-	struct qrild_state *mState;
-
-    public:
-	RadioData(struct qrild_state *state);
-};
 
 // clang-format on
 
