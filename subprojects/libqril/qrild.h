@@ -362,4 +362,5 @@ struct rild_state {
 	})
 
 __END_DECLS
+
 #endif

@@ -34,7 +34,7 @@
  * 
  * @returns DMS_OPERATING_MODE or < 0 on error
  */
-static int dms_get_operating_mode(struct rild_state *state)
+int qrild_qmi_dms_get_operating_mode(struct rild_state *state)
 {
 	struct dms_get_operating_mode_req *req;
 	struct qrild_msg *resp_msg = NULL;
@@ -77,7 +77,7 @@ static int dms_get_operating_mode(struct rild_state *state)
  * @state: RIL state object
  * @mode: mode to set
  */
-static int dms_set_operating_mode(struct rild_state *state, uint8_t mode)
+int qrild_qmi_dms_set_operating_mode(struct rild_state *state, uint8_t mode)
 {
 	struct dms_set_operating_mode_req *req;
 	void *buf;
@@ -106,7 +106,7 @@ int qrild_qmi_powerup(struct rild_state *state)
 
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS,
 			      QRILD_STATE_PENDING);
-	mode = dms_get_operating_mode(state);
+	mode = qrild_qmi_dms_get_operating_mode(state);
 	if (mode < 0) {
 		LOGE("Failed to get operating mode!");
 		return QRILD_STATE_ERROR;
@@ -127,7 +127,7 @@ int qrild_qmi_powerup(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 	}
 
-	dms_set_operating_mode(state, QMI_DMS_OPERATING_MODE_ONLINE);
+	qrild_qmi_dms_set_operating_mode(state, QMI_DMS_OPERATING_MODE_ONLINE);
 
 	return QRILD_STATE_DONE;
 }
@@ -277,6 +277,54 @@ int qrild_qmi_uim_get_card_status(struct rild_state *state)
 	qrild_msg_free(msg);
 
 	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_uim_get_slot_status(struct rild_state *state, struct uim_slot_status_msg *slot_status)
+{
+	struct qrild_msg *msg = NULL;
+	struct uim_get_slot_status_resp *resp;
+	struct qmi_response_type_v01 *res;
+	size_t eid_count;
+	int rc, ret = QRILD_STATE_DONE;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_UIM,
+			      QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_UIM,
+					       QMI_UIM_GET_SLOT_STATUS, &msg);
+	if (rc < 0 || !msg) {
+		fprintf(stderr, "%s: didn't get a response or timed out!\n",
+			__func__);
+		return QRILD_STATE_ERROR;
+	}
+
+	resp = uim_get_slot_status_resp_parse(msg->buf, msg->buf_len);
+	res = qmi_tlv_get_result((void *)resp);
+	if (res->result) {
+		LOGE("Failed to get card status:");
+		qrild_qmi_result_print(res);
+		ret = QRILD_STATE_ERROR;
+		goto out_free;
+	}
+
+	slot_status->eid_info = uim_get_slot_status_resp_get_eid_info(resp, &eid_count);
+	slot_status->eid_info_n = (uint8_t)eid_count;
+	if (slot_status->eid_info_n != 32) {
+		fprintf(stderr, "%s: EID length must be 32, not %u!\n",
+			__func__, slot_status->eid_info_n);
+		if (slot_status->eid_info)
+			free(slot_status->eid_info);
+		ret = QRILD_STATE_ERROR;
+		goto out_free;
+	}
+
+	slot_status->state = uim_get_slot_status_resp_get_slot_state(resp);
+	slot_status->info = uim_get_slot_status_resp_get_slot_info(resp);
+	
+
+out_free:
+	qrild_msg_free(msg);
+	return ret;
 }
 
 int qrild_qmi_uim_set_provisioning(struct rild_state *state)
@@ -489,11 +537,58 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state)
 	return QRILD_STATE_DONE;
 }
 
-int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
+int qrild_qmi_nas_get_signal_strength(struct rild_state *state,
+				      struct nas_signal_strength *strength, int16_t *lte_snr)
 {
 	struct nas_get_signal_strength_req *req;
 	struct nas_get_signal_strength_resp *resp;
-	struct nas_signal_strength *strength;
+	struct nas_signal_strength *qmi_strength;
+	struct qmi_response_type_v01 *res;
+	struct qrild_msg *msg;
+	int rc, i;
+	void *buf;
+	size_t buf_len;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS,
+			      QRILD_STATE_PENDING);
+
+	req = nas_get_signal_strength_req_alloc(qrild_next_transaction_id());
+
+	nas_get_signal_strength_req_set_mask(
+		req, QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR);
+
+	buf = nas_get_signal_strength_req_encode(req, &buf_len);
+
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_NAS, buf, buf_len,
+				 TIMEOUT_DEFAULT, &msg);
+	nas_get_signal_strength_req_free(req);
+
+	resp = nas_get_signal_strength_resp_parse(msg->buf, msg->buf_len);
+
+	res = qmi_tlv_get_result(resp);
+	if (res->result > 0) {
+		LOGE("Failed to get signal strength");
+		qrild_qmi_result_print(&res);
+		return QRILD_STATE_ERROR;
+	}
+
+	qmi_strength = nas_get_signal_strength_resp_get_strength(resp);
+	if (!qmi_strength)
+		return QRILD_STATE_ERROR;
+
+	nas_get_signal_strength_resp_get_lte_snr(resp, lte_snr);
+
+	strength->interface = qmi_strength->interface;
+	strength->strength = qmi_strength->strength;
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_nas_show_signal_strength(struct rild_state *state)
+{
+	struct nas_get_signal_strength_req *req;
+	struct nas_get_signal_strength_resp *resp;
+	struct nas_signal_strength *qmi_strength;
 	struct nas_signal_strength_list *strength_list;
 	struct signal_strength_list_interfaces *le;
 	int16_t lte_snr;
@@ -526,11 +621,11 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 	}
 
-	strength = nas_get_signal_strength_resp_get_strength(resp);
-	if (strength)
+	qmi_strength = nas_get_signal_strength_resp_get_strength(resp);
+	if (qmi_strength)
 		printf("Signal strength:\n"
 		       "  interface: %d, strength: %d\n",
-		       strength->interface, strength->strength);
+		       qmi_strength->interface, qmi_strength->strength);
 
 	rc = nas_get_signal_strength_resp_get_lte_snr(resp, &lte_snr);
 	if (rc == 0)
@@ -744,7 +839,7 @@ static int qrild_qmi_handle_wds_pkt_srvc(struct rild_state *state,
  */
 int qrild_qmi_idle(struct rild_state *state)
 {
-	qrild_qmi_nas_get_signal_strength(state);
+	qrild_qmi_nas_show_signal_strength(state);
 
 	usleep(6000 * 1000);
 

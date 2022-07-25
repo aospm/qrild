@@ -2,8 +2,17 @@ package uim;
 
 const QMI_UIM_GET_CARD_STATUS = 0x2F;
 const QMI_UIM_CHANGE_PROVISIONING_SESSION = 0x38;
+const QMI_UIM_GET_SLOT_STATUS = 0x0047;
+const QMI_UIM_SLOT_STATUS_IND = 0x0048;
 
 const QMI_UIM_SESSION_TYPE_PRIMARY_GW_PROVISIONING = 0;
+
+const QMI_UIM_CARD_STATE_ABSENT = 0;
+const QMI_UIM_CARD_STATE_PRESENT = 1;
+const QMI_UIM_CARD_STATE_ERROR = 2;
+
+# Used by Android side not sure if valid modem side
+const QMI_UIM_CARD_STATE_RESTRICTED = 4;
 
 struct card_status {
 	u16 index_gw_primary;
@@ -49,6 +58,35 @@ struct provisioning_session_application {
 	u8 *application_identifier_value;
 };
 
+struct physical_slot_state {
+	u8 slots_n;
+	struct {
+		u32 card_state;
+		u32 slot_state;
+		u8 logical_slot;
+		u8 iccid_n;
+		u8 *iccid;
+	} *slots;
+};
+
+struct physical_slot_info {
+	u8 slots_n;
+	struct {
+		u32 card_protocol;
+		u8 valid_applications;
+		u8 atr_value_n;
+		u8 *atr_value;
+		u8 is_euicc;
+	} *slots;
+};
+
+struct slot_status_msg {
+	struct physical_slot_state *state;
+	struct physical_slot_info *info;
+	u8 eid_info_n; # ALWAYS 32
+	u8 *eid_info;
+};
+
 request get_card_status_req {
 } = 0x002F;
 
@@ -65,3 +103,19 @@ request change_provisioning_session_req {
 response change_provisioning_session_resp {
 	required qmi_response_type_v01 result = 0x02;
 } = 0x0038;
+
+request get_slot_status_req {
+} = 0x0047;
+
+response get_slot_status_resp {
+	required qmi_response_type_v01 result = 0x02;
+	optional physical_slot_state slot_state = 0x10;
+	optional physical_slot_info slot_info = 0x11;
+	optional u8 eid_info[32] = 0x12;
+} = 0x0047;
+
+indication get_slot_status_ind {
+	optional physical_slot_state slot_state = 0x10;
+	optional physical_slot_info slot_info = 0x11;
+	optional u8 eid_info[32] = 0x12;
+} = 0x0048;
