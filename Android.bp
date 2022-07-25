@@ -21,7 +21,10 @@ cc_library {
         "libutils",
     ],
     cflags: ["-fPIC", "-Wno-error"],
-    export_include_dirs: ["subprojects/libqril"],
+    export_include_dirs: [
+        "subprojects/libqril",
+        "_android",
+    ],
     local_include_dirs: [
         "subprojects/libqril",
         "subprojects/libqril/include",
@@ -35,15 +38,21 @@ cc_binary {
     srcs: [
         "qrild/qrild.c",
         "qrild/qrild_android.cc",
+        "qrild/qrild_android_config.cc",
         "qrild/qrild_android_data.cc",
+        "qrild/qrild_android_messaging.cc",
+        "qrild/qrild_android_modem.cc",
+        "qrild/qrild_android_network.cc",
+        "qrild/qrild_android_sim.cc",
+        "qrild/qrild_android_voice.cc",
     ],
     local_include_dirs: [
         "qrild",
-        "subprojects/libqril",
-        "_android",
     ],
     include_dirs: [
     ],
+    // Disable for testing
+    cflags: ["-Wno-unused-parameter"],
     shared_libs: [
         "libqril",
         "libqrtr",

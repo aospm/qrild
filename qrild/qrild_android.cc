@@ -22,30 +22,39 @@
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
 
-#include "qrild_android.h"
+#include "qrild_android_interface.h"
 #include "qrild_radio.hh"
 
-template <typename T, class... Args>
-std::shared_ptr<T> addService(Args&&... args) {
-    std::shared_ptr<T> ser = ndk::SharedRefBase::make<T>(std::forward<Args>(args)...);
-    auto instanceName = std::string(T::descriptor) + "/default";
+void buildResponseInfo(RadioResponseInfo &info, int serial, RadioResponseType responseType, RadioError e) {
+    info.serial = serial;
+    info.type = responseType;
+    info.error = e;
+
+    return;
+}
+
+template <typename T> std::shared_ptr<T> addService(std::string type, struct rild_state *state) {
+    std::shared_ptr<T> ser = ndk::SharedRefBase::make<T>(state);
+    auto instanceName = std::string(T::descriptor) + type;
     LOG(INFO) << "adding qrild service instance: " << instanceName;
-    binder_status_t status =
-            AServiceManager_addService(ser->asBinder().get(), instanceName.c_str());
+    binder_status_t status = AServiceManager_addService(ser->asBinder().get(), instanceName.c_str());
     CHECK_EQ(status, STATUS_OK);
     return ser;
 }
 
-void qrild_android_main(struct qrild_state *state)
-{
-	ABinderProcess_setThreadPoolMaxThreadCount(0);
-	std::string instance;
-	std::shared_ptr<RadioConfig> radioConfig = addService<RadioConfig>(state);
-	std::shared_ptr<RadioData> radioData = addService<RadioData>(state);
-	std::shared_ptr<RadioModem> radioModem = addService<RadioModem>(state);
-	std::shared_ptr<RadioNetwork> radioNetwork = addService<RadioNetwork>(state);
-	std::shared_ptr<RadioSim> radioSim = addService<RadioSim>(state);
+void qrild_android_main(struct rild_state *state) {
+    ABinderProcess_setThreadPoolMaxThreadCount(0);
+    std::string instance;
+    std::shared_ptr<RadioConfig> radioConfig = addService<RadioConfig>("/default", state);
+    // Need to understand why hwservicemanager wants /slot1 here and what that means for
+    // dual-sim devices.
+    std::shared_ptr<RadioMessaging> radioMessaging = addService<RadioMessaging>("/slot1", state);
+    std::shared_ptr<RadioModem> radioModem = addService<RadioModem>("/slot1", state);
+    std::shared_ptr<RadioData> radioData = addService<RadioData>("/slot1", state);
+    std::shared_ptr<RadioNetwork> radioNetwork = addService<RadioNetwork>("/slot1", state);
+    std::shared_ptr<RadioSim> radioSim = addService<RadioSim>("/slot1", state);
+    std::shared_ptr<RadioVoice> radioVoice = addService<RadioVoice>("/slot1", state);
 
-	ABinderProcess_joinThreadPool();
-	LOG(ERROR) << "Should not be here!";
+    ABinderProcess_joinThreadPool();
+    LOG(ERROR) << "Should not be here!";
 }

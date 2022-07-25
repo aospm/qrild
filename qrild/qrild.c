@@ -41,7 +41,9 @@
 #include "qrild_qmi.h"
 #include "util.h"
 
-#include "qrild_android.h"
+#ifdef ANDROID
+#include "qrild_android_interface.h"
+#endif
 
 static int process_pending(struct rild_state *state) {
 	int rc = QRILD_STATE_PENDING;
@@ -74,7 +76,7 @@ static int process_pending(struct rild_state *state) {
 		rc = qrild_qmi_wds_bind_mux_data_port(state);
 		break;
 	case QRILD_ACTION_GET_SIGNAL_STRENGTH:
-		rc = qrild_qmi_nas_get_signal_strength(state);
+		rc = qrild_qmi_nas_show_signal_strength(state);
 		break;
 	case QRILD_ACTION_START_NET_IFACES:
 		rc = qrild_qmi_wds_start_network_interface(state);

@@ -18,78 +18,97 @@
 
 #include "qrild_radio.hh"
 
-ndk::ScopedAStatus RadioData::allocatePduSessionId(int32_t in_serial)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+RadioData::RadioData(struct rild_state *state) : mState(state) {
+    printf("RadioData::%s\n", __func__);
 }
 
-ndk::ScopedAStatus RadioData::getDataCallList(int32_t in_serial)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+ndk::ScopedAStatus RadioData::allocatePduSessionId(int32_t in_serial) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus RadioData::getSlicingConfig(int32_t in_serial)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+ndk::ScopedAStatus RadioData::cancelHandover(int32_t in_serial, int32_t in_callId) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus RadioData::releasePduSessionId(int32_t in_serial,
-						  int32_t in_id)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+ndk::ScopedAStatus RadioData::deactivateDataCall(int32_t in_serial, int32_t in_cid, data::DataRequestReason in_reason) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus RadioData::setDataAllowed(int32_t in_serial, bool in_allow)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+ndk::ScopedAStatus RadioData::getDataCallList(int32_t in_serial) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus RadioData::setDataProfile(
-	int32_t in_serial,
-	const std::vector<data::DataProfileInfo> &in_profiles)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+ndk::ScopedAStatus RadioData::getSlicingConfig(int32_t in_serial) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus RadioData::releasePduSessionId(int32_t in_serial, int32_t in_id) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus RadioData::responseAcknowledgement() {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus RadioData::setDataAllowed(int32_t in_serial, bool in_allow) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus RadioData::setDataProfile(int32_t in_serial, const std::vector<data::DataProfileInfo> &in_profiles) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus RadioData::setDataThrottling(
+      int32_t in_serial, data::DataThrottlingAction in_dataThrottlingAction, int64_t in_completionDurationMillis) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioData::setInitialAttachApn(
-	int32_t in_serial,
-	const std::optional<DataProfileInfo> &in_dataProfileInfo)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+      int32_t in_serial, const std::optional<data::DataProfileInfo> &in_dataProfileInfo) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioData::setResponseFunctions(
-	const std::shared_ptr<data::IRadioDataIndication>
-		&in_radioDataIndication)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+      const std::shared_ptr<data::IRadioDataResponse> &in_radioDataResponse,
+      const std::shared_ptr<data::IRadioDataIndication> &in_radioDataIndication) {
+    printf("xRadioData::%s\n", __func__);
+
+    mRep = in_radioDataResponse;
+    mInd = in_radioDataIndication;
+
+    return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus RadioData::setupDataCall(
-	int32_t in_serial, AccessNetwork in_accessNetwork,
-	const data::DataProfileInfo &in_dataProfileInfo, bool in_roamingAllowed,
-	data::DataRequestReason in_reason,
-	const std::vector<data::LinkAddress> &in_addresses,
-	const std::vector<std::string> &in_dnses, int32_t in_pduSessionId,
-	const std::optional<data::SliceInfo> &in_sliceInfo,
-	bool in_matchAllRuleAllowedd)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+ndk::ScopedAStatus RadioData::setupDataCall(int32_t in_serial, AccessNetwork in_accessNetwork,
+      const data::DataProfileInfo &in_dataProfileInfo, bool in_roamingAllowed, data::DataRequestReason in_reason,
+      const std::vector<data::LinkAddress> &in_addresses, const std::vector<std::string> &in_dnses,
+      int32_t in_pduSessionId, const std::optional<data::SliceInfo> &in_sliceInfo, bool in_matchAllRuleAllowed) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus RadioData::deactivateDataCall(int32_t in_serial,
-						 int32_t in_cid,
-						 data::DataRequestReason in_reason)
-{
-	printf("%s\n", __func__);
-	return ndk::ScopedAStatus::ok();
+ndk::ScopedAStatus RadioData::startHandover(int32_t in_serial, int32_t in_callId) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus RadioData::startKeepalive(int32_t in_serial, const data::KeepaliveRequest &in_keepalive) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus RadioData::stopKeepalive(int32_t in_serial, int32_t in_sessionHandle) {
+    printf("RadioData::%s\n", __func__);
+    return ndk::ScopedAStatus::ok();
 }
