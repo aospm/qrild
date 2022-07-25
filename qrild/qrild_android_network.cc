@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "android.hardware.radio.INetwork"
+#define LOG_TAG "qrild.INetwork"
 #include <android-base/logging.h>
 
 #include <limits.h>
@@ -26,7 +26,9 @@
 #include "qrild_radio.hh"
 
 RadioNetwork::RadioNetwork(struct rild_state *state) : mState(state) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+
+    mRegStateRes.regState = network::RegState::UNKNOWN;
 }
 
 ndk::ScopedAStatus RadioNetwork::getAllowedNetworkTypesBitmap(int32_t in_serial) {
@@ -46,6 +48,9 @@ ndk::ScopedAStatus RadioNetwork::getAvailableNetworks(int32_t in_serial) {
 
 ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
     printf("RadioNetwork::%s\n", __func__);
+
+    LOG(INFO) << __func__ << " TODO!";
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -60,22 +65,40 @@ ndk::ScopedAStatus RadioNetwork::getCellInfoList(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioNetwork::getDataRegistrationState(int32_t in_serial) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+
+    LOG(INFO) << __func__ << ": TODO";
+
+    mRep->getDataRegistrationStateResponse(RESP_OK(in_serial), mRegStateRes);
+
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getImsRegistrationState(int32_t in_serial) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+    network::RegStateResult res;
+
+    res.regState = network::RegState::UNKNOWN;
+
+    mRep->getImsRegistrationStateResponse(RESP_OK(in_serial), false, RadioTechnologyFamily());
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getNetworkSelectionMode(int32_t in_serial) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+
+    mRep->getNetworkSelectionModeResponse(RESP_OK(in_serial), false);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getOperator(int32_t in_serial) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+
+    LOG(INFO) << __func__ << " FIXME: hardcoded values";
+
+    // Not sure if correct mcc/mnc
+    mRep->getOperatorResponse(RESP_OK(in_serial), "Three.co.uk", "3", "23420");
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -104,7 +127,7 @@ ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
     lte.timingAdvance = 647;
     lte.cqiTableIndex = 5;
 
-    LOG(INFO) << lte.toString();
+    LOG(INFO) << __func__ << lte.toString();
 
     strength.lte = lte;
 
@@ -157,12 +180,23 @@ ndk::ScopedAStatus RadioNetwork::getSystemSelectionChannels(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioNetwork::getVoiceRadioTechnology(int32_t in_serial) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+    RadioResponseInfo r_info = RESP_OK(in_serial);
+    r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+
+    mRep->getVoiceRadioTechnologyResponse(RESP_OK(in_serial), RadioTechnology::UNKNOWN);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getVoiceRegistrationState(int32_t in_serial) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+    network::RegStateResult res;
+
+    LOG(INFO) << __func__ << " FIXME: Always reporting unknown state";
+    res.regState = network::RegState::UNKNOWN;
+
+    mRep->getVoiceRegistrationStateResponse(RESP_OK(in_serial), res);
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -205,13 +239,15 @@ ndk::ScopedAStatus RadioNetwork::setCellInfoListRate(int32_t in_serial, int32_t 
 ndk::ScopedAStatus RadioNetwork::setIndicationFilter(int32_t in_serial, int32_t in_indicationFilter) {
     printf("xRadioNetwork::%s\n", __func__);
     int32_t filter = in_indicationFilter;
+    int32_t filter_bit = 0b1;
 
-    LOG(INFO) << "Filters:";
+    LOG(INFO) << __func__ << " Filters:";
 
-    while(filter) {
-        if (filter & 0b1)
-            LOG(INFO) << network::toString(network::IndicationFilter(filter & 0b1));
-        filter >> 1;
+    // FIXME: don't hardcode this!
+    while(filter_bit < (int32_t)network::IndicationFilter::BARRING_INFO) {
+        if (filter & filter_bit)
+            LOG(INFO) << network::toString(network::IndicationFilter(filter & filter_bit));
+        filter_bit <<= 1;
     }
 
     indicationFilter = in_indicationFilter;
@@ -223,7 +259,26 @@ ndk::ScopedAStatus RadioNetwork::setIndicationFilter(int32_t in_serial, int32_t 
 ndk::ScopedAStatus RadioNetwork::setLinkCapacityReportingCriteria(int32_t in_serial, int32_t in_hysteresisMs,
       int32_t in_hysteresisDlKbps, int32_t in_hysteresisUlKbps, const std::vector<int32_t> &in_thresholdsDownlinkKbps,
       const std::vector<int32_t> &in_thresholdsUplinkKbps, AccessNetwork in_accessNetwork) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+
+    LOG(DEBUG) << __func__ << "(";
+    LOG(DEBUG) << "\thysteresisMs: " << in_hysteresisMs;
+    LOG(DEBUG) << "\thysteresisDlKbps: " << in_hysteresisDlKbps;
+    LOG(DEBUG) << "\thysteresisUlKbps: " << in_hysteresisUlKbps;
+    LOG(DEBUG) << "\tthresholdsDownLinkKbps:";
+    for(auto thresh : in_thresholdsDownlinkKbps) {
+        LOG(DEBUG) << "\t\t" << thresh;
+    }
+    LOG(DEBUG) << "\tthresholdsUplinkKbps:";
+    for(auto thresh : in_thresholdsUplinkKbps) {
+        LOG(DEBUG) << "\t\t" << thresh;
+    }
+
+    LOG(DEBUG) << "\tAccessNetwork: " << toString(in_accessNetwork);
+    LOG(DEBUG) << ");";
+
+    mRep->setLinkCapacityReportingCriteriaResponse(RESP_OK(in_serial));
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -233,13 +288,24 @@ ndk::ScopedAStatus RadioNetwork::setLocationUpdates(int32_t in_serial, bool in_e
 }
 
 ndk::ScopedAStatus RadioNetwork::setNetworkSelectionModeAutomatic(int32_t in_serial) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+
+    LOG(INFO) << __func__;
+
+    mRep->setNetworkSelectionModeAutomaticResponse(RESP_OK(in_serial));
+
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setNetworkSelectionModeManual(
       int32_t in_serial, const std::string &in_operatorNumeric, AccessNetwork in_ran) {
     printf("RadioNetwork::%s\n", __func__);
+    RadioResponseInfo r_info = RESP_OK(in_serial);
+
+    LOG(ERROR) << __func__ << " Can't handle manual network selection!";
+    r_info.error = RadioError::OPERATION_NOT_ALLOWED;
+
+    mRep->setNetworkSelectionModeManualResponse(r_info);
     return ndk::ScopedAStatus::ok();
 }
 
@@ -262,7 +328,15 @@ ndk::ScopedAStatus RadioNetwork::setResponseFunctions(
 
 ndk::ScopedAStatus RadioNetwork::setSignalStrengthReportingCriteria(
       int32_t in_serial, const std::vector<network::SignalThresholdInfo> &in_signalThresholdInfos) {
-    printf("RadioNetwork::%s\n", __func__);
+    printf("xRadioNetwork::%s\n", __func__);
+
+    LOG(DEBUG) << __func__;
+    for(auto thresh : in_signalThresholdInfos) {
+        LOG(DEBUG) << thresh.toString();
+    }
+
+    mRep->setSignalStrengthReportingCriteriaResponse(RESP_OK(in_serial));
+
     return ndk::ScopedAStatus::ok();
 }
 

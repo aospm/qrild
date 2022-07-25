@@ -33,7 +33,7 @@ cc_library {
 }
 
 cc_binary {
-    name: "qrild",
+    name: "android.hardware.radio-service",
     vendor: true,
     srcs: [
         "qrild/qrild.c",
@@ -45,11 +45,6 @@ cc_binary {
         "qrild/qrild_android_network.cc",
         "qrild/qrild_android_sim.cc",
         "qrild/qrild_android_voice.cc",
-    ],
-    local_include_dirs: [
-        "qrild",
-    ],
-    include_dirs: [
     ],
     // Disable for testing
     cflags: ["-Wno-unused-parameter"],
@@ -70,7 +65,8 @@ cc_binary {
         "android.hardware.radio.sim-V1-ndk",
         "android.hardware.radio.voice-V1-ndk",
     ],
-    init_rc: ["qrild.rc"],
+    relative_install_path: "hw",
+    init_rc: ["android.hardware.radio.rc"],
     vintf_fragments: ["android.hardware.radio.xml"],
     overrides: ["rild"],
 }

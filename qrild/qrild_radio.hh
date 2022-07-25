@@ -165,6 +165,8 @@ class RadioModem : public modem::BnRadioModem {
 
     std::shared_ptr<modem::IRadioModemResponse> mRep;
     std::shared_ptr<modem::IRadioModemIndication> mInd;
+    modem::RadioCapability mCaps;
+    bool mEnabled;
     struct rild_state *mState;
 
 public:
@@ -223,6 +225,7 @@ class RadioNetwork : public network::BnRadioNetwork {
     std::shared_ptr<network::IRadioNetworkIndication> mInd;
     struct rild_state *mState;
     int32_t indicationFilter;
+    network::RegStateResult mRegStateRes;
 
 public:
     RadioNetwork(struct rild_state *state);
@@ -360,5 +363,12 @@ void buildResponseInfo(RadioResponseInfo &info, int serial, RadioResponseType re
         buildResponseInfo(info, serial, RESP_SOLICITED, RadioError::NONE);                                             \
         info;                                                                                                          \
     })
+
+
+// Helpers defined in qrild_android_config.cc for now
+// should be moved
+std::string decode_iccid(uint8_t *bcd, uint8_t len);
+std::string decode_eid(uint8_t *eid, uint8_t len);
+std::string decode_atr(uint8_t *atr, uint8_t len);
 
 #endif // __QRILD_RADIO_HH__

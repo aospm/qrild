@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#define LOG_TAG "qrild.IConfig"
+#include <android-base/logging.h>
+
 #include <string>
 
 #include <qrild.h>
@@ -64,7 +67,7 @@ ndk::ScopedAStatus RadioConfig::getPhoneCapability(int32_t in_serial) {
  */
 static const char bcd_chars[] = "0123456789\0\0\0\0\0\0";
 
-static inline std::string decode_iccid(uint8_t *bcd, uint8_t len)
+std::string decode_iccid(uint8_t *bcd, uint8_t len)
 {
     char *str = (char*)zalloc(len * 2 + 1);
     for (size_t i = 0; i < len; i++)
@@ -76,7 +79,7 @@ static inline std::string decode_iccid(uint8_t *bcd, uint8_t len)
     return std::string(str);
 }
 
-static inline std::string decode_eid(uint8_t *eid, uint8_t len)
+std::string decode_eid(uint8_t *eid, uint8_t len)
 {
     char *str = (char*)zalloc(len * 2 + 1);
     for (size_t i = 0; i < len; i++)
@@ -88,7 +91,7 @@ static inline std::string decode_eid(uint8_t *eid, uint8_t len)
     return std::string(str);
 }
 
-static inline std::string decode_atr(uint8_t *atr, uint8_t len)
+std::string decode_atr(uint8_t *atr, uint8_t len)
 {
     char *str = (char*)zalloc(len + 1);
     for (size_t i = 0; i < len; i++)
@@ -144,7 +147,7 @@ ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
     }
 
 out:
-    buildResponseInfo(info, in_serial, RESP_SOLICITED, RadioError::MODEM_ERR);
+    buildResponseInfo(info, in_serial, RESP_SOLICITED, err);
     mRep->getSimSlotsStatusResponse(info, slots);
     return ndk::ScopedAStatus::ok();
 }

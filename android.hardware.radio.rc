@@ -1,4 +1,4 @@
-service vendor.radio-hal logwrapper /vendor/bin/hw/qrild
+service vendor.radio-hal logwrapper /vendor/bin/hw/android.hardware.radio-service
     interface aidl android.hardware.radio.config.IRadioConfig
     interface aidl android.hardware.radio.data.IRadioData
     interface aidl android.hardware.radio.modem.IRadioModem
@@ -8,6 +8,3 @@ service vendor.radio-hal logwrapper /vendor/bin/hw/qrild
     user radio
     group radio inet misc audio log readproc wakelock
     capabilities BLOCK_SUSPEND NET_ADMIN NET_RAW
-
-on post-fs-data
-    start vendor.radio-hal

@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#define LOG_TAG "qrild.IVoice"
+#include <android-base/logging.h>
+
 #include <qrild.h>
 
 #include "qrild_radio.hh"
@@ -242,7 +245,7 @@ ndk::ScopedAStatus RadioVoice::setResponseFunctions(
 }
 
 ndk::ScopedAStatus RadioVoice::setTtyMode(int32_t in_serial, voice::TtyMode in_mode) {
-    printf("RadioVoice::%s\n", __func__);
+    printf("xRadioVoice::%s\n", __func__);
 
     printf("(nop) Set TTY mode to %s\n", voice::toString(in_mode).c_str());
 

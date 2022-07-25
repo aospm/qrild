@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#define LOG_TAG "qrild.IData"
+#include <android-base/logging.h>
+
 #include <qrild.h>
 
 #include "qrild_radio.hh"

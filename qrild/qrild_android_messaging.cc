@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "android.hardware.radio.IMessaging"
+#define LOG_TAG "qrild.IMessaging"
 #include <android-base/logging.h>
 
 #include <qrild.h>

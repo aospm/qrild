@@ -358,6 +358,7 @@ struct rild_state {
 				break;                                         \
 			};                                                     \
 		}                                                              \
+		if (msg->txn != _txn) out = NULL; \
 		out;                                                           \
 	})
 

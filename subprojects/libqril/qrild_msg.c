@@ -36,6 +36,13 @@ void print_service(struct qmi_service_info *pkt)
 	count++;
 }
 
+static void dump_messages(struct list_head *list) {
+	struct qrild_msg *msg;
+	list_for_each_entry(msg, (list), li) {
+		printf("{id: 0x%4x, txn: 0x%2x}\n", msg->msg_id, msg->txn);
+	}
+}
+
 /**
  * @brief: Send a qrild_msg and free it
  * NOTE: Must be called with msg_mutex locked!
@@ -177,6 +184,7 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 	timespec_add(&timeout, timeout_ms);
 	// Check in case the msg thread somehow beat us to it and handled the response
 	// before we got here
+	printf("Waiting for response to msg {id: 0x%x, txn: %u\n", msg->msg_id, msg->txn);
 	msg2 = qrild_msg_get_by_txn(&state->pending_rx, msg->txn);
 	found = msg2 && msg2->txn == msg->txn;
 	while (rc != ETIMEDOUT && !found) {
@@ -184,11 +192,14 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 		rc = pthread_cond_timedwait(&state->msg_change, &state->msg_mutex,
 					&timeout);
 		msg2 = qrild_msg_get_by_txn(&state->pending_rx, msg->txn);
+		if (msg2)
+			printf("Found msg (id: 0x%x) with matching txn\n", msg2->msg_id);
 		found = msg2 && msg2->txn == msg->txn;
 	}
 	if (rc > 0 && !found) {
 		LOGE("Failed waiting for response: %d (%s)\n", rc, strerror(rc));
 		rc = QRILD_STATE_ERROR;
+		dump_messages(&state->pending_rx);
 		goto unlock_out;
 	}
 	printf("Got response for msg {id: 0x%x, txn: %u}: {id: 0x%x, txn: %u} (rc: %d)\n",
@@ -328,7 +339,6 @@ void qrild_qrtr_recv(struct rild_state *state)
 			list_remove(&msg->li);
 		}
 
-		list_append(&state->pending_rx, &msg->li);
 		if (msg->msg_id != qmi->msg_id) {
 			fprintf(stderr, "FIXME: txn %u: req->msg_id (%u) != resp->msg_id (%u)\n", qmi->txn_id, msg->msg_id, qmi->msg_id);
 			msg->msg_id = qmi->msg_id;
@@ -350,9 +360,11 @@ void qrild_qrtr_recv(struct rild_state *state)
 		// 	free(tlv);
 		// }
 
+		list_append(&state->pending_rx, &msg->li);
+
 		// Notify other threads of the received message
-		pthread_cond_broadcast(&state->msg_change);
 		pthread_mutex_unlock(&state->msg_mutex);
+		pthread_cond_broadcast(&state->msg_change);
 		if (msg->handler) {
 			ret = msg->handler(state, msg); 
 		}

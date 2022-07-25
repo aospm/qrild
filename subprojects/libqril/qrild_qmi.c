@@ -39,7 +39,7 @@ int qrild_qmi_dms_get_operating_mode(struct rild_state *state)
 	struct dms_get_operating_mode_req *req;
 	struct qrild_msg *resp_msg = NULL;
 	struct dms_get_operating_mode_resp *resp;
-	uint8_t mode = 0, hw_restricted = 0;
+	uint8_t mode = QMI_DMS_OPERATING_MODE_UNKNOWN, hw_restricted = 0;
 	int rc;
 	void *buf;
 	size_t len;
@@ -77,19 +77,29 @@ int qrild_qmi_dms_get_operating_mode(struct rild_state *state)
  * @state: RIL state object
  * @mode: mode to set
  */
-int qrild_qmi_dms_set_operating_mode(struct rild_state *state, uint8_t mode)
+struct qmi_response_type_v01 qrild_qmi_dms_set_operating_mode(struct rild_state *state, uint8_t mode)
 {
 	struct dms_set_operating_mode_req *req;
+	struct qmi_response_type_v01 res;
 	void *buf;
 	size_t len;
+	int rc;
 
 	req = dms_set_operating_mode_req_alloc(qrild_next_transaction_id());
 	dms_set_operating_mode_req_set_mode(req, mode);
 
 	buf = dms_set_operating_mode_req_encode(req, &len);
 
-	return qrild_msg_send_resp_check(state, QMI_SERVICE_DMS, buf, len,
-					 TIMEOUT_DEFAULT, NULL);
+	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_DMS, buf, len,
+					 TIMEOUT_DEFAULT, &res);
+	if (rc < 0) {
+		LOGE("Failed to set operating mode!");
+		res.result = 1;
+		// FIXME: This is jank, please do something about it future Caleb
+		res.error = QMI_ERR_QRILD;
+	}
+
+	return res;
 }
 
 /*
@@ -103,6 +113,7 @@ int qrild_qmi_dms_set_operating_mode(struct rild_state *state, uint8_t mode)
 int qrild_qmi_powerup(struct rild_state *state)
 {
 	int mode;
+	struct qmi_response_type_v01 res;
 
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS,
 			      QRILD_STATE_PENDING);
@@ -127,7 +138,75 @@ int qrild_qmi_powerup(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 	}
 
-	qrild_qmi_dms_set_operating_mode(state, QMI_DMS_OPERATING_MODE_ONLINE);
+	res = qrild_qmi_dms_set_operating_mode(state, QMI_DMS_OPERATING_MODE_ONLINE);
+	if (res.result) {
+		LOGE("Failed to set modem online: %u\n", res.error);
+		return QRILD_STATE_ERROR;
+	}
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_dms_get_revision(struct rild_state *state, char *revision, size_t buflen)
+{
+	struct dms_get_revision_resp *resp;
+	struct qrild_msg *msg = NULL;
+	int rc;
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS,
+			      QRILD_STATE_PENDING);
+	
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_DMS, QMI_DMS_GET_REVISION,
+		&msg);
+	if (rc < 0) {
+		LOGE("Couldn't get modem revision");
+		return rc;
+	}
+
+	resp = dms_get_revision_resp_parse(msg->buf, msg->buf_len);
+
+	rc = dms_get_revision_resp_get_revision(resp, revision, buflen);
+	if (rc < 0) {
+		LOGE("Couldn't read mode revision");
+		return rc;
+	}
+
+	qrild_msg_free(msg);
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_dms_get_ids(struct rild_state *state, struct dms_ids *ids)
+{
+	struct qrild_msg *msg = NULL;
+	struct dms_get_ids_resp *resp;
+	struct qmi_response_type_v01 *res;
+	int rc;
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS,
+			      QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_DMS, QMI_DMS_GET_IDS,
+		&msg);
+	if (rc < 0) {
+		LOGE("Couldn't get modem IDs");
+		return rc;
+	}
+
+	resp = dms_get_ids_resp_parse(msg->buf, msg->buf_len);
+
+	res = qmi_tlv_get_result((struct qmi_tlv*)resp);
+	if (res->result) {
+		LOGE("Couldn't get IDs, modem returned error:");
+		qrild_qmi_result_print(res);
+		qrild_msg_free(msg);
+		return QRILD_STATE_ERROR;
+	}
+
+	dms_get_ids_resp_get_esn(resp, ids->esn, ids->esn_len);
+	dms_get_ids_resp_get_imei(resp, ids->imei, ids->imei_len);
+	dms_get_ids_resp_get_meid(resp, ids->meid, ids->meid_len);
+	dms_get_ids_resp_get_imei_ver(resp, ids->imei_ver, ids->imei_ver_len);
+
+	qrild_msg_free(msg);
 
 	return QRILD_STATE_DONE;
 }
@@ -568,7 +647,7 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state,
 	res = qmi_tlv_get_result(resp);
 	if (res->result > 0) {
 		LOGE("Failed to get signal strength");
-		qrild_qmi_result_print(&res);
+		qrild_qmi_result_print(res);
 		return QRILD_STATE_ERROR;
 	}
 
@@ -617,7 +696,7 @@ int qrild_qmi_nas_show_signal_strength(struct rild_state *state)
 	res = qmi_tlv_get_result(resp);
 	if (res->result > 0) {
 		LOGE("Failed to get signal strength");
-		qrild_qmi_result_print(&res);
+		qrild_qmi_result_print(res);
 		return QRILD_STATE_ERROR;
 	}
 
@@ -633,7 +712,7 @@ int qrild_qmi_nas_show_signal_strength(struct rild_state *state)
 
 	strength_list = nas_get_signal_strength_resp_get_strength_list(resp);
 	if (strength_list) {
-		printf("Strength_list (%d): \n");
+		printf("Strength_list: \n");
 		for (i = 0; i < strength_list->interfaces_n; i++) {
 			le = &strength_list->interfaces[i];
 			printf("  interface: %d, strength: %d\n", le->interface,

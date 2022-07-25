@@ -1,5 +1,7 @@
 package dms;
 
+const QMI_DMS_GET_REVISION = 0x23;
+const QMI_DMS_GET_IDS = 0x25;
 const QMI_DMS_GET_OPERATING_MODE = 0x2D;
 const QMI_DMS_SET_OPERATING_MODE = 0x2E;
 
@@ -12,6 +14,35 @@ const QMI_DMS_OPERATING_MODE_SHUTTING_DOWN = 5;
 const QMI_DMS_OPERATING_MODE_PERSISTENT_LOW_POWER = 6;
 const QMI_DMS_OPERATING_MODE_MODE_ONLY_LOW_POWER = 7;
 const QMI_DMS_OPERATING_MODE_UNKNOWN = 0xFF;
+
+struct ids {
+	u8 esn_len;
+	string esn;
+	u8 imei_len;
+	string imei;
+	u8 meid_len;
+	string meid;
+	u8 imei_ver_len;
+	string imei_ver;
+};
+
+request get_revision_req {
+} = 0x0023;
+
+response get_revision_resp {
+	required string revision = 0x01;
+} = 0x0023;
+
+request get_ids_req {
+} = 0x0025;
+
+response get_ids_resp {
+	required qmi_response_type_v01 res = 0x02;
+	optional string esn = 0x10;
+	optional string imei = 0x11;
+	optional string meid = 0x12;
+	optional string imei_ver = 0x13;
+} = 0x0025;
 
 request get_operating_mode_req {
 } = 0x002D;
