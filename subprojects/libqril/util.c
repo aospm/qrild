@@ -10,7 +10,7 @@
 #include "util.h"
 #include "qrild_msg.h"
 
-static uint8_t to_hex(uint8_t ch)
+char to_hex(uint8_t ch)
 {
 	ch &= 0xf;
 	return ch <= 9 ? '0' + ch : 'a' + ch - 10;

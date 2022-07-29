@@ -137,19 +137,13 @@ static uint8_t yylex()
 	if (len & 0b1)
 		yyerror("Odd number of hex digits!\n");
 
-	if (!ch) {
-		end = true;
-		return 0;
-	}
-
-	if (!(ch == ':' || ch == '\n')) {
+	if (ch && !(ch == ':' || ch == '\n')) {
 		yyerror("Expected ':' or EOL\n");
 	}
 
-	printf("Parsed: %s\n", buf);
-	i = sscanf(&buf[0], "%2hhx", &out);
+	i = sscanf(buf, "%2hhx", &out);
 	if (i < 0) {
-		fprintf("sscanf failed: %d (%d: %s)\n", i, errno, strerror(errno));
+		fprintf(stderr, "sscanf failed: %d (%d: %s)\n", i, errno, strerror(errno));
 		end = true;
 		return 0;
 	}
@@ -173,9 +167,11 @@ int main(int argc, char **argv)
 {
 	int opt;
 	struct stat sb;
-	uint8_t buf[MAX_LEN];
+	uint8_t *buf = malloc(MAX_LEN);
 	size_t buf_len;
 	struct qmi_tlv *tlv;
+
+	memset(buf, 0, MAX_LEN);
 
 	while ((opt = getopt(argc, argv, "f:")) != -1) {
 		switch (opt) {
@@ -205,8 +201,9 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	buf_len = parse(&buf[0]);
+	buf_len = parse(buf);
 	printf("Got %lu bytes\n", buf_len);
+	//writeout(buf, buf_len);
 
 	tlv = qmi_tlv_decode(buf, buf_len);
 

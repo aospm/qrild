@@ -1,4 +1,5 @@
 package dms;
+package_type client;
 
 const QMI_DMS_GET_REVISION = 0x23;
 const QMI_DMS_GET_IDS = 0x25;
@@ -16,13 +17,13 @@ const QMI_DMS_OPERATING_MODE_MODE_ONLY_LOW_POWER = 7;
 const QMI_DMS_OPERATING_MODE_UNKNOWN = 0xFF;
 
 struct ids {
-	u8 esn_len;
+	u16 esn_len;
 	string esn;
-	u8 imei_len;
+	u16 imei_len;
 	string imei;
-	u8 meid_len;
+	u16 meid_len;
 	string meid;
-	u8 imei_ver_len;
+	u16 imei_ver_len;
 	string imei_ver;
 };
 

@@ -184,7 +184,7 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 	timespec_add(&timeout, timeout_ms);
 	// Check in case the msg thread somehow beat us to it and handled the response
 	// before we got here
-	printf("Waiting for response to msg {id: 0x%x, txn: %u\n", msg->msg_id, msg->txn);
+	printf("Waiting for response to msg {id: 0x%x, txn: %u}\n", msg->msg_id, msg->txn);
 	msg2 = qrild_msg_get_by_txn(&state->pending_rx, msg->txn);
 	found = msg2 && msg2->txn == msg->txn;
 	while (rc != ETIMEDOUT && !found) {
@@ -193,7 +193,8 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 					&timeout);
 		msg2 = qrild_msg_get_by_txn(&state->pending_rx, msg->txn);
 		if (msg2)
-			printf("Found msg (id: 0x%x) with matching txn\n", msg2->msg_id);
+			printf("Found msg (id: 0x%x (%u == %u)) with matching txn\n", msg2->msg_id,
+				msg->txn, msg2->txn);
 		found = msg2 && msg2->txn == msg->txn;
 	}
 	if (rc > 0 && !found) {

@@ -28,7 +28,7 @@
 #include "qrild_radio.hh"
 
 RadioConfig::RadioConfig(struct rild_state *state) : mState(state) {
-    printf("RadioConfig::%s\n", __func__);
+    printf("xRadioConfig::%s\n", __func__);
 }
 
 ndk::ScopedAStatus RadioConfig::getHalDeviceCapabilities(int32_t in_serial) {
@@ -56,6 +56,7 @@ ndk::ScopedAStatus RadioConfig::getPhoneCapability(int32_t in_serial) {
     cap.maxActiveData = 1;
     cap.maxActiveInternetData = 1;
     cap.isInternetLingeringSupported = false;
+    cap.logicalModemIds = std::vector<uint8_t>(0);
 
     mRep->getPhoneCapabilityResponse(RESP_OK(in_serial), cap);
 
@@ -93,10 +94,11 @@ std::string decode_eid(uint8_t *eid, uint8_t len)
 
 std::string decode_atr(uint8_t *atr, uint8_t len)
 {
-    char *str = (char*)zalloc(len + 1);
+    char *str = (char*)zalloc(len * 2 + 1);
     for (size_t i = 0; i < len; i++)
     {
-        str[i] = (char)atr[i];
+        str[i] = to_hex(atr[i] >> 4);
+        str[i+1] = to_hex(atr[i]);
     }
 
     return std::string(str);
@@ -105,10 +107,12 @@ std::string decode_atr(uint8_t *atr, uint8_t len)
 ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
     printf("xRadioConfig::%s\n", __func__);
     int rc;
-    struct uim_slot_status_msg status;
+    struct uim_get_slot_status_resp_data status;
     auto slots = std::vector<config::SimSlotStatus>();
-    RadioResponseInfo info;
+    auto r_info = RESP_OK(in_serial);
     RadioError err = RadioError::NONE;
+    auto slot = new config::SimSlotStatus();
+    auto port = new config::SimPortInfo();
 
     rc = qrild_qmi_uim_get_slot_status(mState, &status);
     switch (rc) {
@@ -122,38 +126,41 @@ ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
         goto out;
     }
 
-    for (size_t i = 0; i < status.state->slots_n; i++) {
-        auto slot = new config::SimSlotStatus();
-        auto port = new config::SimPortInfo();
+    // FIXME: is it correct to only report one SIM?
+    //for (size_t i = 0; i < status.slot_state->slots_n; i++) {
 
-        slot->cardState = status.state->slots[i].card_state;
-        port->logicalSlotId = status.state->slots[i].logical_slot;
-        port->portActive = status.state->slots[i].slot_state;
+    slot->cardState = QmiUimPhysicalCardStateToCardState(status.slot_state->slots[0].card_state);
 
-        printf("Slot %zu\n\tcardState: %d\n\tlogicalSlotId: %d\n\tportActive: %d\n", i, slot->cardState, port->logicalSlotId, port->portActive);
+    port->logicalSlotId = status.slot_state->slots[0].logical_slot - 1;
+    port->portActive = status.slot_state->slots[0].slot_state;
 
-        if (slot->cardState != QMI_UIM_CARD_STATE_PRESENT)
-            goto cont;
+    printf("Slot %d\n\tcardState: %d\n\tlogicalSlotId: %d\n\tportActive: %d\n", 0, slot->cardState, port->logicalSlotId, port->portActive);
 
-        slot->atr = decode_atr(status.info->slots[i].atr_value, status.info->slots[i].atr_value_n);
+    // if (slot->cardState != QMI_UIM_CARD_STATE_PRESENT)
+    //     goto cont;
+
+    slot->atr = decode_atr(status.slot_info->slots[0].atr_value, status.slot_info->slots[0].atr_value_n);
+    if (status.slot_info->slots[0].is_euicc)
         slot->eid = decode_eid(status.eid_info, status.eid_info_n);
-        port->iccId = decode_iccid(status.state->slots[i].iccid, status.state->slots[i].iccid_n);
+    else
+        LOG(DEBUG) << __func__ << ": not EUICC -> no EID";
+    port->iccId = decode_iccid(status.slot_state->slots[0].iccid, status.slot_state->slots[0].iccid_n);
 
-        printf("\tATR: %s\n\tEID: %s\n\tICCID: %s\n", slot->atr.c_str(), slot->eid.c_str(), port->iccId.c_str());
+    printf("\tFIXME! should start with 3B!!! ATR: %s\n\tEID: %s\n\tICCID: %s\n", slot->atr.c_str(), slot->eid.c_str(), port->iccId.c_str());
 
-    cont:
+    //cont:
         slot->portInfo.push_back(*port);
         slots.push_back(*slot);
-    }
+    //}
 
 out:
-    buildResponseInfo(info, in_serial, RESP_SOLICITED, err);
-    mRep->getSimSlotsStatusResponse(info, slots);
+    r_info.error = err;
+    mRep->getSimSlotsStatusResponse(r_info, slots);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioConfig::setNumOfLiveModems(int32_t in_serial, int8_t in_numOfLiveModems) {
-    printf("RadioConfig::%s\n", __func__);
+    printf("FIXME! TODO: RadioConfig::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
@@ -179,6 +186,11 @@ ndk::ScopedAStatus RadioConfig::setResponseFunctions(
 
 ndk::ScopedAStatus RadioConfig::setSimSlotsMapping(
       int32_t in_serial, const std::vector<config::SlotPortMapping> &in_slotMap) {
-    printf("RadioConfig::%s\n", __func__);
+    printf("FIXME! TODO: RadioConfig::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
+}
+
+void RadioConfig::handleQmiIndications()
+{
+
 }

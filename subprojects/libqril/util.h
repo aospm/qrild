@@ -9,6 +9,7 @@ __BEGIN_DECLS
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
+char to_hex(uint8_t ch);
 void print_hex_dump(const char *prefix, const void *buf, size_t len);
 
 #define zalloc(size) calloc(1, (size))

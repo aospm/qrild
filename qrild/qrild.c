@@ -205,6 +205,7 @@ int main(int argc, char **argv) {
 	pthread_mutex_init(&state.services_mutex, &mattr);
 	pthread_mutex_init(&state.msg_mutex, &mattr);
 	pthread_cond_init(&state.msg_change, &cattr);
+	pthread_cond_init(&state.pending_indications, &cattr);
 	pthread_mutex_init(&state.connection_status_mutex, &mattr);
 	pthread_cond_init(&state.connection_status_change, &cattr);
 

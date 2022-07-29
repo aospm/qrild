@@ -1,4 +1,5 @@
 package uim;
+package_type client;
 
 const QMI_UIM_GET_CARD_STATUS = 0x2F;
 const QMI_UIM_CHANGE_PROVISIONING_SESSION = 0x38;
@@ -11,8 +12,18 @@ const QMI_UIM_CARD_STATE_ABSENT = 0;
 const QMI_UIM_CARD_STATE_PRESENT = 1;
 const QMI_UIM_CARD_STATE_ERROR = 2;
 
-# Used by Android side not sure if valid modem side
-const QMI_UIM_CARD_STATE_RESTRICTED = 4;
+const QMI_UIM_PHYSICAL_CARD_STATE_UNKNOWN = 0;
+const QMI_UIM_PHYSICAL_CARD_STATE_ABSENT  = 1;
+const QMI_UIM_PHYSICAL_CARD_STATE_PRESENT = 2;
+
+const QMI_UIM_CARD_APPLICATION_STATE_UNKNOWN                     = 0;
+const QMI_UIM_CARD_APPLICATION_STATE_DETECTED                    = 1;
+const QMI_UIM_CARD_APPLICATION_STATE_PIN1_OR_UPIN_PIN_REQUIRED   = 2;
+const QMI_UIM_CARD_APPLICATION_STATE_PUK1_OR_UPIN_PUK_REQUIRED   = 3;
+const QMI_UIM_CARD_APPLICATION_STATE_CHECK_PERSONALIZATION_STATE = 4;
+const QMI_UIM_CARD_APPLICATION_STATE_PIN1_BLOCKED                = 5;
+const QMI_UIM_CARD_APPLICATION_STATE_ILLEGAL                     = 6;
+const QMI_UIM_CARD_APPLICATION_STATE_READY                       = 7;
 
 struct card_status {
 	u16 index_gw_primary;
@@ -80,13 +91,6 @@ struct physical_slot_info {
 	} *slots;
 };
 
-struct slot_status_msg {
-	struct physical_slot_state *state;
-	struct physical_slot_info *info;
-	u8 eid_info_n; # ALWAYS 32
-	u8 *eid_info;
-};
-
 request get_card_status_req {
 } = 0x002F;
 
@@ -115,7 +119,7 @@ response get_slot_status_resp {
 } = 0x0047;
 
 indication get_slot_status_ind {
-	optional physical_slot_state slot_state = 0x10;
+	required physical_slot_state slot_state = 0x10;
 	optional physical_slot_info slot_info = 0x11;
 	optional u8 eid_info[32] = 0x12;
 } = 0x0048;

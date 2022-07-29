@@ -2,11 +2,16 @@
 #define __QMI_UIM_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <libqrtr.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
@@ -23,7 +28,17 @@
 #define QMI_UIM_CARD_STATE_ABSENT 0
 #define QMI_UIM_CARD_STATE_PRESENT 1
 #define QMI_UIM_CARD_STATE_ERROR 2
-#define QMI_UIM_CARD_STATE_RESTRICTED 4
+#define QMI_UIM_PHYSICAL_CARD_STATE_UNKNOWN 0
+#define QMI_UIM_PHYSICAL_CARD_STATE_ABSENT 1
+#define QMI_UIM_PHYSICAL_CARD_STATE_PRESENT 2
+#define QMI_UIM_CARD_APPLICATION_STATE_UNKNOWN 0
+#define QMI_UIM_CARD_APPLICATION_STATE_DETECTED 1
+#define QMI_UIM_CARD_APPLICATION_STATE_PIN1_OR_UPIN_PIN_REQUIRED 2
+#define QMI_UIM_CARD_APPLICATION_STATE_PUK1_OR_UPIN_PUK_REQUIRED 3
+#define QMI_UIM_CARD_APPLICATION_STATE_CHECK_PERSONALIZATION_STATE 4
+#define QMI_UIM_CARD_APPLICATION_STATE_PIN1_BLOCKED 5
+#define QMI_UIM_CARD_APPLICATION_STATE_ILLEGAL 6
+#define QMI_UIM_CARD_APPLICATION_STATE_READY 7
 
 struct uim_card_status {
 	uint16_t index_gw_primary;
@@ -91,13 +106,6 @@ struct uim_physical_slot_info {
 	} *slots;
 };
 
-struct uim_slot_status_msg {
-	struct uim_physical_slot_state *state;
-	struct uim_physical_slot_info *info;
-	uint8_t eid_info_n;
-	uint8_t *eid_info;
-};
-
 struct uim_get_card_status_req;
 struct uim_get_card_status_resp;
 struct uim_change_provisioning_session_req;
@@ -110,73 +118,94 @@ struct uim_get_slot_status_ind;
  * uim_get_card_status_req message
  */
 struct uim_get_card_status_req *uim_get_card_status_req_alloc(unsigned txn);
-struct uim_get_card_status_req *uim_get_card_status_req_parse(void *buf, size_t len);
 void *uim_get_card_status_req_encode(struct uim_get_card_status_req *get_card_status_req, size_t *len);
 void uim_get_card_status_req_free(struct uim_get_card_status_req *get_card_status_req);
 
 /*
  * uim_get_card_status_resp message
  */
-struct uim_get_card_status_resp *uim_get_card_status_resp_alloc(unsigned txn);
+
+struct uim_get_card_status_resp_data {
+	struct qmi_response_type_v01 *result;
+	bool status_valid;
+	struct uim_card_status *status;
+};
+
 struct uim_get_card_status_resp *uim_get_card_status_resp_parse(void *buf, size_t len);
-void *uim_get_card_status_resp_encode(struct uim_get_card_status_resp *get_card_status_resp, size_t *len);
+void uim_get_card_status_resp_getall(struct uim_get_card_status_resp *get_card_status_resp, struct uim_get_card_status_resp_data *data);
 void uim_get_card_status_resp_free(struct uim_get_card_status_resp *get_card_status_resp);
 
-int uim_get_card_status_resp_set_status(struct uim_get_card_status_resp *get_card_status_resp, struct uim_card_status *val);
 struct uim_card_status *uim_get_card_status_resp_get_status(struct uim_get_card_status_resp *get_card_status_resp);
 
 /*
  * uim_change_provisioning_session_req message
  */
 struct uim_change_provisioning_session_req *uim_change_provisioning_session_req_alloc(unsigned txn);
-struct uim_change_provisioning_session_req *uim_change_provisioning_session_req_parse(void *buf, size_t len);
 void *uim_change_provisioning_session_req_encode(struct uim_change_provisioning_session_req *change_provisioning_session_req, size_t *len);
 void uim_change_provisioning_session_req_free(struct uim_change_provisioning_session_req *change_provisioning_session_req);
 
 int uim_change_provisioning_session_req_set_session_change(struct uim_change_provisioning_session_req *change_provisioning_session_req, struct uim_provisioning_session_change *val);
-struct uim_provisioning_session_change *uim_change_provisioning_session_req_get_session_change(struct uim_change_provisioning_session_req *change_provisioning_session_req);
-
 int uim_change_provisioning_session_req_set_application_information(struct uim_change_provisioning_session_req *change_provisioning_session_req, struct uim_provisioning_session_application *val);
-struct uim_provisioning_session_application *uim_change_provisioning_session_req_get_application_information(struct uim_change_provisioning_session_req *change_provisioning_session_req);
-
 /*
  * uim_change_provisioning_session_resp message
  */
-struct uim_change_provisioning_session_resp *uim_change_provisioning_session_resp_alloc(unsigned txn);
+
+struct uim_change_provisioning_session_resp_data {
+	struct qmi_response_type_v01 *result;
+};
+
 struct uim_change_provisioning_session_resp *uim_change_provisioning_session_resp_parse(void *buf, size_t len);
-void *uim_change_provisioning_session_resp_encode(struct uim_change_provisioning_session_resp *change_provisioning_session_resp, size_t *len);
+void uim_change_provisioning_session_resp_getall(struct uim_change_provisioning_session_resp *change_provisioning_session_resp, struct uim_change_provisioning_session_resp_data *data);
 void uim_change_provisioning_session_resp_free(struct uim_change_provisioning_session_resp *change_provisioning_session_resp);
 
 /*
  * uim_get_slot_status_req message
  */
 struct uim_get_slot_status_req *uim_get_slot_status_req_alloc(unsigned txn);
-struct uim_get_slot_status_req *uim_get_slot_status_req_parse(void *buf, size_t len);
 void *uim_get_slot_status_req_encode(struct uim_get_slot_status_req *get_slot_status_req, size_t *len);
 void uim_get_slot_status_req_free(struct uim_get_slot_status_req *get_slot_status_req);
 
 /*
  * uim_get_slot_status_resp message
  */
-struct uim_get_slot_status_resp *uim_get_slot_status_resp_alloc(unsigned txn);
+
+struct uim_get_slot_status_resp_data {
+	struct qmi_response_type_v01 *result;
+	bool slot_state_valid;
+	struct uim_physical_slot_state *slot_state;
+	bool slot_info_valid;
+	struct uim_physical_slot_info *slot_info;
+	bool eid_info_valid;
+	size_t eid_info_n;
+	uint8_t *eid_info;
+};
+
 struct uim_get_slot_status_resp *uim_get_slot_status_resp_parse(void *buf, size_t len);
-void *uim_get_slot_status_resp_encode(struct uim_get_slot_status_resp *get_slot_status_resp, size_t *len);
+void uim_get_slot_status_resp_getall(struct uim_get_slot_status_resp *get_slot_status_resp, struct uim_get_slot_status_resp_data *data);
 void uim_get_slot_status_resp_free(struct uim_get_slot_status_resp *get_slot_status_resp);
 
-int uim_get_slot_status_resp_set_slot_state(struct uim_get_slot_status_resp *get_slot_status_resp, struct uim_physical_slot_state *val);
 struct uim_physical_slot_state *uim_get_slot_status_resp_get_slot_state(struct uim_get_slot_status_resp *get_slot_status_resp);
 
-int uim_get_slot_status_resp_set_slot_info(struct uim_get_slot_status_resp *get_slot_status_resp, struct uim_physical_slot_info *val);
 struct uim_physical_slot_info *uim_get_slot_status_resp_get_slot_info(struct uim_get_slot_status_resp *get_slot_status_resp);
 
-int uim_get_slot_status_resp_set_eid_info(struct uim_get_slot_status_resp *get_slot_status_resp, uint8_t *val, size_t count);
 uint8_t *uim_get_slot_status_resp_get_eid_info(struct uim_get_slot_status_resp *get_slot_status_resp, size_t *count);
 
 /*
  * uim_get_slot_status_ind message
  */
-struct uim_get_slot_status_ind *uim_get_slot_status_ind_alloc(unsigned txn);
+
+struct uim_get_slot_status_ind_data {
+	struct uim_physical_slot_state *slot_state;
+	bool slot_info_valid;
+	struct uim_physical_slot_info *slot_info;
+	bool eid_info_valid;
+	size_t eid_info_n;
+	uint8_t *eid_info;
+};
+
 struct uim_get_slot_status_ind *uim_get_slot_status_ind_parse(void *buf, size_t len);
+void uim_get_slot_status_ind_getall(struct uim_get_slot_status_ind *get_slot_status_ind, struct uim_get_slot_status_ind_data *data);
+struct uim_get_slot_status_ind *uim_get_slot_status_ind_alloc(unsigned txn);
 void *uim_get_slot_status_ind_encode(struct uim_get_slot_status_ind *get_slot_status_ind, size_t *len);
 void uim_get_slot_status_ind_free(struct uim_get_slot_status_ind *get_slot_status_ind);
 
@@ -188,5 +217,9 @@ struct uim_physical_slot_info *uim_get_slot_status_ind_get_slot_info(struct uim_
 
 int uim_get_slot_status_ind_set_eid_info(struct uim_get_slot_status_ind *get_slot_status_ind, uint8_t *val, size_t count);
 uint8_t *uim_get_slot_status_ind_get_eid_info(struct uim_get_slot_status_ind *get_slot_status_ind, size_t *count);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

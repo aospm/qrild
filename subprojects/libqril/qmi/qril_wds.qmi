@@ -1,4 +1,5 @@
 package wds;
+package_type client;
 
 const QMI_WDS_SERVICE = 0x1;
 
@@ -42,14 +43,14 @@ struct call_end_reason_ext {
 
 response start_network_interface_resp {
 	required qmi_response_type_v01 res = 2;
-	required u32 pkt_data_handle = 1;
+	required u32 pkt_data_handle = 0x1;
 	optional u16 call_end_reason = 0x10;
 	optional call_end_reason_ext ext = 0x11;
 } = 0x20;
 
 # Packet Service Status
 indication get_pkt_srvc_status_ind {
-	required pkt_srvc_status status = 1;
+	required pkt_srvc_status status = 0x1;
 	optional u8 ip_family = 0x12;
 	optional u16 tech_name = 0x13;
 	optional u8 xlat_capable = 0x15;

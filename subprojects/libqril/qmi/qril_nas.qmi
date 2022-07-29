@@ -1,11 +1,24 @@
 package nas;
+package_type client;
 
 const QMI_NAS_EVENT_REPORT = 0x02;
 const QMI_NAS_REGISTER_INDICATIONS = 0x03;
+const QMI_NAS_SERVING_SYSTEM_REPORT = 0x24;
 # https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/gobi-api/GobiAPI_2013-07-31-1347/Core/QMIEnum.h#L474
 const QMI_NAS_SUBSCRIPTION_INFO_REPORT = 0x48;
 const QMI_NAS_ERROR_RATE_REPORT = 0x53;
 const QMI_NAS_RF_BAND_INFO_REPORT = 0x66;
+const QMI_NAS_GET_LTE_CPY_CA_INFO = 0xAC;
+
+# get_lte_cphy_ca_info_resp.dl_bandwidth
+# in MHz
+const QMI_NAS_DL_BANDWIDTH_1_4      = 0;
+const QMI_NAS_DL_BANDWIDTH_3        = 1;
+const QMI_NAS_DL_BANDWIDTH_5        = 2;
+const QMI_NAS_DL_BANDWIDTH_10       = 3;
+const QMI_NAS_DL_BANDWIDTH_15       = 4;
+const QMI_NAS_DL_BANDWIDTH_20       = 5;
+const QMI_NAS_DL_BANDWIDTH_INVALID  = 6;
 
 
 const QMI_NAS_SIGNAL_STRENGTH_REQUEST_NONE       = 0;
@@ -40,6 +53,15 @@ struct network_reject_info {
 	u8 suppress_system_info_indications;
 };
 
+# LTE Cphy CA Info
+struct lte_cphy_agg_scell {
+	u16 pci; # Physical cell ID
+	u16 rx_chan;
+	u32 dl_bandwidth;
+	u16 lte_band;
+	u32 state;
+};
+
 request register_indications_req {
 	required u8 system_selection_preference = 0x10;
 	required u8 ddtm_events = 0x12;
@@ -63,6 +85,43 @@ request get_signal_strength_req {
 	required u16 mask = 0x10;
 } = 0x20;
 
+struct serving_system {
+	u8 registration_state;
+	u8 cs_attach_state;
+	u8 ps_attach_state;
+	u8 selected_network;
+	u8 radio_interfaces_n;
+	u8 *radio_interfaces;
+};
+
+struct current_plmn {
+	u16 mcc;
+	u16 mnc;
+	string description;
+};
+
+struct service_status {
+	u8 status;
+	u8 capability;
+	u8 hdr_status;
+	u8 hdr_hybrid;
+	u8 forbidden;
+};
+
+struct serving_system_ind_msg {
+	struct serving_system *system;
+	u8 data_service_cap;
+	struct current_plmn *plmn;
+	struct service_status *status;
+};
+
+indication serving_system_ind {
+	optional serving_system system = 0x01;
+	optional u8 data_service_cap = 0x11; # do we have data?
+	optional current_plmn plmn = 0x12;
+	optional service_status status = 0x22;
+} = 0x0024;
+
 response get_signal_strength_resp {
 	required qmi_response_type_v01 res = 0x02;
 	required i16 lte_snr = 0x17;
@@ -79,3 +138,16 @@ request set_operating_mode_resp {
 	required qmi_response_type_v01 res = 0x02;
 } = 0x002E;
 
+
+# FIXME: generate this automatically from messages
+struct lte_cphy_ca_info {
+	u32 dl_bandwidth;
+	struct lte_cphy_agg_scell phy_scell_info;
+};
+
+response get_lte_cphy_ca_info_resp {
+	required qmi_response_type_v01 res = 0x02;
+	optional u32 dl_bandwidth = 0x11;
+	optional lte_cphy_agg_scell phy_scell_info = 0x12;
+	# FIXME: add the rest of the TLVs
+} = 0x00AC;

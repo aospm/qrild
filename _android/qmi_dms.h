@@ -2,11 +2,16 @@
 #define __QMI_DMS_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <libqrtr.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define get_next(_type, _sz) ({ \
 	void* buf = ptr + len; \
@@ -30,13 +35,13 @@
 #define QMI_DMS_OPERATING_MODE_UNKNOWN 255
 
 struct dms_ids {
-	uint8_t esn_len;
+	uint16_t esn_len;
 	char * esn;
-	uint8_t imei_len;
+	uint16_t imei_len;
 	char * imei;
-	uint8_t meid_len;
+	uint16_t meid_len;
 	char * meid;
-	uint8_t imei_ver_len;
+	uint16_t imei_ver_len;
 	char * imei_ver;
 };
 
@@ -53,91 +58,104 @@ struct dms_set_operating_mode_resp;
  * dms_get_revision_req message
  */
 struct dms_get_revision_req *dms_get_revision_req_alloc(unsigned txn);
-struct dms_get_revision_req *dms_get_revision_req_parse(void *buf, size_t len);
 void *dms_get_revision_req_encode(struct dms_get_revision_req *get_revision_req, size_t *len);
 void dms_get_revision_req_free(struct dms_get_revision_req *get_revision_req);
 
 /*
  * dms_get_revision_resp message
  */
-struct dms_get_revision_resp *dms_get_revision_resp_alloc(unsigned txn);
+
+struct dms_get_revision_resp_data {
+	char * revision;
+};
+
 struct dms_get_revision_resp *dms_get_revision_resp_parse(void *buf, size_t len);
-void *dms_get_revision_resp_encode(struct dms_get_revision_resp *get_revision_resp, size_t *len);
+void dms_get_revision_resp_getall(struct dms_get_revision_resp *get_revision_resp, struct dms_get_revision_resp_data *data);
 void dms_get_revision_resp_free(struct dms_get_revision_resp *get_revision_resp);
 
-int dms_get_revision_resp_set_revision(struct dms_get_revision_resp *get_revision_resp, char *buf, size_t len);
-int dms_get_revision_resp_get_revision(struct dms_get_revision_resp *get_revision_resp, char *buf, size_t buflen);
+char *dms_get_revision_resp_get_revision(struct dms_get_revision_resp *get_revision_resp);
 
 /*
  * dms_get_ids_req message
  */
 struct dms_get_ids_req *dms_get_ids_req_alloc(unsigned txn);
-struct dms_get_ids_req *dms_get_ids_req_parse(void *buf, size_t len);
 void *dms_get_ids_req_encode(struct dms_get_ids_req *get_ids_req, size_t *len);
 void dms_get_ids_req_free(struct dms_get_ids_req *get_ids_req);
 
 /*
  * dms_get_ids_resp message
  */
-struct dms_get_ids_resp *dms_get_ids_resp_alloc(unsigned txn);
+
+struct dms_get_ids_resp_data {
+	struct qmi_response_type_v01 *res;
+	bool esn_valid;
+	char * esn;
+	bool imei_valid;
+	char * imei;
+	bool meid_valid;
+	char * meid;
+	bool imei_ver_valid;
+	char * imei_ver;
+};
+
 struct dms_get_ids_resp *dms_get_ids_resp_parse(void *buf, size_t len);
-void *dms_get_ids_resp_encode(struct dms_get_ids_resp *get_ids_resp, size_t *len);
+void dms_get_ids_resp_getall(struct dms_get_ids_resp *get_ids_resp, struct dms_get_ids_resp_data *data);
 void dms_get_ids_resp_free(struct dms_get_ids_resp *get_ids_resp);
 
-int dms_get_ids_resp_set_esn(struct dms_get_ids_resp *get_ids_resp, char *buf, size_t len);
-int dms_get_ids_resp_get_esn(struct dms_get_ids_resp *get_ids_resp, char *buf, size_t buflen);
+char *dms_get_ids_resp_get_esn(struct dms_get_ids_resp *get_ids_resp);
 
-int dms_get_ids_resp_set_imei(struct dms_get_ids_resp *get_ids_resp, char *buf, size_t len);
-int dms_get_ids_resp_get_imei(struct dms_get_ids_resp *get_ids_resp, char *buf, size_t buflen);
+char *dms_get_ids_resp_get_imei(struct dms_get_ids_resp *get_ids_resp);
 
-int dms_get_ids_resp_set_meid(struct dms_get_ids_resp *get_ids_resp, char *buf, size_t len);
-int dms_get_ids_resp_get_meid(struct dms_get_ids_resp *get_ids_resp, char *buf, size_t buflen);
+char *dms_get_ids_resp_get_meid(struct dms_get_ids_resp *get_ids_resp);
 
-int dms_get_ids_resp_set_imei_ver(struct dms_get_ids_resp *get_ids_resp, char *buf, size_t len);
-int dms_get_ids_resp_get_imei_ver(struct dms_get_ids_resp *get_ids_resp, char *buf, size_t buflen);
+char *dms_get_ids_resp_get_imei_ver(struct dms_get_ids_resp *get_ids_resp);
 
 /*
  * dms_get_operating_mode_req message
  */
 struct dms_get_operating_mode_req *dms_get_operating_mode_req_alloc(unsigned txn);
-struct dms_get_operating_mode_req *dms_get_operating_mode_req_parse(void *buf, size_t len);
 void *dms_get_operating_mode_req_encode(struct dms_get_operating_mode_req *get_operating_mode_req, size_t *len);
 void dms_get_operating_mode_req_free(struct dms_get_operating_mode_req *get_operating_mode_req);
 
 /*
  * dms_get_operating_mode_resp message
  */
-struct dms_get_operating_mode_resp *dms_get_operating_mode_resp_alloc(unsigned txn);
+
+struct dms_get_operating_mode_resp_data {
+	struct qmi_response_type_v01 *res;
+	uint8_t mode;
+	bool offline_reason_valid;
+	uint16_t offline_reason;
+	uint8_t hardware_restricted;
+};
+
 struct dms_get_operating_mode_resp *dms_get_operating_mode_resp_parse(void *buf, size_t len);
-void *dms_get_operating_mode_resp_encode(struct dms_get_operating_mode_resp *get_operating_mode_resp, size_t *len);
+void dms_get_operating_mode_resp_getall(struct dms_get_operating_mode_resp *get_operating_mode_resp, struct dms_get_operating_mode_resp_data *data);
 void dms_get_operating_mode_resp_free(struct dms_get_operating_mode_resp *get_operating_mode_resp);
 
-int dms_get_operating_mode_resp_set_mode(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint8_t val);
 int dms_get_operating_mode_resp_get_mode(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint8_t *val);
 
-int dms_get_operating_mode_resp_set_offline_reason(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint16_t val);
 int dms_get_operating_mode_resp_get_offline_reason(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint16_t *val);
 
-int dms_get_operating_mode_resp_set_hardware_restricted(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint8_t val);
 int dms_get_operating_mode_resp_get_hardware_restricted(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint8_t *val);
 
 /*
  * dms_set_operating_mode_req message
  */
 struct dms_set_operating_mode_req *dms_set_operating_mode_req_alloc(unsigned txn);
-struct dms_set_operating_mode_req *dms_set_operating_mode_req_parse(void *buf, size_t len);
 void *dms_set_operating_mode_req_encode(struct dms_set_operating_mode_req *set_operating_mode_req, size_t *len);
 void dms_set_operating_mode_req_free(struct dms_set_operating_mode_req *set_operating_mode_req);
 
 int dms_set_operating_mode_req_set_mode(struct dms_set_operating_mode_req *set_operating_mode_req, uint8_t val);
-int dms_set_operating_mode_req_get_mode(struct dms_set_operating_mode_req *set_operating_mode_req, uint8_t *val);
-
 /*
  * dms_set_operating_mode_resp message
  */
 struct dms_set_operating_mode_resp *dms_set_operating_mode_resp_alloc(unsigned txn);
-struct dms_set_operating_mode_resp *dms_set_operating_mode_resp_parse(void *buf, size_t len);
 void *dms_set_operating_mode_resp_encode(struct dms_set_operating_mode_resp *set_operating_mode_resp, size_t *len);
 void dms_set_operating_mode_resp_free(struct dms_set_operating_mode_resp *set_operating_mode_resp);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

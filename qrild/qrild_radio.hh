@@ -42,11 +42,23 @@
 
 using namespace aidl::android::hardware::radio;
 
+class IHandlesQmiIndications {
+public:
+      virtual ~IHandlesQmiIndications() = default;
+      /**
+       * @brief: called on each service so they can handle QMI
+       * indications and propagate them up to Android
+       * NOTE: rild_state.msg_mutex is locked when this method
+       * is called!
+       */
+      virtual void handleQmiIndications() = 0;
+};
+
 /*****************************************************
  * AIDL impl class definitions
  */
 
-class RadioConfig : public config::BnRadioConfig {
+class RadioConfig : public config::BnRadioConfig, public IHandlesQmiIndications {
     ndk::ScopedAStatus getHalDeviceCapabilities(int32_t in_serial) override;
     ndk::ScopedAStatus getNumOfLiveModems(int32_t in_serial) override;
     ndk::ScopedAStatus getPhoneCapability(int32_t in_serial) override;
@@ -64,9 +76,10 @@ class RadioConfig : public config::BnRadioConfig {
 
 public:
     RadioConfig(struct rild_state *state);
+    void handleQmiIndications() override;
 };
 
-class RadioData : public data::BnRadioData {
+class RadioData : public data::BnRadioData, public IHandlesQmiIndications {
     ndk::ScopedAStatus allocatePduSessionId(int32_t in_serial) override;
     ndk::ScopedAStatus cancelHandover(int32_t in_serial, int32_t in_callId) override;
     ndk::ScopedAStatus deactivateDataCall(
@@ -99,9 +112,10 @@ class RadioData : public data::BnRadioData {
 
 public:
     RadioData(struct rild_state *state);
+    void handleQmiIndications() override;
 };
 
-class RadioMessaging : public messaging::BnRadioMessaging {
+class RadioMessaging : public messaging::BnRadioMessaging, public IHandlesQmiIndications {
     ndk::ScopedAStatus acknowledgeIncomingGsmSmsWithPdu(
           int32_t in_serial, bool in_success, const std::string &in_ackPdu) override;
     ndk::ScopedAStatus acknowledgeLastIncomingCdmaSms(
@@ -139,9 +153,10 @@ class RadioMessaging : public messaging::BnRadioMessaging {
 
 public:
     RadioMessaging(struct rild_state *state);
+    void handleQmiIndications() override;
 };
 
-class RadioModem : public modem::BnRadioModem {
+class RadioModem : public modem::BnRadioModem, public IHandlesQmiIndications {
     ndk::ScopedAStatus enableModem(int32_t in_serial, bool in_on) override;
     ndk::ScopedAStatus getBasebandVersion(int32_t in_serial) override;
     ndk::ScopedAStatus getDeviceIdentity(int32_t in_serial) override;
@@ -171,9 +186,10 @@ class RadioModem : public modem::BnRadioModem {
 
 public:
     RadioModem(struct rild_state *state);
+    void handleQmiIndications() override;
 };
 
-class RadioNetwork : public network::BnRadioNetwork {
+class RadioNetwork : public network::BnRadioNetwork, public IHandlesQmiIndications {
     ndk::ScopedAStatus getAllowedNetworkTypesBitmap(int32_t in_serial) override;
     ndk::ScopedAStatus getAvailableBandModes(int32_t in_serial) override;
     ndk::ScopedAStatus getAvailableNetworks(int32_t in_serial) override;
@@ -221,6 +237,8 @@ class RadioNetwork : public network::BnRadioNetwork {
     ndk::ScopedAStatus setUsageSetting(int32_t in_serial, network::UsageSetting in_usageSetting) override;
     ndk::ScopedAStatus getUsageSetting(int32_t in_serial) override;
 
+    void reportSystemStatus(struct qrild_msg *serving_system_ind);
+
     std::shared_ptr<network::IRadioNetworkResponse> mRep;
     std::shared_ptr<network::IRadioNetworkIndication> mInd;
     struct rild_state *mState;
@@ -229,9 +247,10 @@ class RadioNetwork : public network::BnRadioNetwork {
 
 public:
     RadioNetwork(struct rild_state *state);
+    void handleQmiIndications() override;
 };
 
-class RadioSim : public sim::BnRadioSim {
+class RadioSim : public sim::BnRadioSim, public IHandlesQmiIndications {
     ndk::ScopedAStatus areUiccApplicationsEnabled(int32_t in_serial) override;
     ndk::ScopedAStatus changeIccPin2ForApp(int32_t in_serial, const std::string &in_oldPin2,
           const std::string &in_newPin2, const std::string &in_aid) override;
@@ -289,9 +308,10 @@ class RadioSim : public sim::BnRadioSim {
 
 public:
     RadioSim(struct rild_state *state);
+    void handleQmiIndications() override;
 };
 
-class RadioVoice : public voice::BnRadioVoice {
+class RadioVoice : public voice::BnRadioVoice, public IHandlesQmiIndications {
     ndk::ScopedAStatus acceptCall(int32_t in_serial) override;
     ndk::ScopedAStatus cancelPendingUssd(int32_t in_serial) override;
     ndk::ScopedAStatus conference(int32_t in_serial) override;
@@ -342,6 +362,7 @@ class RadioVoice : public voice::BnRadioVoice {
 
 public:
     RadioVoice(struct rild_state *state);
+    void handleQmiIndications() override;
 };
 
 /*****************************************************
@@ -370,5 +391,7 @@ void buildResponseInfo(RadioResponseInfo &info, int serial, RadioResponseType re
 std::string decode_iccid(uint8_t *bcd, uint8_t len);
 std::string decode_eid(uint8_t *eid, uint8_t len);
 std::string decode_atr(uint8_t *atr, uint8_t len);
+
+int QmiUimPhysicalCardStateToCardState(int physical_card_state);
 
 #endif // __QRILD_RADIO_HH__

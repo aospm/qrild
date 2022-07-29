@@ -77,7 +77,8 @@ int qrild_qmi_dms_get_operating_mode(struct rild_state *state)
  * @state: RIL state object
  * @mode: mode to set
  */
-struct qmi_response_type_v01 qrild_qmi_dms_set_operating_mode(struct rild_state *state, uint8_t mode)
+struct qmi_response_type_v01 qrild_qmi_dms_set_operating_mode(
+	struct rild_state *state, uint8_t mode)
 {
 	struct dms_set_operating_mode_req *req;
 	struct qmi_response_type_v01 res;
@@ -91,7 +92,7 @@ struct qmi_response_type_v01 qrild_qmi_dms_set_operating_mode(struct rild_state 
 	buf = dms_set_operating_mode_req_encode(req, &len);
 
 	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_DMS, buf, len,
-					 TIMEOUT_DEFAULT, &res);
+				       TIMEOUT_DEFAULT, &res);
 	if (rc < 0) {
 		LOGE("Failed to set operating mode!");
 		res.result = 1;
@@ -138,7 +139,8 @@ int qrild_qmi_powerup(struct rild_state *state)
 		return QRILD_STATE_ERROR;
 	}
 
-	res = qrild_qmi_dms_set_operating_mode(state, QMI_DMS_OPERATING_MODE_ONLINE);
+	res = qrild_qmi_dms_set_operating_mode(state,
+					       QMI_DMS_OPERATING_MODE_ONLINE);
 	if (res.result) {
 		LOGE("Failed to set modem online: %u\n", res.error);
 		return QRILD_STATE_ERROR;
@@ -147,16 +149,16 @@ int qrild_qmi_powerup(struct rild_state *state)
 	return QRILD_STATE_DONE;
 }
 
-int qrild_qmi_dms_get_revision(struct rild_state *state, char *revision, size_t buflen)
+int qrild_qmi_dms_get_revision(struct rild_state *state, char **revision)
 {
 	struct dms_get_revision_resp *resp;
 	struct qrild_msg *msg = NULL;
 	int rc;
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS,
 			      QRILD_STATE_PENDING);
-	
-	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_DMS, QMI_DMS_GET_REVISION,
-		&msg);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_DMS,
+					       QMI_DMS_GET_REVISION, &msg);
 	if (rc < 0) {
 		LOGE("Couldn't get modem revision");
 		return rc;
@@ -164,7 +166,7 @@ int qrild_qmi_dms_get_revision(struct rild_state *state, char *revision, size_t 
 
 	resp = dms_get_revision_resp_parse(msg->buf, msg->buf_len);
 
-	rc = dms_get_revision_resp_get_revision(resp, revision, buflen);
+	*revision = dms_get_revision_resp_get_revision(resp);
 	if (rc < 0) {
 		LOGE("Couldn't read mode revision");
 		return rc;
@@ -175,7 +177,7 @@ int qrild_qmi_dms_get_revision(struct rild_state *state, char *revision, size_t 
 	return QRILD_STATE_DONE;
 }
 
-int qrild_qmi_dms_get_ids(struct rild_state *state, struct dms_ids *ids)
+int qrild_qmi_dms_get_ids(struct rild_state *state, struct dms_get_ids_resp_data *ids)
 {
 	struct qrild_msg *msg = NULL;
 	struct dms_get_ids_resp *resp;
@@ -184,8 +186,8 @@ int qrild_qmi_dms_get_ids(struct rild_state *state, struct dms_ids *ids)
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS,
 			      QRILD_STATE_PENDING);
 
-	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_DMS, QMI_DMS_GET_IDS,
-		&msg);
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_DMS,
+					       QMI_DMS_GET_IDS, &msg);
 	if (rc < 0) {
 		LOGE("Couldn't get modem IDs");
 		return rc;
@@ -193,7 +195,7 @@ int qrild_qmi_dms_get_ids(struct rild_state *state, struct dms_ids *ids)
 
 	resp = dms_get_ids_resp_parse(msg->buf, msg->buf_len);
 
-	res = qmi_tlv_get_result((struct qmi_tlv*)resp);
+	res = qmi_tlv_get_result((struct qmi_tlv *)resp);
 	if (res->result) {
 		LOGE("Couldn't get IDs, modem returned error:");
 		qrild_qmi_result_print(res);
@@ -201,10 +203,7 @@ int qrild_qmi_dms_get_ids(struct rild_state *state, struct dms_ids *ids)
 		return QRILD_STATE_ERROR;
 	}
 
-	dms_get_ids_resp_get_esn(resp, ids->esn, ids->esn_len);
-	dms_get_ids_resp_get_imei(resp, ids->imei, ids->imei_len);
-	dms_get_ids_resp_get_meid(resp, ids->meid, ids->meid_len);
-	dms_get_ids_resp_get_imei_ver(resp, ids->imei_ver, ids->imei_ver_len);
+	dms_get_ids_resp_getall(resp, ids);
 
 	qrild_msg_free(msg);
 
@@ -228,18 +227,19 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 	nas_register_indications_req_set_system_selection_preference(req,
 								     false);
 	nas_register_indications_req_set_ddtm_events(req, false);
-	nas_register_indications_req_set_serving_system_events(req, false);
+	nas_register_indications_req_set_serving_system_events(req, true);
 	nas_register_indications_req_set_dual_standby_preference(req, false);
 	nas_register_indications_req_set_subscription_info(req, true);
-	nas_register_indications_req_set_network_time(req, false);
+	nas_register_indications_req_set_network_time(req, true);
 	nas_register_indications_req_set_system_info(req, false);
 	nas_register_indications_req_set_signal_info(req, true);
-	nas_register_indications_req_set_error_rate(req, false);
+	nas_register_indications_req_set_error_rate(req, true);
 	nas_register_indications_req_set_hdr_new_uati_assigned(req, false);
 	nas_register_indications_req_set_hdr_session_closed(req, false);
-	nas_register_indications_req_set_managed_roaming(req, false);
-	nas_register_indications_req_set_current_plmn_name(req, false);
+	nas_register_indications_req_set_managed_roaming(req, true);
+	nas_register_indications_req_set_current_plmn_name(req, true);
 	nas_register_indications_req_set_embms_status(req, false);
+	// FIXME: the QMI message this sends isn't documented
 	nas_register_indications_req_set_rf_band_information(req, false);
 	reject_info.enable_network_reject_indications = true;
 	reject_info.suppress_system_info_indications = true;
@@ -258,6 +258,44 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 	}
 
 	return QRILD_STATE_DONE;
+}
+
+/**
+ * @brief: parses a NAS_SERVING_SYSTEM_REPORT message and populates @status
+ * with the data.
+ * NOTE: freeing the qrild_msg will free the data in @status!
+ * FIXME: This whole function should be autogenerated for every QMI message!!!!
+ * 
+ * @state: ril state
+ * @msg: The msg for the system report message
+ * @status: struct to populate
+ */
+int qrild_qmi_nas_parse_serving_system_ind(
+	struct rild_state *state, struct qrild_msg *msg,
+	struct nas_serving_system_ind_msg *status)
+{
+	struct nas_serving_system_ind *ind;
+
+	if (!msg)
+		return -1;
+	if (msg->msg_id != QMI_NAS_SERVING_SYSTEM_REPORT) {
+		fprintf(stderr, "%s: invalid msg id: 0x%20x", __func__, msg->msg_id);
+		return -1;
+	}
+
+	ind = nas_serving_system_ind_parse(msg->buf, msg->buf_len);
+	if (!ind) {
+		fprintf(stderr, "Couldn't parse indication!\n");
+		return -1;
+	}
+
+	status->system = nas_serving_system_ind_get_system(ind);
+	nas_serving_system_ind_get_data_service_cap(ind,
+						    &status->data_service_cap);
+	status->plmn = nas_serving_system_ind_get_plmn(ind);
+	status->status = nas_serving_system_ind_get_status(ind);
+
+	return 0;
 }
 
 static void dump_card_status(struct uim_card_status *cs)
@@ -358,7 +396,8 @@ int qrild_qmi_uim_get_card_status(struct rild_state *state)
 	return QRILD_STATE_DONE;
 }
 
-int qrild_qmi_uim_get_slot_status(struct rild_state *state, struct uim_slot_status_msg *slot_status)
+int qrild_qmi_uim_get_slot_status(struct rild_state *state,
+				  struct uim_get_slot_status_resp_data *slot_status)
 {
 	struct qrild_msg *msg = NULL;
 	struct uim_get_slot_status_resp *resp;
@@ -386,20 +425,7 @@ int qrild_qmi_uim_get_slot_status(struct rild_state *state, struct uim_slot_stat
 		goto out_free;
 	}
 
-	slot_status->eid_info = uim_get_slot_status_resp_get_eid_info(resp, &eid_count);
-	slot_status->eid_info_n = (uint8_t)eid_count;
-	if (slot_status->eid_info_n != 32) {
-		fprintf(stderr, "%s: EID length must be 32, not %u!\n",
-			__func__, slot_status->eid_info_n);
-		if (slot_status->eid_info)
-			free(slot_status->eid_info);
-		ret = QRILD_STATE_ERROR;
-		goto out_free;
-	}
-
-	slot_status->state = uim_get_slot_status_resp_get_slot_state(resp);
-	slot_status->info = uim_get_slot_status_resp_get_slot_info(resp);
-	
+	uim_get_slot_status_resp_getall(resp, slot_status);
 
 out_free:
 	qrild_msg_free(msg);
@@ -617,7 +643,7 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state)
 }
 
 int qrild_qmi_nas_get_signal_strength(struct rild_state *state,
-				      struct nas_signal_strength *strength, int16_t *lte_snr)
+				      struct nas_get_signal_strength_resp_data *strength)
 {
 	struct nas_get_signal_strength_req *req;
 	struct nas_get_signal_strength_resp *resp;
@@ -644,21 +670,7 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state,
 
 	resp = nas_get_signal_strength_resp_parse(msg->buf, msg->buf_len);
 
-	res = qmi_tlv_get_result(resp);
-	if (res->result > 0) {
-		LOGE("Failed to get signal strength");
-		qrild_qmi_result_print(res);
-		return QRILD_STATE_ERROR;
-	}
-
-	qmi_strength = nas_get_signal_strength_resp_get_strength(resp);
-	if (!qmi_strength)
-		return QRILD_STATE_ERROR;
-
-	nas_get_signal_strength_resp_get_lte_snr(resp, lte_snr);
-
-	strength->interface = qmi_strength->interface;
-	strength->strength = qmi_strength->strength;
+	nas_get_signal_strength_resp_getall(resp, strength);
 
 	return QRILD_STATE_DONE;
 }
@@ -693,7 +705,7 @@ int qrild_qmi_nas_show_signal_strength(struct rild_state *state)
 
 	resp = nas_get_signal_strength_resp_parse(msg->buf, msg->buf_len);
 
-	res = qmi_tlv_get_result(resp);
+	res = qmi_tlv_get_result((struct qmi_tlv*)resp);
 	if (res->result > 0) {
 		LOGE("Failed to get signal strength");
 		qrild_qmi_result_print(res);
@@ -723,6 +735,33 @@ int qrild_qmi_nas_show_signal_strength(struct rild_state *state)
 	return QRILD_STATE_DONE;
 }
 
+int qrild_qmi_nas_get_lte_cphy_ca_info(struct rild_state *state,
+				       struct nas_get_lte_cphy_ca_info_resp_data *data)
+{
+	struct nas_get_lte_cphy_ca_info_resp *resp;
+	struct nas_lte_cphy_agg_scell *scell_info;
+	uint32_t dl_bandwidth;
+	struct qmi_response_type_v01 *res;
+	struct qrild_msg *msg;
+	int rc, i;
+	void *buf;
+	size_t buf_len;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS,
+			      QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(
+		state, QMI_SERVICE_NAS, QMI_NAS_GET_LTE_CPY_CA_INFO, &msg);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = nas_get_lte_cphy_ca_info_resp_parse(msg->buf, msg->buf_len);
+
+	nas_get_lte_cphy_ca_info_resp_getall(resp, data);
+
+	return QRILD_STATE_DONE;
+}
+
 int qrild_qmi_wds_start_network_interface_resp(struct rild_state *state,
 					       struct qrild_msg *msg)
 {
@@ -738,7 +777,8 @@ int qrild_qmi_wds_start_network_interface_resp(struct rild_state *state,
 		state->exit = true;
 	}
 
-	wds_start_network_interface_resp_get_pkt_data_handle(resp, &state->wds_pkt_data_handle);
+	wds_start_network_interface_resp_get_pkt_data_handle(
+		resp, &state->wds_pkt_data_handle);
 	LOGD("Got WDS packet data handle: %u", state->wds_pkt_data_handle);
 
 	return 0;
@@ -918,7 +958,7 @@ static int qrild_qmi_handle_wds_pkt_srvc(struct rild_state *state,
  */
 int qrild_qmi_idle(struct rild_state *state)
 {
-	qrild_qmi_nas_show_signal_strength(state);
+	//qrild_qmi_nas_show_signal_strength(state);
 
 	usleep(6000 * 1000);
 
@@ -939,21 +979,28 @@ int qrild_qmi_process_indications(struct rild_state *state)
 		if (msg->type != 0x4)
 			continue;
 
-		switch (msg->msg_id) {
-		case QMI_WDS_PKT_SRVC_STATUS:
-			qrild_qmi_handle_wds_pkt_srvc(state, msg);
-			break;
-		case QMI_NAS_SUBSCRIPTION_INFO_REPORT:
-		case QMI_NAS_ERROR_RATE_REPORT:
-		case QMI_NAS_RF_BAND_INFO_REPORT:
-			printf("Undocumented QMI NAS indication\n");
-		default:
-			LOGW("Dropping unknown message {id: 0x%x, txn: %u}",
-			     msg->msg_id, msg->txn);
-			print_hex_dump("Unknown msg", msg->buf, msg->buf_len);
-			break;
-		}
-		qrild_msg_free_locked(msg);
+		pthread_mutex_unlock(&state->msg_mutex);
+		// notify the indication processing thread
+		// FIXME: not sure this description offers much confidence
+		// in my implementation...
+		pthread_cond_broadcast(&state->pending_indications);
+		return 0;
+
+		// switch (msg->msg_id) {
+		// case QMI_WDS_PKT_SRVC_STATUS:
+		// 	qrild_qmi_handle_wds_pkt_srvc(state, msg);
+		// 	break;
+		// case QMI_NAS_SUBSCRIPTION_INFO_REPORT:
+		// case QMI_NAS_ERROR_RATE_REPORT:
+		// case QMI_NAS_RF_BAND_INFO_REPORT:
+		// 	printf("Undocumented QMI NAS indication\n");
+		// default:
+		// 	LOGW("Dropping unknown message {id: 0x%x, txn: %u}",
+		// 	     msg->msg_id, msg->txn);
+		// 	print_hex_dump("Unknown msg", msg->buf, msg->buf_len);
+		// 	break;
+		// }
+		// qrild_msg_free_locked(msg);
 	}
 	pthread_mutex_unlock(&state->msg_mutex);
 

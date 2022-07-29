@@ -264,6 +264,9 @@ struct qrild_msg {
 	uint32_t msg_id;
 	enum qmi_service svc;
 	bool sent;
+	// Ready to be free'd, shouldn't be touched
+	// FIXME: linked lists make this all so hard!
+	bool discard;
 	/*
 	 * QMI msg type:
 	 * 0: request
@@ -297,6 +300,8 @@ struct rild_state {
 	struct list_head pending_rx;
 	struct list_head pending_tx;
 	THREADED_PROP(msg);
+	// Broadcast when there are new pending QMI indications
+	pthread_cond_t pending_indications;
 
 	/* Mobile data connection */
 	uint8_t connection_status;
@@ -347,20 +352,15 @@ struct rild_state {
 	if (!qmi_service_get((_l), _s))                                        \
 	return _r
 
-// message state handling
-#define qrild_msg_get_by_txn(list, _txn)                                       \
-	({                                                                     \
-		struct qrild_msg *msg, *out = NULL;                            \
-		list_for_each_entry(msg, (list), li)                           \
-		{                                                              \
-			if (msg->txn == _txn) {                                \
-				out = msg;                                     \
-				break;                                         \
-			};                                                     \
-		}                                                              \
-		if (msg->txn != _txn) out = NULL; \
-		out;                                                           \
-	})
+static inline struct qrild_msg *qrild_msg_get_by_txn(struct list_head *list, uint16_t txn)
+{
+	struct qrild_msg *msg;
+	list_for_each_entry(msg, list, li) {
+		if (msg->txn == txn)
+			return msg;
+	}
+	return NULL;
+}
 
 __END_DECLS
 
