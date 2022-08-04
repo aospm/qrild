@@ -4,6 +4,7 @@ package_type client;
 const QMI_NAS_EVENT_REPORT = 0x02;
 const QMI_NAS_REGISTER_INDICATIONS = 0x03;
 const QMI_NAS_SERVING_SYSTEM_REPORT = 0x24;
+const QMI_NAS_GET_OPERATOR_NAME = 0x39;
 # https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/gobi-api/GobiAPI_2013-07-31-1347/Core/QMIEnum.h#L474
 const QMI_NAS_SUBSCRIPTION_INFO_REPORT = 0x48;
 const QMI_NAS_ERROR_RATE_REPORT = 0x53;
@@ -20,7 +21,6 @@ const QMI_NAS_DL_BANDWIDTH_15       = 4;
 const QMI_NAS_DL_BANDWIDTH_20       = 5;
 const QMI_NAS_DL_BANDWIDTH_INVALID  = 6;
 
-
 const QMI_NAS_SIGNAL_STRENGTH_REQUEST_NONE       = 0;
 const QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSSI       = 1;
 const QMI_NAS_SIGNAL_STRENGTH_REQUEST_ECIO       = 2;
@@ -33,19 +33,38 @@ const QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_RSRP   = 128;
 
 const QMI_NAS_GET_SIGNAL_STRENGTH = 0x20;
 
+# serving_system.registration_state
+const QMI_NAS_REGISTRATION_STATE_NOT_REGISTERED           = 0x00;
+const QMI_NAS_REGISTRATION_STATE_REGISTERED               = 0x01;
+const QMI_NAS_REGISTRATION_STATE_NOT_REGISTERED_SEARCHING = 0x02;
+const QMI_NAS_REGISTRATION_STATE_REGISTRATION_DENIED      = 0x03;
+const QMI_NAS_REGISTRATION_STATE_UNKNOWN                  = 0x04;
+
+# serving_system.XX_attach_state
+const QMI_NAS_ATTACH_STATE_UNKNOWN  = 0x00;
+const QMI_NAS_ATTACH_STATE_ATTACHED = 0x01;
+const QMI_NAS_ATTACH_STATE_DETACHED = 0x02;
+
+const QMI_NAS_RADIO_INTERFACE_UNKNOWN     = 0xFF;
+const QMI_NAS_RADIO_INTERFACE_NONE        = 0x00;
+const QMI_NAS_RADIO_INTERFACE_CDMA_1X     = 0x01;
+const QMI_NAS_RADIO_INTERFACE_CDMA_1XEVDO = 0x02;
+const QMI_NAS_RADIO_INTERFACE_AMPS        = 0x03;
+const QMI_NAS_RADIO_INTERFACE_GSM         = 0x04;
+const QMI_NAS_RADIO_INTERFACE_UMTS        = 0x05;
+const QMI_NAS_RADIO_INTERFACE_LTE         = 0x08;
+const QMI_NAS_RADIO_INTERFACE_TD_SCDMA    = 0x09;
+const QMI_NAS_RADIO_INTERFACE_5GNR        = 0x0C;
+
 # The strength for the requested interface ??
 struct signal_strength {
 	i8 strength;
 	i8 interface;
 };
 
-# Strength list for all supported interfaces ??
-struct signal_strength_list {
-	u8 interfaces_n;
-	struct {
-		i8 strength;
-		i8 interface;
-	} *interfaces;
+struct ss_value {
+	u8 val;
+	i8 interface;
 };
 
 struct network_reject_info {
@@ -60,6 +79,29 @@ struct lte_cphy_agg_scell {
 	u32 dl_bandwidth;
 	u16 lte_band;
 	u32 state;
+};
+
+struct serving_system {
+	u8 registration_state;
+	u8 cs_attach_state;
+	u8 ps_attach_state;
+	u8 selected_network;
+	u8 radio_interfaces_n;
+	u8 *radio_interfaces;
+};
+
+struct current_plmn {
+	u16 mcc;
+	u16 mnc;
+	string description;
+};
+
+struct service_status {
+	u8 status;
+	u8 capability;
+	u8 hdr_status;
+	u8 hdr_hybrid;
+	u8 forbidden;
 };
 
 request register_indications_req {
@@ -85,35 +127,19 @@ request get_signal_strength_req {
 	required u16 mask = 0x10;
 } = 0x20;
 
-struct serving_system {
-	u8 registration_state;
-	u8 cs_attach_state;
-	u8 ps_attach_state;
-	u8 selected_network;
-	u8 radio_interfaces_n;
-	u8 *radio_interfaces;
-};
-
-struct current_plmn {
-	u16 mcc;
-	u16 mnc;
-	string description;
-};
-
-struct service_status {
-	u8 status;
-	u8 capability;
-	u8 hdr_status;
-	u8 hdr_hybrid;
-	u8 forbidden;
-};
-
-struct serving_system_ind_msg {
-	struct serving_system *system;
-	u8 data_service_cap;
-	struct current_plmn *plmn;
-	struct service_status *status;
-};
+response get_signal_strength_resp {
+	optional signal_strength strength = 0x01;
+	required qmi_response_type_v01 res = 0x02;
+	optional signal_strength strength_list(16) = 0x10;
+	optional ss_value rssi_list(16) = 0x11;
+	optional ss_value ecio_list(16) = 0x12;
+	optional u32 io = 0x13;
+	optional u8 sinr = 0x14;
+	optional ss_value err_rate_list(16) = 0x15;
+	optional ss_value rsrq = 0x16;
+	optional i16 lte_snr = 0x17;
+	optional i16 lte_rsrp = 0x18;
+} = 0x0020;
 
 indication serving_system_ind {
 	optional serving_system system = 0x01;
@@ -121,14 +147,6 @@ indication serving_system_ind {
 	optional current_plmn plmn = 0x12;
 	optional service_status status = 0x22;
 } = 0x0024;
-
-response get_signal_strength_resp {
-	required qmi_response_type_v01 res = 0x02;
-	required i16 lte_snr = 0x17;
-	required i16 lte_rsrp = 0x18;
-	required signal_strength strength = 0x01;
-	required signal_strength_list strength_list = 0x10;
-} = 0x002D;
 
 request set_operating_mode_req {
 	required u8 mode = 0x01;
@@ -138,12 +156,53 @@ request set_operating_mode_resp {
 	required qmi_response_type_v01 res = 0x02;
 } = 0x002E;
 
-
-# FIXME: generate this automatically from messages
-struct lte_cphy_ca_info {
-	u32 dl_bandwidth;
-	struct lte_cphy_agg_scell phy_scell_info;
+struct service_provider_name {
+	u8 display_condition;
+	string name;
 };
+
+struct operator_plmn {
+	char mcc[3];
+	char mnc[3];
+	u16 lac1;
+	u16 lac2;
+	u8 name_record_indicator;
+};
+
+struct operator_plmn_name {
+	u8 name_encoding;
+	u8 short_country_initials;
+	u8 long_name_spare_bits;
+	u8 short_name_spare_bits;
+	u8 long_name_n;
+	u8 *long_name;
+	u8 short_name_n;
+	u8 *short_name;
+};
+
+response get_operator_name_resp {
+	required qmi_response_type_v01 res = 0x02;
+	optional service_provider_name provider_name = 0x10;
+	optional operator_plmn operator_plmn_list(64) = 0x11;
+	optional operator_plmn_name operator_plmn_names(64) = 0x12;
+	optional string operator_string_name = 0x13;
+	optional operator_plmn_name nitz_info = 0x14;
+} = 0x0039;
+
+#indication get_operator_name_ind {
+#	optional service_provider_name provider_name = 0x10;
+#	optional operator_plmn operator_plmn_list(64) = 0x11;
+#	optional operator_plmn_name operator_plmn_names(64) = 0x12;
+#	optional string operator_string_name = 0x13;
+#	optional operator_plmn_name nitz_info = 0x14;
+#} = 0x003A;
+
+struct geran_info {
+	u8 x;
+};
+
+response get_cell_loc_info {
+} = 0x0043;
 
 response get_lte_cphy_ca_info_resp {
 	required qmi_response_type_v01 res = 0x02;

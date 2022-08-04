@@ -108,6 +108,21 @@ response change_provisioning_session_resp {
 	required qmi_response_type_v01 result = 0x02;
 } = 0x0038;
 
+# https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/gobi-api/Gobi_2012-06-18-1054/GobiConnectionMgmt/GobiConnectionMgmtAPIStructs.h#L19609
+request icc_open_logical_channel_req {
+	required u8 slot = 0x1;
+	optional u8 application_id(32) = 0x10; # 16 is the max length
+	optional u8 fileControlInfo = 0x11;
+} = 0x0042;
+
+response icc_open_logical_channel_resp {
+	required qmi_response_type_v01 result = 0x02;
+	optional u8 channel_id = 0x10;
+	# Actually two 8-bit values: mSW1 and mSW2
+	optional u16 card_result = 0x11;
+	optional u8 select_response(255) = 0x12;
+} = 0x0042;
+
 request get_slot_status_req {
 } = 0x0047;
 

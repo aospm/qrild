@@ -11,6 +11,8 @@ __BEGIN_DECLS
 
 char to_hex(uint8_t ch);
 void print_hex_dump(const char *prefix, const void *buf, size_t len);
+uint8_t *bytes_from_hex_str(const char *str, size_t *out_len);
+char *bytes_to_hex_string(uint8_t *bytes, size_t len);
 
 #define zalloc(size) calloc(1, (size))
 
@@ -24,6 +26,18 @@ void ba_set_size(struct bytearray *ba, size_t newsize);
 void ba_free(struct bytearray *ba);
 
 int msleep(long ms);
+
+const char *qmi_tlv_msg_get_name(int qmi_svc, int msg_id);
+void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc);
+static inline int qmi_tlv_dump_buf(void *buf, size_t len, int qmi_svc) {
+	struct qmi_tlv *tlv = qmi_tlv_decode(buf, len);
+	if (!tlv)
+		return -1;
+	qmi_tlv_dump(tlv, qmi_svc);
+	qmi_tlv_free(tlv);
+
+	return 0;
+}
 
 __END_DECLS
 #endif

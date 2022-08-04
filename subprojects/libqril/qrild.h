@@ -317,6 +317,8 @@ struct rild_state {
 	struct list_head services;
 	pthread_mutex_t services_mutex;
 
+	pthread_mutex_t print_mutex;
+
 	struct uim_card_status *card_status;
 };
 
