@@ -2,6 +2,18 @@
 #include <string.h>
 #include "qmi_wds.h"
 
+const struct qmi_tlv_msg_name wds_msg_name_map[9] = {
+	{ .msg_id = 32, .msg_name = "wds_start_network_interface_req" },
+	{ .msg_id = 32, .msg_name = "wds_start_network_interface_resp" },
+	{ .msg_id = 34, .msg_name = "wds_get_pkt_srvc_status_ind" },
+	{ .msg_id = 45, .msg_name = "wds_get_current_settings_req" },
+	{ .msg_id = 45, .msg_name = "wds_get_current_settings_resp" },
+	{ .msg_id = 162, .msg_name = "wds_bind_mux_data_port_req" },
+	{ .msg_id = 162, .msg_name = "wds_bind_mux_data_port_resp" },
+	{ .msg_id = 175, .msg_name = "wds_bind_subscription_req" },
+	{ .msg_id = 175, .msg_name = "wds_bind_subscription_resp" },
+};
+
 struct wds_start_network_interface_req *wds_start_network_interface_req_alloc(unsigned txn)
 {
 	return (struct wds_start_network_interface_req*)qmi_tlv_init(txn, 32, 0);
@@ -62,12 +74,22 @@ void wds_start_network_interface_resp_getall(struct wds_start_network_interface_
 	int rc;
 	(void)rc;
 
-	data->res = qmi_tlv_get((struct qmi_tlv*)start_network_interface_resp, 2, NULL);
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)start_network_interface_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
 	rc = wds_start_network_interface_resp_get_pkt_data_handle(start_network_interface_resp, &data->pkt_data_handle);
 	rc = wds_start_network_interface_resp_get_call_end_reason(start_network_interface_resp, &data->call_end_reason);
 	data->call_end_reason_valid = rc >= 0;
 	data->ext = wds_start_network_interface_resp_get_ext(start_network_interface_resp);
 	data->ext_valid = !!data->ext;
+}
+
+void wds_start_network_interface_resp_data_free(struct wds_start_network_interface_resp_data *data)
+{
+
+		free(data->res);
+	if(data->ext_valid) {
+		free(data->ext);
+	}
 }
 
 void wds_start_network_interface_resp_free(struct wds_start_network_interface_resp *start_network_interface_resp)
@@ -149,6 +171,12 @@ void wds_get_pkt_srvc_status_ind_getall(struct wds_get_pkt_srvc_status_ind *get_
 	data->tech_name_valid = rc >= 0;
 	rc = wds_get_pkt_srvc_status_ind_get_xlat_capable(get_pkt_srvc_status_ind, &data->xlat_capable);
 	data->xlat_capable_valid = rc >= 0;
+}
+
+void wds_get_pkt_srvc_status_ind_data_free(struct wds_get_pkt_srvc_status_ind_data *data)
+{
+
+		free(data->status);
 }
 
 void wds_get_pkt_srvc_status_ind_free(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind)
@@ -269,7 +297,8 @@ void wds_get_current_settings_resp_getall(struct wds_get_current_settings_resp *
 	int rc;
 	(void)rc;
 
-	data->res = qmi_tlv_get((struct qmi_tlv*)get_current_settings_resp, 2, NULL);
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_current_settings_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
 	rc = wds_get_current_settings_resp_get_ipv4_address_preference(get_current_settings_resp, &data->ipv4_address_preference);
 	data->ipv4_address_preference_valid = rc >= 0;
 	rc = wds_get_current_settings_resp_get_ipv4_gateway_addr(get_current_settings_resp, &data->ipv4_gateway_addr);
@@ -280,6 +309,12 @@ void wds_get_current_settings_resp_getall(struct wds_get_current_settings_resp *
 	data->mtu_valid = rc >= 0;
 	rc = wds_get_current_settings_resp_get_ip_family(get_current_settings_resp, &data->ip_family);
 	data->ip_family_valid = rc >= 0;
+}
+
+void wds_get_current_settings_resp_data_free(struct wds_get_current_settings_resp_data *data)
+{
+
+		free(data->res);
 }
 
 void wds_get_current_settings_resp_free(struct wds_get_current_settings_resp *get_current_settings_resp)
@@ -402,7 +437,14 @@ void wds_bind_mux_data_port_resp_getall(struct wds_bind_mux_data_port_resp *bind
 	int rc;
 	(void)rc;
 
-	data->res = qmi_tlv_get((struct qmi_tlv*)bind_mux_data_port_resp, 2, NULL);
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)bind_mux_data_port_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
+}
+
+void wds_bind_mux_data_port_resp_data_free(struct wds_bind_mux_data_port_resp_data *data)
+{
+
+		free(data->res);
 }
 
 void wds_bind_mux_data_port_resp_free(struct wds_bind_mux_data_port_resp *bind_mux_data_port_resp)
@@ -440,7 +482,14 @@ void wds_bind_subscription_resp_getall(struct wds_bind_subscription_resp *bind_s
 	int rc;
 	(void)rc;
 
-	data->res = qmi_tlv_get((struct qmi_tlv*)bind_subscription_resp, 2, NULL);
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)bind_subscription_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
+}
+
+void wds_bind_subscription_resp_data_free(struct wds_bind_subscription_resp_data *data)
+{
+
+		free(data->res);
 }
 
 void wds_bind_subscription_resp_free(struct wds_bind_subscription_resp *bind_subscription_resp)

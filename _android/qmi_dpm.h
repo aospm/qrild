@@ -33,6 +33,10 @@ struct dpm_control_port {
 struct dpm_open_port_req;
 struct dpm_open_port_resp;
 
+
+#define QMI_NUM_MESSAGES_DPM 2
+extern const struct qmi_tlv_msg_name dpm_msg_name_map[2];
+
 /*
  * dpm_open_port_req message
  */
@@ -41,6 +45,7 @@ void *dpm_open_port_req_encode(struct dpm_open_port_req *open_port_req, size_t *
 void dpm_open_port_req_free(struct dpm_open_port_req *open_port_req);
 
 int dpm_open_port_req_set_port_list(struct dpm_open_port_req *open_port_req, struct dpm_control_port *val, size_t count);
+
 /*
  * dpm_open_port_resp message
  */
@@ -51,6 +56,7 @@ struct dpm_open_port_resp_data {
 
 struct dpm_open_port_resp *dpm_open_port_resp_parse(void *buf, size_t len);
 void dpm_open_port_resp_getall(struct dpm_open_port_resp *open_port_resp, struct dpm_open_port_resp_data *data);
+void dpm_open_port_resp_data_free(struct dpm_open_port_resp_data *data);
 void dpm_open_port_resp_free(struct dpm_open_port_resp *open_port_resp);
 
 #ifdef __cplusplus

@@ -2,6 +2,11 @@
 #include <string.h>
 #include "qmi_wda.h"
 
+const struct qmi_tlv_msg_name wda_msg_name_map[2] = {
+	{ .msg_id = 32, .msg_name = "wda_set_data_format_req" },
+	{ .msg_id = 32, .msg_name = "wda_set_data_format_resp" },
+};
+
 struct wda_set_data_format_req *wda_set_data_format_req_alloc(unsigned txn)
 {
 	return (struct wda_set_data_format_req*)qmi_tlv_init(txn, 32, 0);
@@ -57,7 +62,14 @@ void wda_set_data_format_resp_getall(struct wda_set_data_format_resp *set_data_f
 	int rc;
 	(void)rc;
 
-	data->res = qmi_tlv_get((struct qmi_tlv*)set_data_format_resp, 2, NULL);
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)set_data_format_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
+}
+
+void wda_set_data_format_resp_data_free(struct wda_set_data_format_resp_data *data)
+{
+
+		free(data->res);
 }
 
 void wda_set_data_format_resp_free(struct wda_set_data_format_resp *set_data_format_resp)

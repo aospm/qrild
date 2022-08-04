@@ -57,6 +57,10 @@ struct wds_bind_mux_data_port_resp;
 struct wds_bind_subscription_req;
 struct wds_bind_subscription_resp;
 
+
+#define QMI_NUM_MESSAGES_WDS 9
+extern const struct qmi_tlv_msg_name wds_msg_name_map[9];
+
 /*
  * wds_start_network_interface_req message
  */
@@ -68,6 +72,7 @@ int wds_start_network_interface_req_set_apn_name(struct wds_start_network_interf
 int wds_start_network_interface_req_set_apn_type(struct wds_start_network_interface_req *start_network_interface_req, uint32_t val);
 int wds_start_network_interface_req_set_ip_family_preference(struct wds_start_network_interface_req *start_network_interface_req, uint8_t val);
 int wds_start_network_interface_req_set_ep_type(struct wds_start_network_interface_req *start_network_interface_req, struct wds_ep_type_iface_id *val);
+
 int wds_start_network_interface_req_set_bring_up_by_apn_name(struct wds_start_network_interface_req *start_network_interface_req, uint8_t val);
 int wds_start_network_interface_req_set_call_type(struct wds_start_network_interface_req *start_network_interface_req, uint8_t val);
 int wds_start_network_interface_req_set_profile_index(struct wds_start_network_interface_req *start_network_interface_req, uint8_t val);
@@ -86,6 +91,7 @@ struct wds_start_network_interface_resp_data {
 
 struct wds_start_network_interface_resp *wds_start_network_interface_resp_parse(void *buf, size_t len);
 void wds_start_network_interface_resp_getall(struct wds_start_network_interface_resp *start_network_interface_resp, struct wds_start_network_interface_resp_data *data);
+void wds_start_network_interface_resp_data_free(struct wds_start_network_interface_resp_data *data);
 void wds_start_network_interface_resp_free(struct wds_start_network_interface_resp *start_network_interface_resp);
 
 int wds_start_network_interface_resp_get_pkt_data_handle(struct wds_start_network_interface_resp *start_network_interface_resp, uint32_t *val);
@@ -93,6 +99,7 @@ int wds_start_network_interface_resp_get_pkt_data_handle(struct wds_start_networ
 int wds_start_network_interface_resp_get_call_end_reason(struct wds_start_network_interface_resp *start_network_interface_resp, uint16_t *val);
 
 struct wds_call_end_reason_ext *wds_start_network_interface_resp_get_ext(struct wds_start_network_interface_resp *start_network_interface_resp);
+void wds_call_end_reason_ext_free(struct wds_call_end_reason_ext *val);
 
 /*
  * wds_get_pkt_srvc_status_ind message
@@ -110,12 +117,14 @@ struct wds_get_pkt_srvc_status_ind_data {
 
 struct wds_get_pkt_srvc_status_ind *wds_get_pkt_srvc_status_ind_parse(void *buf, size_t len);
 void wds_get_pkt_srvc_status_ind_getall(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind, struct wds_get_pkt_srvc_status_ind_data *data);
+void wds_get_pkt_srvc_status_ind_data_free(struct wds_get_pkt_srvc_status_ind_data *data);
 struct wds_get_pkt_srvc_status_ind *wds_get_pkt_srvc_status_ind_alloc(unsigned txn);
 void *wds_get_pkt_srvc_status_ind_encode(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind, size_t *len);
 void wds_get_pkt_srvc_status_ind_free(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind);
 
 int wds_get_pkt_srvc_status_ind_set_status(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind, struct wds_pkt_srvc_status *val);
 struct wds_pkt_srvc_status *wds_get_pkt_srvc_status_ind_get_status(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind);
+void wds_pkt_srvc_status_free(struct wds_pkt_srvc_status *val);
 
 int wds_get_pkt_srvc_status_ind_set_ip_family(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind, uint8_t val);
 int wds_get_pkt_srvc_status_ind_get_ip_family(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind, uint8_t *val);
@@ -154,6 +163,7 @@ struct wds_get_current_settings_resp_data {
 
 struct wds_get_current_settings_resp *wds_get_current_settings_resp_parse(void *buf, size_t len);
 void wds_get_current_settings_resp_getall(struct wds_get_current_settings_resp *get_current_settings_resp, struct wds_get_current_settings_resp_data *data);
+void wds_get_current_settings_resp_data_free(struct wds_get_current_settings_resp_data *data);
 void wds_get_current_settings_resp_free(struct wds_get_current_settings_resp *get_current_settings_resp);
 
 int wds_get_current_settings_resp_get_ipv4_address_preference(struct wds_get_current_settings_resp *get_current_settings_resp, uint32_t *val);
@@ -174,6 +184,7 @@ void *wds_bind_mux_data_port_req_encode(struct wds_bind_mux_data_port_req *bind_
 void wds_bind_mux_data_port_req_free(struct wds_bind_mux_data_port_req *bind_mux_data_port_req);
 
 int wds_bind_mux_data_port_req_set_ep_id(struct wds_bind_mux_data_port_req *bind_mux_data_port_req, struct wds_ep_type_iface_id *val);
+
 int wds_bind_mux_data_port_req_set_mux_id(struct wds_bind_mux_data_port_req *bind_mux_data_port_req, uint8_t val);
 /*
  * wds_bind_mux_data_port_resp message
@@ -185,6 +196,7 @@ struct wds_bind_mux_data_port_resp_data {
 
 struct wds_bind_mux_data_port_resp *wds_bind_mux_data_port_resp_parse(void *buf, size_t len);
 void wds_bind_mux_data_port_resp_getall(struct wds_bind_mux_data_port_resp *bind_mux_data_port_resp, struct wds_bind_mux_data_port_resp_data *data);
+void wds_bind_mux_data_port_resp_data_free(struct wds_bind_mux_data_port_resp_data *data);
 void wds_bind_mux_data_port_resp_free(struct wds_bind_mux_data_port_resp *bind_mux_data_port_resp);
 
 /*
@@ -205,6 +217,7 @@ struct wds_bind_subscription_resp_data {
 
 struct wds_bind_subscription_resp *wds_bind_subscription_resp_parse(void *buf, size_t len);
 void wds_bind_subscription_resp_getall(struct wds_bind_subscription_resp *bind_subscription_resp, struct wds_bind_subscription_resp_data *data);
+void wds_bind_subscription_resp_data_free(struct wds_bind_subscription_resp_data *data);
 void wds_bind_subscription_resp_free(struct wds_bind_subscription_resp *bind_subscription_resp);
 
 #ifdef __cplusplus

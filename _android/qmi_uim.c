@@ -2,6 +2,18 @@
 #include <string.h>
 #include "qmi_uim.h"
 
+const struct qmi_tlv_msg_name uim_msg_name_map[9] = {
+	{ .msg_id = 47, .msg_name = "uim_get_card_status_req" },
+	{ .msg_id = 47, .msg_name = "uim_get_card_status_resp" },
+	{ .msg_id = 56, .msg_name = "uim_change_provisioning_session_req" },
+	{ .msg_id = 56, .msg_name = "uim_change_provisioning_session_resp" },
+	{ .msg_id = 66, .msg_name = "uim_icc_open_logical_channel_req" },
+	{ .msg_id = 66, .msg_name = "uim_icc_open_logical_channel_resp" },
+	{ .msg_id = 71, .msg_name = "uim_get_slot_status_req" },
+	{ .msg_id = 71, .msg_name = "uim_get_slot_status_resp" },
+	{ .msg_id = 72, .msg_name = "uim_get_slot_status_ind" },
+};
+
 struct uim_get_card_status_req *uim_get_card_status_req_alloc(unsigned txn)
 {
 	return (struct uim_get_card_status_req*)qmi_tlv_init(txn, 47, 0);
@@ -27,9 +39,20 @@ void uim_get_card_status_resp_getall(struct uim_get_card_status_resp *get_card_s
 	int rc;
 	(void)rc;
 
-	data->result = qmi_tlv_get((struct qmi_tlv*)get_card_status_resp, 2, NULL);
+	data->result = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->result, qmi_tlv_get((struct qmi_tlv*)get_card_status_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
 	data->status = uim_get_card_status_resp_get_status(get_card_status_resp);
 	data->status_valid = !!data->status;
+}
+
+void uim_get_card_status_resp_data_free(struct uim_get_card_status_resp_data *data)
+{
+
+		free(data->result);
+	if(data->status_valid) {
+		uim_card_status_free(data->status);
+		free(data->status);
+	}
 }
 
 void uim_get_card_status_resp_free(struct uim_get_card_status_resp *get_card_status_resp)
@@ -145,12 +168,135 @@ void uim_change_provisioning_session_resp_getall(struct uim_change_provisioning_
 	int rc;
 	(void)rc;
 
-	data->result = qmi_tlv_get((struct qmi_tlv*)change_provisioning_session_resp, 2, NULL);
+	data->result = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->result, qmi_tlv_get((struct qmi_tlv*)change_provisioning_session_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
+}
+
+void uim_change_provisioning_session_resp_data_free(struct uim_change_provisioning_session_resp_data *data)
+{
+
+		free(data->result);
 }
 
 void uim_change_provisioning_session_resp_free(struct uim_change_provisioning_session_resp *change_provisioning_session_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)change_provisioning_session_resp);
+}
+
+struct uim_icc_open_logical_channel_req *uim_icc_open_logical_channel_req_alloc(unsigned txn)
+{
+	return (struct uim_icc_open_logical_channel_req*)qmi_tlv_init(txn, 66, 0);
+}
+
+void *uim_icc_open_logical_channel_req_encode(struct uim_icc_open_logical_channel_req *icc_open_logical_channel_req, size_t *len)
+{
+	return qmi_tlv_encode((struct qmi_tlv*)icc_open_logical_channel_req, len);
+}
+
+void uim_icc_open_logical_channel_req_free(struct uim_icc_open_logical_channel_req *icc_open_logical_channel_req)
+{
+	qmi_tlv_free((struct qmi_tlv*)icc_open_logical_channel_req);
+}
+
+int uim_icc_open_logical_channel_req_set_slot(struct uim_icc_open_logical_channel_req *icc_open_logical_channel_req, uint8_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)icc_open_logical_channel_req, 1, &val, sizeof(uint8_t));
+}
+
+int uim_icc_open_logical_channel_req_set_application_id(struct uim_icc_open_logical_channel_req *icc_open_logical_channel_req, uint8_t *val, size_t count)
+{
+	return qmi_tlv_set_array((struct qmi_tlv*)icc_open_logical_channel_req, 16, 1, val, count, sizeof(uint8_t));
+}
+
+int uim_icc_open_logical_channel_req_set_fileControlInfo(struct uim_icc_open_logical_channel_req *icc_open_logical_channel_req, uint8_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)icc_open_logical_channel_req, 17, &val, sizeof(uint8_t));
+}
+
+struct uim_icc_open_logical_channel_resp *uim_icc_open_logical_channel_resp_parse(void *buf, size_t len)
+{
+	return (struct uim_icc_open_logical_channel_resp*)qmi_tlv_decode(buf, len);
+}
+
+void uim_icc_open_logical_channel_resp_getall(struct uim_icc_open_logical_channel_resp *icc_open_logical_channel_resp, struct uim_icc_open_logical_channel_resp_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->result = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->result, qmi_tlv_get((struct qmi_tlv*)icc_open_logical_channel_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
+	rc = uim_icc_open_logical_channel_resp_get_channel_id(icc_open_logical_channel_resp, &data->channel_id);
+	data->channel_id_valid = rc >= 0;
+	rc = uim_icc_open_logical_channel_resp_get_card_result(icc_open_logical_channel_resp, &data->card_result);
+	data->card_result_valid = rc >= 0;
+	data->select_response = uim_icc_open_logical_channel_resp_get_select_response(icc_open_logical_channel_resp, &data->select_response_n);
+	data->select_response_valid = !!data->select_response_n;
+}
+
+void uim_icc_open_logical_channel_resp_data_free(struct uim_icc_open_logical_channel_resp_data *data)
+{
+
+		free(data->result);
+	if(data->select_response_valid) {
+		free(data->select_response);
+	}
+}
+
+void uim_icc_open_logical_channel_resp_free(struct uim_icc_open_logical_channel_resp *icc_open_logical_channel_resp)
+{
+	qmi_tlv_free((struct qmi_tlv*)icc_open_logical_channel_resp);
+}
+
+int uim_icc_open_logical_channel_resp_get_channel_id(struct uim_icc_open_logical_channel_resp *icc_open_logical_channel_resp, uint8_t *val)
+{
+	uint8_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)icc_open_logical_channel_resp, 16, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(uint8_t))
+		return -EINVAL;
+
+	*val = *(uint8_t*)ptr;
+	return 0;
+}
+
+int uim_icc_open_logical_channel_resp_get_card_result(struct uim_icc_open_logical_channel_resp *icc_open_logical_channel_resp, uint16_t *val)
+{
+	uint16_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)icc_open_logical_channel_resp, 17, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(uint16_t))
+		return -EINVAL;
+
+	*val = *(uint16_t*)ptr;
+	return 0;
+}
+
+uint8_t *uim_icc_open_logical_channel_resp_get_select_response(struct uim_icc_open_logical_channel_resp *icc_open_logical_channel_resp, size_t *count)
+{
+	uint8_t *ptr, *out;
+	size_t size;
+	size_t len;
+
+	ptr = qmi_tlv_get_array((struct qmi_tlv*)icc_open_logical_channel_resp, 18, 1, &len, &size);
+	if (!ptr)
+		return NULL;
+
+	if (size != sizeof(uint8_t))
+		return NULL;
+
+	out = malloc(len);
+	memcpy(out, ptr, len);
+
+	*count = len;
+	return out;
 }
 
 struct uim_get_slot_status_req *uim_get_slot_status_req_alloc(unsigned txn)
@@ -178,13 +324,31 @@ void uim_get_slot_status_resp_getall(struct uim_get_slot_status_resp *get_slot_s
 	int rc;
 	(void)rc;
 
-	data->result = qmi_tlv_get((struct qmi_tlv*)get_slot_status_resp, 2, NULL);
+	data->result = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->result, qmi_tlv_get((struct qmi_tlv*)get_slot_status_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
 	data->slot_state = uim_get_slot_status_resp_get_slot_state(get_slot_status_resp);
 	data->slot_state_valid = !!data->slot_state;
 	data->slot_info = uim_get_slot_status_resp_get_slot_info(get_slot_status_resp);
 	data->slot_info_valid = !!data->slot_info;
 	data->eid_info = uim_get_slot_status_resp_get_eid_info(get_slot_status_resp, &data->eid_info_n);
 	data->eid_info_valid = !!data->eid_info_n;
+}
+
+void uim_get_slot_status_resp_data_free(struct uim_get_slot_status_resp_data *data)
+{
+
+		free(data->result);
+	if(data->slot_state_valid) {
+		uim_physical_slot_state_free(data->slot_state);
+		free(data->slot_state);
+	}
+	if(data->slot_info_valid) {
+		uim_physical_slot_info_free(data->slot_info);
+		free(data->slot_info);
+	}
+	if(data->eid_info_valid) {
+		free(data->eid_info);
+	}
 }
 
 void uim_get_slot_status_resp_free(struct uim_get_slot_status_resp *get_slot_status_resp)
@@ -305,6 +469,20 @@ void uim_get_slot_status_ind_getall(struct uim_get_slot_status_ind *get_slot_sta
 	data->slot_info_valid = !!data->slot_info;
 	data->eid_info = uim_get_slot_status_ind_get_eid_info(get_slot_status_ind, &data->eid_info_n);
 	data->eid_info_valid = !!data->eid_info_n;
+}
+
+void uim_get_slot_status_ind_data_free(struct uim_get_slot_status_ind_data *data)
+{
+
+		uim_physical_slot_state_free(data->slot_state);
+		free(data->slot_state);
+	if(data->slot_info_valid) {
+		uim_physical_slot_info_free(data->slot_info);
+		free(data->slot_info);
+	}
+	if(data->eid_info_valid) {
+		free(data->eid_info);
+	}
 }
 
 void uim_get_slot_status_ind_free(struct uim_get_slot_status_ind *get_slot_status_ind)
@@ -459,5 +637,41 @@ uint8_t *uim_get_slot_status_ind_get_eid_info(struct uim_get_slot_status_ind *ge
 
 	*count = len;
 	return out;
+}
+
+void uim_card_status_free(struct uim_card_status *val)
+{
+	for(size_t i = 0; i < val->cards_n; i++) {
+		for(size_t ii = 0; ii < val->cards[i].applications_n; ii++) {
+			free(val->cards[i].applications[ii].application_identifier_value);
+		}
+		free(val->cards[i].applications);
+	}
+	free(val->cards);
+
+}
+
+void uim_provisioning_session_application_free(struct uim_provisioning_session_application *val)
+{
+	free(val->application_identifier_value);
+
+}
+
+void uim_physical_slot_state_free(struct uim_physical_slot_state *val)
+{
+	for(size_t i = 0; i < val->slots_n; i++) {
+		free(val->slots[i].iccid);
+	}
+	free(val->slots);
+
+}
+
+void uim_physical_slot_info_free(struct uim_physical_slot_info *val)
+{
+	for(size_t i = 0; i < val->slots_n; i++) {
+		free(val->slots[i].atr_value);
+	}
+	free(val->slots);
+
 }
 

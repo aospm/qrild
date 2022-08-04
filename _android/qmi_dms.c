@@ -2,6 +2,17 @@
 #include <string.h>
 #include "qmi_dms.h"
 
+const struct qmi_tlv_msg_name dms_msg_name_map[8] = {
+	{ .msg_id = 35, .msg_name = "dms_get_revision_req" },
+	{ .msg_id = 35, .msg_name = "dms_get_revision_resp" },
+	{ .msg_id = 37, .msg_name = "dms_get_ids_req" },
+	{ .msg_id = 37, .msg_name = "dms_get_ids_resp" },
+	{ .msg_id = 45, .msg_name = "dms_get_operating_mode_req" },
+	{ .msg_id = 45, .msg_name = "dms_get_operating_mode_resp" },
+	{ .msg_id = 46, .msg_name = "dms_set_operating_mode_req" },
+	{ .msg_id = 46, .msg_name = "dms_set_operating_mode_resp" },
+};
+
 struct dms_get_revision_req *dms_get_revision_req_alloc(unsigned txn)
 {
 	return (struct dms_get_revision_req*)qmi_tlv_init(txn, 35, 0);
@@ -28,6 +39,12 @@ void dms_get_revision_resp_getall(struct dms_get_revision_resp *get_revision_res
 	(void)rc;
 
 	data->revision = dms_get_revision_resp_get_revision(get_revision_resp);
+}
+
+void dms_get_revision_resp_data_free(struct dms_get_revision_resp_data *data)
+{
+
+		free(data->revision);
 }
 
 void dms_get_revision_resp_free(struct dms_get_revision_resp *get_revision_resp)
@@ -81,7 +98,8 @@ void dms_get_ids_resp_getall(struct dms_get_ids_resp *get_ids_resp, struct dms_g
 	int rc;
 	(void)rc;
 
-	data->res = qmi_tlv_get((struct qmi_tlv*)get_ids_resp, 2, NULL);
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_ids_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
 	data->esn = dms_get_ids_resp_get_esn(get_ids_resp);
 	data->esn_valid = !!data->esn;
 	data->imei = dms_get_ids_resp_get_imei(get_ids_resp);
@@ -90,6 +108,24 @@ void dms_get_ids_resp_getall(struct dms_get_ids_resp *get_ids_resp, struct dms_g
 	data->meid_valid = !!data->meid;
 	data->imei_ver = dms_get_ids_resp_get_imei_ver(get_ids_resp);
 	data->imei_ver_valid = !!data->imei_ver;
+}
+
+void dms_get_ids_resp_data_free(struct dms_get_ids_resp_data *data)
+{
+
+		free(data->res);
+	if(data->esn_valid) {
+		free(data->esn);
+	}
+	if(data->imei_valid) {
+		free(data->imei);
+	}
+	if(data->meid_valid) {
+		free(data->meid);
+	}
+	if(data->imei_ver_valid) {
+		free(data->imei_ver);
+	}
 }
 
 void dms_get_ids_resp_free(struct dms_get_ids_resp *get_ids_resp)
@@ -206,11 +242,18 @@ void dms_get_operating_mode_resp_getall(struct dms_get_operating_mode_resp *get_
 	int rc;
 	(void)rc;
 
-	data->res = qmi_tlv_get((struct qmi_tlv*)get_operating_mode_resp, 2, NULL);
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_operating_mode_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
 	rc = dms_get_operating_mode_resp_get_mode(get_operating_mode_resp, &data->mode);
 	rc = dms_get_operating_mode_resp_get_offline_reason(get_operating_mode_resp, &data->offline_reason);
 	data->offline_reason_valid = rc >= 0;
 	rc = dms_get_operating_mode_resp_get_hardware_restricted(get_operating_mode_resp, &data->hardware_restricted);
+}
+
+void dms_get_operating_mode_resp_data_free(struct dms_get_operating_mode_resp_data *data)
+{
+
+		free(data->res);
 }
 
 void dms_get_operating_mode_resp_free(struct dms_get_operating_mode_resp *get_operating_mode_resp)
@@ -299,5 +342,14 @@ void *dms_set_operating_mode_resp_encode(struct dms_set_operating_mode_resp *set
 void dms_set_operating_mode_resp_free(struct dms_set_operating_mode_resp *set_operating_mode_resp)
 {
 	qmi_tlv_free((struct qmi_tlv*)set_operating_mode_resp);
+}
+
+void dms_ids_free(struct dms_ids *val)
+{
+	free(val->esn);
+	free(val->imei);
+	free(val->meid);
+	free(val->imei_ver);
+
 }
 

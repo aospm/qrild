@@ -36,13 +36,13 @@ extern "C" {
 
 struct dms_ids {
 	uint16_t esn_len;
-	char * esn;
+	char *esn;
 	uint16_t imei_len;
-	char * imei;
+	char *imei;
 	uint16_t meid_len;
-	char * meid;
+	char *meid;
 	uint16_t imei_ver_len;
-	char * imei_ver;
+	char *imei_ver;
 };
 
 struct dms_get_revision_req;
@@ -53,6 +53,10 @@ struct dms_get_operating_mode_req;
 struct dms_get_operating_mode_resp;
 struct dms_set_operating_mode_req;
 struct dms_set_operating_mode_resp;
+
+
+#define QMI_NUM_MESSAGES_DMS 8
+extern const struct qmi_tlv_msg_name dms_msg_name_map[8];
 
 /*
  * dms_get_revision_req message
@@ -66,11 +70,12 @@ void dms_get_revision_req_free(struct dms_get_revision_req *get_revision_req);
  */
 
 struct dms_get_revision_resp_data {
-	char * revision;
+	char *revision;
 };
 
 struct dms_get_revision_resp *dms_get_revision_resp_parse(void *buf, size_t len);
 void dms_get_revision_resp_getall(struct dms_get_revision_resp *get_revision_resp, struct dms_get_revision_resp_data *data);
+void dms_get_revision_resp_data_free(struct dms_get_revision_resp_data *data);
 void dms_get_revision_resp_free(struct dms_get_revision_resp *get_revision_resp);
 
 char *dms_get_revision_resp_get_revision(struct dms_get_revision_resp *get_revision_resp);
@@ -89,17 +94,18 @@ void dms_get_ids_req_free(struct dms_get_ids_req *get_ids_req);
 struct dms_get_ids_resp_data {
 	struct qmi_response_type_v01 *res;
 	bool esn_valid;
-	char * esn;
+	char *esn;
 	bool imei_valid;
-	char * imei;
+	char *imei;
 	bool meid_valid;
-	char * meid;
+	char *meid;
 	bool imei_ver_valid;
-	char * imei_ver;
+	char *imei_ver;
 };
 
 struct dms_get_ids_resp *dms_get_ids_resp_parse(void *buf, size_t len);
 void dms_get_ids_resp_getall(struct dms_get_ids_resp *get_ids_resp, struct dms_get_ids_resp_data *data);
+void dms_get_ids_resp_data_free(struct dms_get_ids_resp_data *data);
 void dms_get_ids_resp_free(struct dms_get_ids_resp *get_ids_resp);
 
 char *dms_get_ids_resp_get_esn(struct dms_get_ids_resp *get_ids_resp);
@@ -131,6 +137,7 @@ struct dms_get_operating_mode_resp_data {
 
 struct dms_get_operating_mode_resp *dms_get_operating_mode_resp_parse(void *buf, size_t len);
 void dms_get_operating_mode_resp_getall(struct dms_get_operating_mode_resp *get_operating_mode_resp, struct dms_get_operating_mode_resp_data *data);
+void dms_get_operating_mode_resp_data_free(struct dms_get_operating_mode_resp_data *data);
 void dms_get_operating_mode_resp_free(struct dms_get_operating_mode_resp *get_operating_mode_resp);
 
 int dms_get_operating_mode_resp_get_mode(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint8_t *val);
