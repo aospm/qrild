@@ -18,6 +18,7 @@
 #include <android-base/logging.h>
 
 #include <qrild.h>
+#include <util.h>
 #include <qrild_qmi.h>
 #include <qmi_uim.h>
 
@@ -82,23 +83,12 @@ ndk::ScopedAStatus RadioSim::getFacilityLockForApp(int32_t in_serial,
 }
 
 // FIXME: Hardcoded SIM slot 1 here
-// FIXME: EID length is 0 for some reason!
-/*
-07-18 14:19:18.816  1119  1119 E UiccController: com.android.internal.telephony.CommandException: MODEM_ERR
-07-18 14:19:18.816  1119  1119 E UiccController: 	at com.android.internal.telephony.RILRequest.onError(RILRequest.java:236)
-07-18 14:19:18.816  1119  1119 E UiccController: 	at com.android.internal.telephony.RIL.processResponseDoneInternal(RIL.java:5312)
-07-18 14:19:18.816  1119  1119 E UiccController: 	at com.android.internal.telephony.RIL.processResponseDone(RIL.java:5297)
-07-18 14:19:18.816  1119  1119 E UiccController: 	at com.android.internal.telephony.SimResponse.getIccCardStatusResponse(SimResponse.java:191)
-07-18 14:19:18.816  1119  1119 E UiccController: 	at android.hardware.radio.sim.IRadioSimResponse$Stub.onTransact(IRadioSimResponse.java:820)
-07-18 14:19:18.816  1119  1119 E UiccController: 	at android.os.Binder.execTransactInternal(Binder.java:1205)
-07-18 14:19:18.816  1119  1119 E UiccController: 	at android.os.Binder.execTransact(Binder.java:1163)
-*/
 ndk::ScopedAStatus RadioSim::getIccCardStatus(int32_t in_serial) {
     printf("xRadioSim::%s\n", __func__);
     auto cardStatus = sim::CardStatus();
     int rc;
     struct uim_get_slot_status_resp_data slot_status;
-    struct uim_card_status *qmi_card_status;
+    struct uim_get_card_status_resp_data card_status;
     auto r_info = RESP_OK(in_serial);
     sim::AppStatus appn;
     config::SlotPortMapping map;
@@ -115,7 +105,7 @@ ndk::ScopedAStatus RadioSim::getIccCardStatus(int32_t in_serial) {
         goto out;
     }
 
-    rc = qrild_qmi_uim_get_card_status(mState);
+    rc = qrild_qmi_uim_get_card_status(mState, &card_status);
     switch (rc) {
     case QRILD_STATE_PENDING:
         r_info.error = RadioError::RADIO_NOT_AVAILABLE;
@@ -124,13 +114,13 @@ ndk::ScopedAStatus RadioSim::getIccCardStatus(int32_t in_serial) {
         break;
     default:
         r_info.error = RadioError::MODEM_ERR;
-        goto out;
+        goto out_free_slot;
     }
-    qmi_card_status = mState->card_status;
 
-    cardStatus.cardState = QmiUimPhysicalCardStateToCardState(slot_status.slot_state->slots[0].card_state);
+    cardStatus.cardState =
+          QmiUimPhysicalCardStateToCardState(slot_status.slot_state->slots[0].card_state);
 
-    cardStatus.universalPinState = sim::PinState(qmi_card_status->cards[0].upin_state);
+    cardStatus.universalPinState = sim::PinState(card_status.status->cards[0].upin_state);
     // FIXME: Is GSM/CDMA needed for LTE?
     // Zero-based?
     cardStatus.gsmUmtsSubscriptionAppIndex = 0;
@@ -138,8 +128,8 @@ ndk::ScopedAStatus RadioSim::getIccCardStatus(int32_t in_serial) {
     cardStatus.imsSubscriptionAppIndex = 0;
     cardStatus.applications = std::vector<sim::AppStatus>();
     // FIXME: Should be USIM, hopefully can get away with this
-    appn.appType = qmi_card_status->cards[0].applications[0].type;
-    switch (qmi_card_status->cards[0].applications[0].state) {
+    appn.appType = card_status.status->cards[0].applications[0].type;
+    switch (card_status.status->cards[0].applications[0].state) {
     case QMI_UIM_CARD_APPLICATION_STATE_DETECTED:
         appn.appState = sim::AppStatus::APP_STATE_DETECTED;
         break;
@@ -155,27 +145,32 @@ ndk::ScopedAStatus RadioSim::getIccCardStatus(int32_t in_serial) {
     default:
         appn.appState = sim::AppStatus::APP_STATE_UNKNOWN;
         LOG(WARNING) << "Got unhandled application state: "
-                  << qmi_card_status->cards[0].applications[0].state << "!";
+                     << card_status.status->cards[0].applications[0].state << "!";
     }
 
-    //FIXME: rename decode_atr to something generic
-    appn.aidPtr = decode_atr(qmi_card_status->cards[0].applications[0].application_identifier_value, qmi_card_status->cards[0].applications[0].application_identifier_value_n);
+    appn.aidPtr = decode_bytes(card_status.status->cards[0].applications[0].application_identifier_value,
+          card_status.status->cards[0].applications[0].application_identifier_value_n);
 
-    appn.pin1 = sim::PinState(qmi_card_status->cards[0].applications[0].pin1_state);
-    appn.pin2 = sim::PinState(qmi_card_status->cards[0].applications[0].pin2_state);
+    appn.pin1 = sim::PinState(card_status.status->cards[0].applications[0].pin1_state);
+    appn.pin2 = sim::PinState(card_status.status->cards[0].applications[0].pin2_state);
 
     cardStatus.applications.push_back(appn);
 
-    cardStatus.atr = decode_atr(
+    cardStatus.atr = decode_bytes(
           slot_status.slot_info->slots[0].atr_value, slot_status.slot_info->slots[0].atr_value_n);
     cardStatus.eid = decode_eid(slot_status.eid_info, slot_status.eid_info_n);
     cardStatus.iccid = decode_iccid(
           slot_status.slot_state->slots[0].iccid, slot_status.slot_state->slots[0].iccid_n);
 
-    map.physicalSlotId = 1;
+    map.physicalSlotId = 0;
     map.portId = 0;
 
     cardStatus.slotMap = map;
+
+    uim_get_card_status_resp_data_free(&card_status);
+
+out_free_slot:
+    uim_get_slot_status_resp_data_free(&slot_status);
 
 out:
     LOG(INFO) << __func__ << ": err: " << toString(r_info.error) << "\n\t" << cardStatus.toString();
@@ -210,15 +205,50 @@ ndk::ScopedAStatus RadioSim::iccIoForApp(int32_t in_serial, const sim::IccIo &in
     return ndk::ScopedAStatus::ok();
 }
 
+/*
+ * Carrier privileged applications.
+ * See frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/UiccCarrierPrivilegeRules.java
+ * for details.
+ */
+#define ARAM_AID "A00000015141434C00"
+#define ARAD_AID "A00000015144414300"
+
 ndk::ScopedAStatus RadioSim::iccOpenLogicalChannel(
       int32_t in_serial, const std::string &in_aid, int32_t in_p2) {
     printf("xRadioSim::%s\n", __func__);
     auto r_info = RESP_OK(in_serial);
+    struct uim_icc_open_logical_channel_resp_data resp;
+    int32_t channelId = 0;
+    std::vector<uint8_t> selectResponse;
 
-    LOG(WARNING) << __func__ << ": FIXME! TODO:? aid: " << in_aid << ", p2: " << in_p2;
-    r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+    LOG(INFO) << __func__ << ": " << in_aid << ", p2: " << in_p2;
 
-    mRep->iccOpenLogicalChannelResponse(r_info, 0, std::vector<uint8_t>());
+    auto rc = qrild_qmi_uim_icc_open_logical_channel(mState, 0, in_aid.c_str(), 4, &resp);
+    if (resp.result->result > 0) {
+        LOG(INFO) << "Failed to open logical channel, err: " << (int)resp.result->error;
+        switch(resp.result->error) {
+        case 48: // INVALID_ARGUMENT
+            r_info.error = RadioError::NO_SUCH_ELEMENT;
+            break;
+        default:
+            r_info.error = RadioError::INTERNAL_ERR;
+        }
+        
+        goto out;
+    }
+
+    channelId = resp.channel_id;
+    selectResponse =
+          std::vector<uint8_t>(resp.select_response, resp.select_response + resp.select_response_n);
+
+    LOG(INFO) << __func__ << ": Success! channelID: " << (int)resp.channel_id
+              << "selectResponse: " << ::android::internal::ToString(selectResponse)
+              << ", cardResult: " << std::hex << resp.card_result;
+
+    uim_icc_open_logical_channel_resp_data_free(&resp);
+
+out:
+    mRep->iccOpenLogicalChannelResponse(r_info, channelId, selectResponse);
 
     return ndk::ScopedAStatus::ok();
 }
@@ -236,7 +266,12 @@ ndk::ScopedAStatus RadioSim::iccTransmitApduLogicalChannel(
 }
 
 ndk::ScopedAStatus RadioSim::reportStkServiceIsRunning(int32_t in_serial) {
-    printf("FIXME! TODO: RadioSim::%s\n", __func__);
+    printf("xRadioSim::%s\n", __func__);
+    auto r_info = RESP_OK(in_serial);
+    r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+
+    mRep->reportStkServiceIsRunningResponse(r_info);
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -355,7 +390,5 @@ ndk::ScopedAStatus RadioSim::updateSimPhonebookRecords(
     return ndk::ScopedAStatus::ok();
 }
 
-void RadioSim::handleQmiIndications()
-{
-
+void RadioSim::handleQmiIndications() {
 }

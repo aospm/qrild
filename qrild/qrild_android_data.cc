@@ -67,6 +67,11 @@ ndk::ScopedAStatus RadioData::setDataAllowed(int32_t in_serial, bool in_allow) {
 
 ndk::ScopedAStatus RadioData::setDataProfile(int32_t in_serial, const std::vector<data::DataProfileInfo> &in_profiles) {
     printf("FIXME! TODO: RadioData::%s\n", __func__);
+
+    for (auto profile : in_profiles) {
+        LOG(INFO) << "\tprofile: " << profile.toString();
+    }
+
     return ndk::ScopedAStatus::ok();
 }
 

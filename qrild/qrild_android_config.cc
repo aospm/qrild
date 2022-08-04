@@ -63,47 +63,6 @@ ndk::ScopedAStatus RadioConfig::getPhoneCapability(int32_t in_serial) {
     return ndk::ScopedAStatus::ok();
 }
 
-/* Thanks qmicli
- * https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/src/qmicli/qmicli-uim.c#L999
- */
-static const char bcd_chars[] = "0123456789\0\0\0\0\0\0";
-
-std::string decode_iccid(uint8_t *bcd, uint8_t len)
-{
-    char *str = (char*)zalloc(len * 2 + 1);
-    for (size_t i = 0; i < len; i++)
-    {
-        str[i] = (bcd_chars[bcd[i] & 0xF]);
-        str[i+1] = (bcd_chars[(bcd[i] >> 4) & 0xF]);
-    }
-
-    return std::string(str);
-}
-
-std::string decode_eid(uint8_t *eid, uint8_t len)
-{
-    char *str = (char*)zalloc(len * 2 + 1);
-    for (size_t i = 0; i < len; i++)
-    {
-        str[i] = bcd_chars[(eid[i] >> 4) & 0xF];
-        str[i+1] = bcd_chars[eid[i] & 0xF];
-    }
-
-    return std::string(str);
-}
-
-std::string decode_atr(uint8_t *atr, uint8_t len)
-{
-    char *str = (char*)zalloc(len * 2 + 1);
-    for (size_t i = 0; i < len; i++)
-    {
-        str[i] = to_hex(atr[i] >> 4);
-        str[i+1] = to_hex(atr[i]);
-    }
-
-    return std::string(str);
-}
-
 ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
     printf("xRadioConfig::%s\n", __func__);
     int rc;
@@ -139,7 +98,7 @@ ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
     // if (slot->cardState != QMI_UIM_CARD_STATE_PRESENT)
     //     goto cont;
 
-    slot->atr = decode_atr(status.slot_info->slots[0].atr_value, status.slot_info->slots[0].atr_value_n);
+    slot->atr = decode_bytes(status.slot_info->slots[0].atr_value, status.slot_info->slots[0].atr_value_n);
     if (status.slot_info->slots[0].is_euicc)
         slot->eid = decode_eid(status.eid_info, status.eid_info_n);
     else

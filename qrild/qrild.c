@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -25,27 +24,27 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <syslog.h>
 #include <errno.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
 
+#include "q_log.h"
+
 #include "libqrtr.h"
-#include "logging.h"
 
 #include "qrild.h"
 #include "qrild_link.h"
 #include "qrild_msg.h"
 #include "qrild_qmi.h"
 #include "util.h"
-
-#ifdef ANDROID
+#include "qmi_uim.h"
 #include "qrild_android_interface.h"
-#endif
 
 static int process_pending(struct rild_state *state) {
+	struct uim_get_card_status_resp_data card_status;
+	struct nas_get_signal_strength_resp_data signal_strength;
 	int rc = QRILD_STATE_PENDING;
 
 	switch (state->state) {
@@ -58,7 +57,8 @@ static int process_pending(struct rild_state *state) {
 		//state->state = QRILD_ACTION_GET_RUNTIME_SETTINGS;
 		break;
 	case QRILD_ACTION_SLOT_STATUS:
-		rc = qrild_qmi_uim_get_card_status(state);
+		rc = qrild_qmi_uim_get_card_status(state, &card_status);
+		state->card_status = card_status.status;
 		break;
 	case QRILD_ACTION_PROVISION:
 		rc = qrild_qmi_uim_set_provisioning(state);
@@ -76,7 +76,9 @@ static int process_pending(struct rild_state *state) {
 		rc = qrild_qmi_wds_bind_mux_data_port(state);
 		break;
 	case QRILD_ACTION_GET_SIGNAL_STRENGTH:
-		rc = qrild_qmi_nas_show_signal_strength(state);
+		rc = qrild_qmi_nas_get_signal_strength(state, &signal_strength);
+		if (!rc)
+			qrild_qmi_nas_show_signal_strength(&signal_strength);
 		break;
 	case QRILD_ACTION_START_NET_IFACES:
 		rc = qrild_qmi_wds_start_network_interface(state);
@@ -92,7 +94,7 @@ static int process_pending(struct rild_state *state) {
 		rc = qrild_qmi_idle(state);
 		break;
 	default:
-		fprintf(stderr, "[STATE] unknown state %d\n", state->state);
+		log_error("[STATE] unknown state %d", state->state);
 		return -1;
 	}
 
@@ -101,14 +103,14 @@ static int process_pending(struct rild_state *state) {
 		msleep(TIMEOUT_DEFAULT / 3);
 		break;
 	case QRILD_STATE_ERROR:
-		fprintf(stderr, "[STATE] ERROR: failed in state %d\n", state->state);
+		log_error("[STATE] ERROR: failed in state %d", state->state);
 		return rc;
 	case QRILD_STATE_DONE:
 		state->state++;
-		LOGD("[STATE] In state state %d\n", state->state);
+		log_debug("[STATE] In state state %d", state->state);
 		break;
 	default:
-		fprintf(stderr, "[STATE] ERROR: Invalid status %d\n", rc);
+		log_error("[STATE] ERROR: Invalid status %d", rc);
 		return rc;
 	}
 
@@ -121,7 +123,7 @@ void *msg_loop(void *x) {
 
 	state->sock = qrtr_open(0);
 	if (state->sock < 0) {
-		LOGE("Failed to open QRTR socket: %d", state->sock);
+		log_error("Failed to open QRTR socket: %d", state->sock);
 		return NULL;
 	}
 
@@ -131,7 +133,7 @@ void *msg_loop(void *x) {
 	while (!state->exit) {
 		rc = qrild_qrtr_send_queued(state);
 		if (rc < 0) {
-			LOGE("Failed to send queued messages! %d\n", rc);
+			log_error("Failed to send queued messages! %d", rc);
 			state->exit = true;
 			break;
 		}
@@ -139,14 +141,14 @@ void *msg_loop(void *x) {
 		if (rc < 0 && errno == EINTR)
 			continue;
 		if (rc < 0)
-			PLOGE_AND_EXIT("Failed to poll");
+			log_error("poll() failed: %d (%s)", errno, strerror(errno));
 
 		if (rc > 0)
 			qrild_qrtr_recv(state);
 		qrild_qmi_process_indications(state);
 	}
 
-	printf("Quitting loop!\n");
+	log_info("Quitting loop!");
 	qrtr_close(state->sock);
 
 	return NULL;
@@ -163,8 +165,9 @@ void main_loop(struct rild_state *state)
 void usage() {
 	fprintf(stderr, "qrild: QRTR modem interface / RIL\n");
 	fprintf(stderr, "--------------------------------------\n");
-	fprintf(stderr, "qrild [-h] [-i IP -g GATEWAY]\n");
+	fprintf(stderr, "qrild [-h] [-d] [-i IP -g GATEWAY]\n");
 	fprintf(stderr, "    -h               This help message\n");
+	fprintf(stderr, "    -d               Dump QMI packets (slow and verbose)\n");
 	fprintf(stderr, "    -n               Don't configure network interfaces automatically\n");
 	fprintf(stderr, "    -i IP            IP address to configure\n");
 	fprintf(stderr, "    -g GATEWAY       Gateway address to use\n\n");
@@ -172,6 +175,15 @@ void usage() {
 	fprintf(stderr, "talk to the modem but just configure the rmnet interface.\n");
 
 	exit(1);
+}
+
+void q_log_lock(bool lock, void *data) {
+	struct rild_state *state = data;
+
+	if (lock)
+		pthread_mutex_lock(&state->print_mutex);
+	else
+		pthread_mutex_unlock(&state->print_mutex);
 }
 
 int main(int argc, char **argv) {
@@ -185,12 +197,9 @@ int main(int argc, char **argv) {
 	pthread_condattr_t cattr;
 	pthread_t msg_thread;
 
-	(void)argc;
-
-	qlog_setup(progname, false);
-	qlog_set_min_priority(LOG_DEBUG);
-
 	memset(&state, 0, sizeof(state));
+
+	log_set_lock(q_log_lock, &state);
 
 	state.sock = -1;
 	list_init(&state.services);
@@ -209,8 +218,11 @@ int main(int argc, char **argv) {
 	pthread_mutex_init(&state.connection_status_mutex, &mattr);
 	pthread_cond_init(&state.connection_status_change, &cattr);
 
-	while ((opt = getopt(argc, argv, "hni:g:")) != -1) {
+	while ((opt = getopt(argc, argv, "hdni:g:")) != -1) {
 		switch (opt) {
+		case 'd':
+			log_error("FIXME: debug_print always enabled");
+			break;
 		case 'n':
 			state.no_configure_inet = true;
 			break;
@@ -227,37 +239,37 @@ int main(int argc, char **argv) {
 	}
 
 	if ((ip_str && !gateway_str) || (gateway_str && !ip_str)) {
-		fprintf(stderr, "You must pass both '-i' and '-g' or none of them\n");
+		log_error("You must pass both '-i' and '-g' or none of them");
 		return EXIT_FAILURE;
 	}
 
 	if (ip_str) {
-		printf("Got IP: %s, gateway: %s\n", ip_str, gateway_str);
+		log_info("Got IP: %s, gateway: %s", ip_str, gateway_str);
 		rc = inet_aton(ip_str, &ip);
 		if (rc == 0) {
-			fprintf(stderr, "Invalid IP address: '%s'\n", ip_str);
+			log_error("Invalid IP address: '%s'", ip_str);
 			return EXIT_FAILURE;
 		}
 		rc = inet_aton(gateway_str, &gateway);
 		if (rc == 0) {
-			fprintf(stderr, "Invalid gateway address: '%s'\n", ip_str);
+			log_error("Invalid gateway address: '%s'", ip_str);
 			return EXIT_FAILURE;
 		}
-		printf("Both inet_aton success\n");
+		log_info("Both inet_aton success");
 
 		// hardcode the mask for now when setting manually, it's always /29 anyway
 		mask.s_addr = htonl(0xfffffff8);
 
 		rc = qrild_link_configure(&ip, &mask, &gateway);
 		if (rc < 0) {
-			fprintf(stderr, "Failed to configure rmnet interface\n");
+			log_error("Failed to configure rmnet interface");
 			return EXIT_FAILURE;
 		}
 		return EXIT_SUCCESS;
 	}
 
 	if (pthread_create(&msg_thread, NULL, msg_loop, &state)) {
-		LOGE("Failed to create msg thread!\n");
+		log_error("Failed to create msg thread!");
 		return 1;
 	}
 #ifdef ANDROID

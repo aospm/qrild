@@ -39,6 +39,7 @@
 #include <aidl/android/hardware/radio/voice/BnRadioVoiceResponse.h>
 
 #include <qrild.h>
+#include <util.h>
 
 using namespace aidl::android::hardware::radio;
 
@@ -388,9 +389,45 @@ void buildResponseInfo(RadioResponseInfo &info, int serial, RadioResponseType re
 
 // Helpers defined in qrild_android_config.cc for now
 // should be moved
-std::string decode_iccid(uint8_t *bcd, uint8_t len);
-std::string decode_eid(uint8_t *eid, uint8_t len);
-std::string decode_atr(uint8_t *atr, uint8_t len);
+/*
+ * https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/src/qmicli/qmicli-uim.c#L999
+ */
+static const char bcd_chars[] = "0123456789\0\0\0\0\0\0";
+
+static inline std::string decode_iccid(uint8_t *bcd, uint8_t len)
+{
+    char *str = (char*)zalloc(len * 2 + 1);
+    for (size_t i = 0; i < len; i++)
+    {
+        str[i*2] = (bcd_chars[bcd[i] & 0xF]);
+        str[i*2+1] = (bcd_chars[(bcd[i] >> 4) & 0xF]);
+    }
+
+    auto s = std::string(str);
+    free(str);
+    return s;
+}
+
+static inline std::string decode_eid(uint8_t *eid, uint8_t len)
+{
+    char *str = (char*)zalloc(len * 2 + 1);
+    for (size_t i = 0; i < len; i++)
+    {
+        str[i*2] = bcd_chars[(eid[i] >> 4) & 0xF];
+        str[i*2+1] = bcd_chars[eid[i] & 0xF];
+    }
+
+    auto s = std::string(str);
+    free(str);
+    return s;
+}
+
+static inline std::string decode_bytes(uint8_t *bytes, size_t len) {
+      char *str = bytes_to_hex_string(bytes, len);
+      auto s = std::string(str);
+      free(str);
+      return s;
+}
 
 int QmiUimPhysicalCardStateToCardState(int physical_card_state);
 

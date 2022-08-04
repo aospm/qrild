@@ -24,10 +24,12 @@
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
 
+#include <qrild_msg.h>
+#include <util.h>
+#include <list.h>
+
 #include "qrild_android_interface.h"
 #include "qrild_radio.hh"
-#include "qrild_msg.h"
-#include <list.h>
 
 // FIXME: ehhh global or not pick one?!
 static struct rild_state *state;
@@ -63,20 +65,26 @@ template <typename T> std::shared_ptr<T> addService(std::string type, struct ril
     return ser;
 }
 
-void *qmi_indications_loop(void *service)
+void *qmi_indications_loop(void *)
 {
     while (!state->exit) {
+        /* Wait for a new indication, call each service to let them process it */
         pthread_mutex_lock(&state->msg_mutex);
         pthread_cond_wait(&state->pending_indications, &state->msg_mutex);
         for(auto svc : services) {
             svc->handleQmiIndications();
         }
+
+        /* Free all indications */
         struct qrild_msg *msg;
+        // FIXME: Should use list_for_each_entry_safe
+        // To avoid the silly extra loop here.
         auto to_free = std::vector<struct qrild_msg*>();
         list_for_each_entry(msg, &state->pending_rx, li) {
             if (msg->type == 0x4)
                 to_free.push_back(msg);
         }
+
         for(auto m : to_free)
             qrild_msg_free_locked(m);
         pthread_mutex_unlock(&state->msg_mutex);

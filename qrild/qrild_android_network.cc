@@ -63,13 +63,13 @@ ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
     std::vector<network::BarringInfo> v_bi;
     network::BarringInfo bi;
     auto r_info = RESP_OK(in_serial);
-    struct nas_get_lte_cphy_ca_info_resp_data ca_info;
+    struct nas_get_lte_cphy_ca_info_resp_data data;
     int rc;
 
-    rc = qrild_qmi_nas_get_lte_cphy_ca_info(mState, &ca_info);
+    rc = qrild_qmi_nas_get_lte_cphy_ca_info(mState, &data);
     if (rc) {
         LOG(ERROR) << __func__ << ": Couldn't get lte CPhy CA info";
-        switch(rc) {
+        switch (rc) {
         case QMI_ERR_INFO_UNAVAILABLE:
             r_info.error = RadioError::RADIO_NOT_AVAILABLE;
             break;
@@ -77,30 +77,24 @@ ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
             r_info.error = RadioError::INTERNAL_ERR;
             break;
         }
-        mRep->getBarringInfoResponse(r_info, network::CellIdentity(), v_bi);
-    }
-    if (ca_info.res->result) {
-        switch(ca_info.res->error) {
-        case QMI_ERR_INFO_UNAVAILABLE:
-            goto no_info;
-        }
+        goto no_info;
     }
 
-    LOG(DEBUG) << __func__ << ": Got physical cell ID " << ca_info.phy_scell_info->pci;
+    LOG(INFO) << __func__ << ": Got physical cell ID " << data.phy_scell_info->pci;
 
     // FIXME: can be unknown but should probably set (and get from modem!!!)
     //i_lte.mcc = 234;
     //i_lte.mnc = 20;
     i_lte.ci = INT_MAX;
-    i_lte.pci = ca_info.phy_scell_info->pci;
+    i_lte.pci = data.phy_scell_info->pci;
     i_lte.tac = INT_MAX;
     // FIXME: aidl says this is 18-bit but QMI is only 16-bit, is this correct??
-    i_lte.earfcn = ca_info.phy_scell_info->rx_chan;
+    i_lte.earfcn = data.phy_scell_info->rx_chan;
     i_lte.operatorNames = network::OperatorInfo{ "Three.co.uk", "3", "23420",
         network::OperatorInfo::STATUS_CURRENT };
-    
-    // FIXME: is ca_info.phy_scell_info->dl_bandwidth the right thing to use??
-    switch(ca_info.phy_scell_info->dl_bandwidth) {
+
+    // FIXME: is data.phy_scell_info->dl_bandwidth the right thing to use??
+    switch (data.phy_scell_info->dl_bandwidth) {
     case QMI_NAS_DL_BANDWIDTH_1_4:
         i_lte.bandwidth = 1400;
         break;
@@ -125,15 +119,15 @@ ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
         i_lte.bandwidth = 11111;
         break;
     }
-    
+
     i_lte.additionalPlmns = std::vector<std::string>();
 
-    LOG(DEBUG) << __func__ << ": Have LTE band: " << ca_info.phy_scell_info->lte_band;
+    LOG(DEBUG) << __func__ << ": Have LTE band: " << data.phy_scell_info->lte_band;
 
     // FIXME: This is awful lol, at least import QmiNasActiveBand enum
     // FIXME: This should be all the bands for this tower, not just the active one
-    if(ca_info.phy_scell_info->lte_band >= 120)
-        band = network::EutranBands(ca_info.phy_scell_info->lte_band - 119);
+    if (data.phy_scell_info->lte_band >= 120)
+        band = network::EutranBands(data.phy_scell_info->lte_band - 119);
 
     i_lte.bands = std::vector<network::EutranBands>();
     i_lte.bands.push_back(band);
@@ -161,9 +155,12 @@ ndk::ScopedAStatus RadioNetwork::getCellInfoList(int32_t in_serial) {
     printf("FIXME! WIP: RadioNetwork::%s\n", __func__);
     auto cellInfo = std::vector<network::CellInfo>();
 
-    LOG(ERROR) << "\n\n\n===============\n" << __func__ << "\n\tDO THIS NEXT!!! subid is -1 because we don't report data here, android needs to know about cell tower connections to actually register a change and detect the proper subscription info ID!\n\n\n";
+    LOG(ERROR)
+          << "\n\n\n===============\n"
+          << __func__
+          << "\n\tDO THIS NEXT!!! subid is -1 because we don't report data here, android needs to know about cell tower connections to actually register a change and detect the proper subscription info ID!\n\n\n";
 
-    cellInfo.push_back(network::CellInfo{false, network::CellConnectionStatus::NONE});
+    cellInfo.push_back(network::CellInfo{ false, network::CellConnectionStatus::NONE });
 
     mRep->getCellInfoListResponse(RESP_OK(in_serial), cellInfo);
 
@@ -199,13 +196,91 @@ ndk::ScopedAStatus RadioNetwork::getNetworkSelectionMode(int32_t in_serial) {
 
 ndk::ScopedAStatus RadioNetwork::getOperator(int32_t in_serial) {
     printf("xRadioNetwork::%s\n", __func__);
+    struct qrild_msg *msg;
+    struct nas_get_operator_name_resp *resp;
+    struct nas_get_operator_name_resp_data data;
+    std::string long_name, short_name, mccmnc;
+    auto r_info = RESP_OK(in_serial);
+    int rc, i;
 
-    LOG(INFO) << __func__ << " FIXME: hardcoded values";
+    rc = qrild_qmi_send_basic_request_sync(
+          mState, QMI_SERVICE_NAS, QMI_NAS_GET_OPERATOR_NAME, &msg);
+    if (rc < 0) {
+        LOG(ERROR) << __func__ << ": Failed to request operator name";
+        r_info.error = RadioError::RADIO_NOT_AVAILABLE;
+        goto out_err;
+    }
+
+    resp = nas_get_operator_name_resp_parse(msg->buf, msg->buf_len);
+    if (!resp) {
+        LOG(ERROR) << __func__ << ": Failed to parse operator name";
+        r_info.error = RadioError::INTERNAL_ERR;
+        goto out_err;
+    }
+
+    nas_get_operator_name_resp_getall(resp, &data);
+    if (data.res->result) {
+        LOG(ERROR) << __func__ << ": Modem responded with error: " << (int)data.res->error;
+        switch(data.res->error) {
+            case QMI_ERR_INFO_UNAVAILABLE:
+                // FIXME: ehh
+                r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+                break;
+            default:
+                r_info.error = RadioError::SYSTEM_ERR;
+        }
+        goto out_err;
+    }
+
+    long_name = data.operator_string_name;
+    short_name = data.provider_name->name;
+    // This is awful, the first 6 bytes of the struct are the mcc and mnc
+    // ASCII encoded, this reads those bytes into a string.
+    if (data.operator_plmn_list_n >= 1) {
+        for(i = 0; i < 6; i++)
+            mccmnc += *(((char*)data.operator_plmn_list)+i);
+    }
 
     // Not sure if correct mcc/mnc
-    mRep->getOperatorResponse(RESP_OK(in_serial), "Three.co.uk", "3", "23420");
+    mRep->getOperatorResponse(r_info, long_name, short_name, mccmnc);
 
     return ndk::ScopedAStatus::ok();
+
+out_err:
+    mRep->getOperatorResponse(r_info, "", "", "");
+    return ndk::ScopedAStatus::ok();
+}
+
+static network::GsmSignalStrength getSignalStrengthGsm(
+      struct nas_get_signal_strength_resp_data *data) {
+    auto gsm = network::GsmSignalStrength();
+
+    gsm.signalStrength = INT_MAX;
+    gsm.timingAdvance = INT_MAX;
+    gsm.bitErrorRate = INT_MAX;
+
+    if (data->strength->interface != QMI_NAS_RADIO_INTERFACE_GSM)
+        return gsm;
+
+    gsm.signalStrength = data->strength->strength;
+
+    return gsm;
+}
+
+// Apparently UMTS runs on top of W-CDMA, hopefully these match
+static network::WcdmaSignalStrength getSignalStrengthWcdma(
+      struct nas_get_signal_strength_resp_data *data) {
+    auto wcdma = network::WcdmaSignalStrength();
+
+    wcdma.signalStrength = INT_MAX;
+    wcdma.bitErrorRate = INT_MAX;
+    wcdma.rscp = INT_MAX;
+    wcdma.ecno = INT_MAX;
+
+    if (data->strength->interface != QMI_NAS_RADIO_INTERFACE_UMTS)
+        return wcdma;
+
+    return wcdma;
 }
 
 ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
@@ -262,17 +337,19 @@ ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
     strength.nr = nr;
 
     rc = qrild_qmi_nas_get_signal_strength(mState, &qmi_strength);
-    if (rc < 0){
+    if (rc < 0) {
         LOG(ERROR) << __func__ << ": Couldn't get signal strength";
     }
     if (qmi_strength.res->result) {
-        switch(qmi_strength.res->error) {
+        switch (qmi_strength.res->error) {
         case QMI_ERR_INFO_UNAVAILABLE:
             // Not an "error", we just have no signal
             lte.signalStrength = INT_MAX;
             goto out;
         }
     }
+
+    qrild_qmi_nas_show_signal_strength(&qmi_strength);
 
     lte.signalStrength = qmi_strength.strength->strength;
     lte.rsrp = 65;
@@ -446,6 +523,8 @@ ndk::ScopedAStatus RadioNetwork::setResponseFunctions(
     mRep = in_radioNetworkResponse;
     mInd = in_radioNetworkIndication;
 
+    qrild_qmi_send_basic_request_async(mState, QMI_SERVICE_NAS, 0x0043);
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -502,32 +581,68 @@ ndk::ScopedAStatus RadioNetwork::getUsageSetting(int32_t in_serial) {
     return ndk::ScopedAStatus::ok();
 }
 
-void RadioNetwork::reportSystemStatus(struct qrild_msg *serving_system_ind)
-{
-    struct nas_serving_system_ind_msg status;
+void RadioNetwork::reportSystemStatus(struct qrild_msg *msg) {
+    struct nas_serving_system_ind *ind_msg = NULL;
+    struct nas_serving_system_ind_data stat;
     int rc;
-    memset(&status, 0, sizeof(struct nas_serving_system_ind_msg));
+    auto cellInfo = network::CellInfo();
 
-    rc = qrild_qmi_nas_parse_serving_system_ind(mState, serving_system_ind, &status);
-    if (rc < 0) {
-        fprintf(stderr, "Couldn't parse serving system report!");
+    LOG(INFO) << __func__ << ": WIP!";
+
+    ind_msg = nas_serving_system_ind_parse(msg->buf, msg->buf_len);
+    if (!ind_msg) {
+        fprintf(stderr, "%s: Couldn't parse serving system report\n", __func__);
+        return;
+    }
+    nas_serving_system_ind_getall(ind_msg, &stat);
+    if (!stat.system_valid) {
+        fprintf(stderr, "%s: Couldn't parse serving system TLV\n", __func__);
         return;
     }
 
-    LOG(INFO) << __func__ << ": FIXME! implement this";
+    LOG(INFO) << __func__ << ": System {"
+              << " regState: " << (int)stat.system->registration_state
+              << ", cs_attach: " << (int)stat.system->cs_attach_state
+              << ", ps_attach: " << (int)stat.system->ps_attach_state
+              << ", selectedNetwork: " << (int)stat.system->selected_network
+              << ", interfaces: " << (int)stat.system->radio_interfaces_n << ": ";
+    for (int i = 0; i < stat.system->radio_interfaces_n; i++) {
+        LOG(INFO) << "\t" << (int)stat.system->radio_interfaces[i];
+    }
+
+    cellInfo.registered = stat.system->registration_state == QMI_NAS_REGISTRATION_STATE_REGISTERED;
+    if (cellInfo.registered) {
+        if (stat.system->cs_attach_state == QMI_NAS_ATTACH_STATE_ATTACHED)
+            cellInfo.connectionStatus = network::CellConnectionStatus::PRIMARY_SERVING;
+        else if (stat.system->ps_attach_state == QMI_NAS_ATTACH_STATE_ATTACHED)
+            cellInfo.connectionStatus = network::CellConnectionStatus::SECONDARY_SERVING;
+    }
+
+    if (stat.system->radio_interfaces_n) {
+        if (stat.system->radio_interfaces_n > 1)
+            LOG(WARNING) << __func__ << ": Serving more than 1 radio interface! Taking first";
+
+        switch (stat.system->radio_interfaces[0]) {
+        case QMI_NAS_RADIO_INTERFACE_GSM:
+            break;
+        }
+    }
+
+    nas_serving_system_ind_data_free(&stat);
+
+    auto arr = std::vector<network::CellInfo>();
+    arr.push_back(cellInfo);
+    mInd->cellInfoList(RadioIndicationType::UNSOLICITED, arr);
 }
 
-void RadioNetwork::handleQmiIndications()
-{
+void RadioNetwork::handleQmiIndications() {
     struct qrild_msg *msg;
-    list_for_each_entry(msg, &mState->pending_rx, li)
-    {
+    list_for_each_entry(msg, &mState->pending_rx, li) {
         if (msg->type != 0x4)
             continue;
-        switch(msg->msg_id) {
+        switch (msg->msg_id) {
         case QMI_NAS_SERVING_SYSTEM_REPORT:
             reportSystemStatus(msg);
-            
             break;
         default:
             break;

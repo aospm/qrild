@@ -92,10 +92,7 @@ ndk::ScopedAStatus RadioModem::getDeviceIdentity(int32_t in_serial) {
     mRep->getDeviceIdentityResponse(r_info, std::string(ids.imei), std::string(ids.imei_ver),
           std::string(ids.esn), std::string(ids.meid));
 
-    free(ids.esn);
-    free(ids.imei);
-    free(ids.meid);
-    free(ids.imei_ver);
+    dms_get_ids_resp_data_free(&ids);
 
     return ndk::ScopedAStatus::ok();
 }
@@ -107,7 +104,7 @@ ndk::ScopedAStatus RadioModem::getHardwareConfig(int32_t in_serial) {
     auto modem = modem::HardwareConfig();
     auto modemConfig = modem::HardwareConfigModem();
     auto sim1 = modem::HardwareConfig();
-    auto sim2 = modem::HardwareConfig();
+    //auto sim2 = modem::HardwareConfig();
     auto simConfig = modem::HardwareConfigSim();
     modem.type = modem::HardwareConfig::TYPE_MODEM;
     modem.uuid = "org.linaro.qrild.lm1";
@@ -136,7 +133,6 @@ ndk::ScopedAStatus RadioModem::getHardwareConfig(int32_t in_serial) {
 
     modem.modem = std::vector<modem::HardwareConfigModem>();
     modem.modem.push_back(modemConfig);
-    hw_config.push_back(modem);
 
     sim1.type = modem::HardwareConfig::TYPE_SIM;
     sim1.uuid = "totally-a-real-sim-card";
@@ -147,6 +143,7 @@ ndk::ScopedAStatus RadioModem::getHardwareConfig(int32_t in_serial) {
     sim1.sim = std::vector<modem::HardwareConfigSim>();
     sim1.sim.push_back(simConfig);
 
+    hw_config.push_back(modem);
     hw_config.push_back(sim1);
 
     // sim2.type = modem::HardwareConfig::TYPE_SIM;
@@ -160,6 +157,7 @@ ndk::ScopedAStatus RadioModem::getHardwareConfig(int32_t in_serial) {
     //hw_config.push_back(sim2);
 
     LOG(INFO) << modem.toString();
+    LOG(INFO) << sim1.toString();
 
     mRep->getHardwareConfigResponse(RESP_OK(in_serial), hw_config);
 
@@ -326,7 +324,7 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
                 r_info.error = RadioError::MODEM_ERR;
             }
         } else {
-            LOG(INFO) << "Set modem operating mode to: " << desired_mode << "!";
+            LOG(INFO) << "Set modem operating mode to: " << (int)desired_mode << "!";
             printf("Set operating mode to %u\n", desired_mode);
             mEnabled = in_powerOn || in_forEmergencyCall || in_preferredForEmergencyCall;
             switch (desired_mode) {
@@ -343,7 +341,8 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
             }
         }
     } else {
-        LOG(INFO) << "Modem already in mode: " << desired_mode << " ignoring for now";
+        LOG(WARNING) << "Modem already in mode: " << (int)desired_mode << " ignoring for now";
+        r_info.error = RadioError::INVALID_ARGUMENTS;
     }
 
     mRep->setRadioPowerResponse(r_info);

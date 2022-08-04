@@ -6,6 +6,7 @@ cc_library {
         "subprojects/libqril/qrild_msg.c",
         "subprojects/libqril/qrild_link.cc",
         "subprojects/libqril/util.c",
+        "subprojects/libqril/q_log.c",
         // Generated with qmic
         "_android/qmi_dms.c",
         "_android/qmi_dpm.c",
@@ -76,12 +77,6 @@ cc_binary {
     vendor: true,
     srcs: [
         "tools/tlv_dump.c",
-    ],
-    local_include_dirs: [
-        "subprojects/libqril",
-        "_android",
-    ],
-    include_dirs: [
     ],
     shared_libs: [
         "libqril",
