@@ -1,0 +1,65 @@
+02-12 14:55:25.154   686   686 I android.hardware.radio: adding qrild service instance: android.hardware.radio.config.IRadioConfig/default
+02-12 14:55:25.155   686   686 I android.hardware.radio: adding qrild service instance: android.hardware.radio.messaging.IRadioMessaging/slot1
+02-12 14:55:25.156   686   686 I qrild.IModem: HACK: Powering on modem...
+02-12 14:55:25.274   686   686 I android.hardware.radio: adding qrild service instance: android.hardware.radio.modem.IRadioModem/slot1
+02-12 14:55:25.275   686   686 I android.hardware.radio: adding qrild service instance: android.hardware.radio.data.IRadioData/slot1
+02-12 14:55:25.325   686   686 I android.hardware.radio: adding qrild service instance: android.hardware.radio.network.IRadioNetwork/slot1
+02-12 14:55:25.326   686   686 I android.hardware.radio: adding qrild service instance: android.hardware.radio.sim.IRadioSim/slot1
+02-12 14:55:25.328   686   686 I android.hardware.radio: adding qrild service instance: android.hardware.radio.voice.IRadioVoice/slot1
+02-12 14:55:27.117   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
+02-12 14:55:27.135   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
+02-12 14:55:27.137   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
+08-02 00:04:29.981   686   686 E qrild.IModem: Reporting radio state ON
+08-02 00:04:30.032   686   686 I qrild.IModem: HardwareConfig{type: 0, uuid: org.linaro.qrild.lm1, state: 0, modem: [HardwareConfigModem{rilModel: 0, rat: LTE, maxVoiceCalls: 1, maxDataCalls: 1, maxStandby: 2}], sim: []}
+08-02 00:04:30.032   686   686 I qrild.ISim: (nop) got Cdma subscription source: RUIM_SIM
+08-02 00:04:30.034   686   686 I qrild.IModem: setRadioPower(powerOn: 0, forEmergencyCall: 0, preferredForEmergencyCall: 0)
+08-02 00:04:30.084   686   686 I qrild.IModem: Set modem operating mode to: !
+08-02 00:04:30.128   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
+08-02 00:04:30.128   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
+08-02 00:04:30.184   686   686 I qrild.INetwork: getSignalStrengthLteSignalStrength{signalStrength: -128, rsrp: 65, rsrq: 18, rssnr: 16, cqi: 13, timingAdvance: 647, cqiTableIndex: 5}
+08-02 00:04:30.641   686   686 I qrild.ISim: getIccCardStatus: err: NONE
+08-02 00:04:30.641   686   686 I qrild.ISim: 	CardStatus{cardState: 1, universalPinState: UNKNOWN, gsmUmtsSubscriptionAppIndex: 0, cdmaSubscriptionAppIndex: 0, imsSubscriptionAppIndex: 0, applications: [AppStatus{appType: 2, appState: 1, persoSubstate: UNKNOWN, aidPtr: a000810ffff800000, appLabelPtr: , pin1Replaced: false, pin1: UNKNOWN, pin2: UNKNOWN}], atr: 39981c83e7f216d01c10c0, iccid: 8420099350, eid: , slotMap: SlotPortMapping{physicalSlotId: 1, portId: 0}}
+08-02 00:04:30.751   686   686 E qrild.ISim: areUiccApplicationsEnabled: Hardcode enable UICC application
+08-02 00:04:30.807   686   686 I qrild.IModem: getDeviceIdentity: IMEI: 869295038309353, ESN: 8018E647, MEID: 99001202896467
+08-02 00:04:30.807   686   686 I qrild.INetwork: getOperator FIXME: hardcoded values
+08-02 00:04:30.808   686   686 I qrild.IModem: setRadioPower(powerOn: 1, forEmergencyCall: 0, preferredForEmergencyCall: 0)
+08-02 00:04:30.918   686   686 I qrild.IModem: Set modem operating mode to:
+08-02 00:04:30.919   686   686 I qrild.IModem: setRadioPower(powerOn: 1, forEmergencyCall: 0, preferredForEmergencyCall: 0)
+08-02 00:04:30.969   686   686 I qrild.IModem: Modem already in mode:
+08-02 00:04:30.969   686   686 I qrild.INetwork: getOperator FIXME: hardcoded values
+08-02 00:04:30.969   686   686 I qrild.IModem: Got device state: CHARGING_STATE
+08-02 00:04:30.969   686   686 I qrild.IModem: Got device state: LOW_DATA_EXPECTED
+08-02 00:04:30.970   686   686 I qrild.INetwork: setIndicationFilter Filters:
+08-02 00:04:30.970   686   686 I qrild.INetwork: SIGNAL_STRENGTH
+08-02 00:04:30.970   686   686 I qrild.INetwork: FULL_NETWORK_STATE
+08-02 00:04:30.971   686   686 I qrild.INetwork: DATA_CALL_DORMANCY_CHANGED
+08-02 00:04:30.971   686   686 I qrild.INetwork: LINK_CAPACITY_ESTIMATE
+08-02 00:04:30.971   686   686 I qrild.INetwork: PHYSICAL_CHANNEL_CONFIG
+08-02 00:04:30.971   686   686 I qrild.INetwork: REGISTRATION_FAILURE
+08-02 00:04:30.971   686   686 I qrild.IModem: Got device state: POWER_SAVE_MODE
+08-02 00:04:30.972   686   686 I qrild.IModem: Got device state: CHARGING_STATE
+08-02 00:04:30.972   686   686 I qrild.IModem: Got device state: LOW_DATA_EXPECTED
+08-02 00:04:30.972   686   686 I qrild.IModem: Got device state: POWER_SAVE_MODE
+08-02 00:04:30.973   686   686 I qrild.INetwork: setIndicationFilter Filters:
+08-02 00:04:30.973   686   686 I qrild.INetwork: SIGNAL_STRENGTH
+08-02 00:04:30.973   686   686 I qrild.INetwork: FULL_NETWORK_STATE
+08-02 00:04:30.974   686   686 I qrild.INetwork: DATA_CALL_DORMANCY_CHANGED
+08-02 00:04:30.974   686   686 I qrild.INetwork: LINK_CAPACITY_ESTIMATE
+08-02 00:04:30.974   686   686 I qrild.INetwork: PHYSICAL_CHANNEL_CONFIG
+08-02 00:04:30.975   686   686 I qrild.INetwork: REGISTRATION_FAILURE
+08-02 00:04:31.027   686   686 I qrild.IModem: getModemStackStatus: 1
+08-02 00:04:31.119   686   686 W qrild.ISim: iccOpenLogicalChannel: FIXME! TODO:? aid: A00000015144414300, p2: 0
+08-02 00:04:31.159   686   686 I qrild.INetwork: getOperator FIXME: hardcoded values
+08-02 00:04:31.166   686   686 I qrild.ISim: getCdmaSubscriptionSource: FIXME: hardcoded to RUIM_SIM
+08-02 00:04:31.169   686   686 I qrild.INetwork: setIndicationFilter Filters:
+08-02 00:04:31.169   686   686 I qrild.INetwork: SIGNAL_STRENGTH
+08-02 00:04:31.169   686   686 I qrild.INetwork: FULL_NETWORK_STATE
+08-02 00:04:31.170   686   686 I qrild.INetwork: DATA_CALL_DORMANCY_CHANGED
+08-02 00:04:31.170   686   686 I qrild.INetwork: LINK_CAPACITY_ESTIMATE
+08-02 00:04:31.170   686   686 I qrild.INetwork: PHYSICAL_CHANNEL_CONFIG
+08-02 00:04:31.170   686   686 I qrild.INetwork: REGISTRATION_FAILURE
+08-02 00:04:31.355   686   686 W qrild.ISim: iccOpenLogicalChannel: FIXME! TODO:? aid: A00000015141434C00, p2: 0
+08-02 00:04:31.557   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
+08-02 00:04:31.563   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
+08-02 00:04:31.564   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
+08-02 00:04:31.676   686   686 W qrild.ISim: iccOpenLogicalChannel: FIXME! TODO:? aid: A000000063504B43532D3135, p2: 4

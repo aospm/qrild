@@ -1,0 +1,436 @@
+DEBUG android.hardware.radio-service: | Type | Node | Port | Major | Minor | Service Name
+DEBUG android.hardware.radio-service: |   66 |    0 |     1 |  180  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   43 |    0 |     4 |   18  |    0  | QMI_SERVICE_SSCTL
+DEBUG android.hardware.radio-service: |   15 |    0 |    22 |    0  |    0  | QMI_SERVICE_TEST
+DEBUG android.hardware.radio-service: |   51 |    0 |    23 |    2  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   21 |    0 |    24 |    0  |    0  | QMI_SERVICE_MFS
+DEBUG android.hardware.radio-service: |   24 |    0 |    25 |    0  |    0  | QMI_SERVICE_TMD
+DEBUG android.hardware.radio-service: |   23 |    0 |    26 |    0  |    0  | QMI_SERVICE_TS
+DEBUG android.hardware.radio-service: |   22 |    0 |    27 |    0  |    0  | QMI_SERVICE_TIME
+DEBUG android.hardware.radio-service: |   36 |    0 |    29 |    0  |    0  | QMI_SERVICE_PDC
+DEBUG android.hardware.radio-service: |   49 |    0 |    30 |    2  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   54 |    0 |    35 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   17 |    0 |    36 |    0  |    0  | QMI_SERVICE_SAR
+DEBUG android.hardware.radio-service: |   74 |    0 |    37 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: | 4098 |    0 |    38 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   34 |    0 |    40 |    0  |    0  | QMI_SERVICE_COEX
+DEBUG android.hardware.radio-service: |   41 |    0 |    43 |    1  |    0  | QMI_SERVICE_RFRPE
+DEBUG android.hardware.radio-service: |  228 |    0 |    46 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   55 |    0 |    47 |    2  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   50 |    0 |    51 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |    9 |    0 |    53 |    0  |    0  | QMI_SERVICE_VOICE
+DEBUG android.hardware.radio-service: |    3 |    0 |    54 |    0  |    0  | QMI_SERVICE_NAS
+DEBUG android.hardware.radio-service: |   12 |    0 |    55 |    0  |    0  | QMI_SERVICE_PBM
+DEBUG android.hardware.radio-service: |   10 |    0 |    56 |    0  |    0  | QMI_SERVICE_CAT2
+DEBUG android.hardware.radio-service: |    1 |    0 |    57 |    0  |    0  | QMI_SERVICE_WDS
+DEBUG android.hardware.radio-service: |    4 |    0 |    58 |    0  |    0  | QMI_SERVICE_QOS
+DEBUG android.hardware.radio-service: |   26 |    0 |    59 |    0  |    0  | QMI_SERVICE_WDA
+DEBUG android.hardware.radio-service: |    7 |    0 |    60 |    0  |    0  | QMI_SERVICE_AUTH
+DEBUG android.hardware.radio-service: |    8 |    0 |    61 |    0  |    0  | QMI_SERVICE_AT
+DEBUG android.hardware.radio-service: |   29 |    0 |    62 |    0  |    0  | QMI_SERVICE_CSVT
+DEBUG android.hardware.radio-service: |   47 |    0 |    63 |    0  |    0  | QMI_SERVICE_DPM
+DEBUG android.hardware.radio-service: |   11 |    0 |    64 |    0  |    0  | QMI_SERVICE_UIM
+DEBUG android.hardware.radio-service: |   71 |    0 |    65 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   42 |    0 |    71 |    0  |    0  | QMI_SERVICE_DSD
+DEBUG android.hardware.radio-service: |    2 |    0 |    72 |    0  |    0  | QMI_SERVICE_DMS
+DEBUG android.hardware.radio-service: |    5 |    0 |    74 |    0  |    0  | QMI_SERVICE_WMS
+DEBUG android.hardware.radio-service: |   48 |    0 |    75 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   68 |    0 |    76 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   16 |    0 |    77 |    0  |    0  | QMI_SERVICE_LOC
+DEBUG android.hardware.radio-service: |   51 |    0 |    84 |    3  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   69 |    0 |    85 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   77 |    0 |    87 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   33 |    0 |    90 |    0  |    0  | QMI_SERVICE_IMSA
+DEBUG android.hardware.radio-service: |   18 |    0 |    91 |    0  |    0  | QMI_SERVICE_IMS
+DEBUG android.hardware.radio-service: |   14 |    1 |    14 |    0  |    0  | QMI_SERVICE_RMTFS
+DEBUG android.hardware.radio-service: |   49 |    1 | 16387 |    1  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   64 |    1 | 16393 |    1  |    0  | <unknown>
+DEBUG android.hardware.radio-service: | 4096 |    1 | 16396 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   15 |    5 |     1 |   32  |    0  | QMI_SERVICE_TEST
+DEBUG android.hardware.radio-service: |   66 |    5 |     2 |   74  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   43 |    5 |     5 |   20  |    0  | QMI_SERVICE_SSCTL
+DEBUG android.hardware.radio-service: |   51 |    5 |     6 |    5  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   24 |    5 |     8 |    1  |    0  | QMI_SERVICE_TMD
+DEBUG android.hardware.radio-service: |   15 |    5 |     9 |   33  |    0  | QMI_SERVICE_TEST
+DEBUG android.hardware.radio-service: |  769 |    5 |    11 |    0  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   15 |   10 |     1 |   64  |    0  | QMI_SERVICE_TEST
+DEBUG android.hardware.radio-service: |   66 |   10 |     2 |   76  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   43 |   10 |     5 |   23  |    0  | QMI_SERVICE_SSCTL
+DEBUG android.hardware.radio-service: |   51 |   10 |     6 |   13  |    0  | <unknown>
+DEBUG android.hardware.radio-service: |   24 |   10 |     8 |   67  |    0  | QMI_SERVICE_TMD
+DEBUG android.hardware.radio-service: Operating mode:
+	mode: 5
+	hw_restriced: No
+
+DEBUG android.hardware.radio-service: Freeing msg {id: 2d, txn: 4}
+DEBUG android.hardware.radio-service: Freeing msg {id: 2e, txn: 5}
+DEBUG android.hardware.radio-service: Freeing msg {id: 3, txn: 6}
+DEBUG android.hardware.radio-service: Freeing msg {id: 24, txn: 1}
+DEBUG android.hardware.radio-service: Freeing msg {id: 53, txn: 2}
+DEBUG android.hardware.radio-service: Freeing msg {id: 24, txn: 3}
+DEBUG android.hardware.radio-service: Freeing msg {id: 51, txn: 4}
+DEBUG android.hardware.radio-service: Freeing msg {id: 53, txn: 5}
+DEBUG android.hardware.radio-service: Freeing msg {id: 24, txn: 6}
+DEBUG android.hardware.radio-service: Operating mode:
+	mode: 0
+	hw_restriced: No
+
+DEBUG android.hardware.radio-service: Freeing msg {id: 2d, txn: 7}
+DEBUG android.hardware.radio-service: Operating mode:
+	mode: 0
+	hw_restriced: No
+
+DEBUG android.hardware.radio-service: Freeing msg {id: 2d, txn: 8}
+DEBUG android.hardware.radio-service: Operating mode:
+	mode: 0
+	hw_restriced: No
+
+DEBUG android.hardware.radio-service: Freeing msg {id: 2d, txn: 9}
+xRadioConfig::RadioConfig
+-RadioMessaging::RadioMessaging
+xRadioModem::RadioModem
+Waiting for response to msg {id: 0x2d, txn: 4}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:04:00:2d:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x2d, txn: 4, type: 2
+QRTR RX:
+02:04:00:2d:00:0b:00:02:04:00:00:00:00:00:01:01:00:05
+
+Found msg (id: 0x2d (4 == 4)) with matching txn
+Got response for msg {id: 0x2d, txn: 4}: {id: 0x2d, txn: 4} (rc: 0)
+Modem state: 5
+Turning on modem
+Waiting for response to msg {id: 0x2e, txn: 5}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:05:00:2e:00:04:00:01:01:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x2e, txn: 5, type: 2
+QRTR RX:
+02:05:00:2e:00:07:00:02:04:00:00:00:00:00
+
+Found msg (id: 0x2e (5 == 5)) with matching txn
+Got response for msg {id: 0x2e, txn: 5}: {id: 0x2e, txn: 5} (rc: 0)
+-RadioData::RadioData
+xRadioNetwork::RadioNetwork
+Waiting for response to msg {id: 0x3, txn: 6}
+Sending to service 'QMI_SERVICE_NAS'
+QRTR TX:
+00:06:00:03:00:41:00:10:01:00:00:12:01:00:00:13:01:00:01:14:01:00:00:15:01:00:01:17:01:00:01:18:01:00:00:19:01:00:01:1a:01:00:01:1b:01:00:00:1c:01:00:00:1d:01:00:01:1e:01:00:01:1f:01:00:00:20
+
+01:00:00:21:02:00:01:01
+
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x 3, txn: 6, type: 2
+QRTR RX:
+02:06:00:03:00:07:00:02:04:00:00:00:00:00
+
+Found msg (id: 0x3 (6 == 6)) with matching txn
+Got response for msg {id: 0x3, txn: 6}: {id: 0x3, txn: 6} (rc: 0)
+-RadioSim::RadioSim
+-RadioVoice::RadioVoice
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x24, txn: 1, type: 4
+QRTR RX:
+04:01:00:24:00:15:00:01:06:00:02:02:02:00:01:00:11:01:00:00:22:05:00:00:00:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x53, txn: 2, type: 4
+QRTR RX:
+04:02:00:53:00:04:00:12:01:00:ff
+
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x24, txn: 3, type: 4
+QRTR RX:
+04:03:00:24:00:25:00:01:06:00:02:02:02:02:01:04:11:01:00:00:12:05:00:ea:00:1e:00:00:22:05:00:01:01:00:00:00:29:05:00:ea:00:1e:00:00
+
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x51, txn: 4, type: 4
+QRTR RX:
+04:04:00:51:00:04:00:12:01:00:a4
+
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x53, txn: 5, type: 4
+QRTR RX:
+04:05:00:53:00:04:00:12:01:00:ff
+
+nas_serving_system_ind_get_plmn: expected at least 6 bytes but got 5
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x24, txn: 6, type: 4
+QRTR RX:
+04:06:00:24:00:1f:00:01:06:00:02:02:02:02:01:04:10:01:00:00:11:01:00:00:15:03:00:01:04:00:22:05:00:01:03:00:00:00
+
+xRadioModem::setResponseFunctions
+Waiting for response to msg {id: 0x2d, txn: 7}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:07:00:2d:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x2d, txn: 7, type: 2
+QRTR RX:
+02:07:00:2d:00:0b:00:02:04:00:00:00:00:00:01:01:00:00
+
+Found msg (id: 0x2d (7 == 7)) with matching txn
+Got response for msg {id: 0x2d, txn: 7}: {id: 0x2d, txn: 7} (rc: 0)
+xRadioData::setResponseFunctions
+xRadioMessaging::setResponseFunctions
+xRadioNetwork::setResponseFunctions
+xRadioSim::setResponseFunctions
+xRadioVoice::setResponseFunctions
+xRadioModem::getHardwareConfig
+Waiting for response to msg {id: 0x2d, txn: 8}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:08:00:2d:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x2d, txn: 8, type: 2
+QRTR RX:
+02:08:00:2d:00:0b:00:02:04:00:00:00:00:00:01:01:00:00
+
+Found msg (id: 0x2d (8 == 8)) with matching txn
+Got response for msg {id: 0x2d, txn: 8}: {id: 0x2d, txn: 8} (rc: 0)
+xRadioSim::setCdmaSubscriptionSource
+xRadioConfig::setResponseFunctions
+xRadioModem::setRadioPower
+Waiting for response to msg {id: 0x2d, txn: 9}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:09:00:2d:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x2d, txn: 9, type: 2
+QRTR RX:
+02:09:00:2d:00:0b:00:02:04:00:00:00:00:00:01:01:00:00
+
+Found msg (id: 0x2d (9 == 9)) with matching txn
+Got response for msg {id: 0x2d, txn: 9}: {id: 0x2d, txn: 9} (rc: 0)
+Waiting for response to msg {id: 0x2e, txn: 10}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:0a:00:2e:00:04:00:01:01:00:01
+
+[QRTR] data packet from QMI_SERVICE_DMS, msDEBUG android.hardware.radio-service: Freeing msg {id: 2e, txn: 10}
+DEBUG android.hardware.radio-service: Freeing msg {id: 24, txn: 7}
+DEBUG android.hardware.radio-service: Freeing msg {id: 24, txn: 8}
+DEBUG android.hardware.radio-service: Freeing msg {id: 47, txn: 12}
+DEBUG android.hardware.radio-service: Freeing msg {id: 2f, txn: 13}
+DEBUG android.hardware.radio-service: Freeing msg {id: 47, txn: 14}
+g_id: 0x2e, txn: 10, type: 2
+QRTR RX:
+02:0a:00:2e:00:07:00:02:04:00:00:00:00:00
+
+Found msg (id: 0x2e (10 == 10)) with matching txn
+Got response for msg {id: 0x2e, txn: 10}: {id: 0x2e, txn: 10} (rc: 0)
+Set operating mode to 1
+xRadioConfig::getHalDeviceCapabilities
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x24, txn: 7, type: 4
+QRTR RX:
+04:07:00:24:00:15:00:01:06:00:00:02:02:00:01:00:11:01:00:00:22:05:00:00:03:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x24, txn: 8, type: 4
+QRTR RX:
+04:08:00:24:00:15:00:01:06:00:00:02:02:00:01:00:11:01:00:00:22:05:00:00:03:00:00:00
+
+xRadioNetwork::getSignalStrength
+Waiting for response to msg {id: 0x20, txn: 11}
+Sending to service 'QMI_SERVICE_NAS'
+QRTR TX:
+00:0b:00:20:00:05:00:10:02:00:40:00
+
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x20, txn: 11, type: 2
+QRTR RX:
+02:0b:00:20:00:0c:00:02:04:00:00:00:00:00:01:02:00:80:00
+
+Found msg (id: 0x20 (11 == 11)) with matching txn
+Got response for msg {id: 0x20, txn: 11}: {id: 0x20, txn: 11} (rc: 0)
+xRadioVoice::setTtyMode
+(nop) Set TTY mode to OFF
+xRadioSim::getIccCardStatus
+Waiting for response to msg {id: 0x47, txn: 12}
+Sending to service 'QMI_SERVICE_UIM'
+QRTR TX:
+00:0c:00:47:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_UIM, msg_id: 0x47, txn: 12, type: 2
+QRTR RX:
+02:0c:00:47:00:50:00:02:04:00:00:00:00:00:11:24:00:02:02:00:00:00:00:15:3b:9e:95:80:1f:c7:80:31:e0:73:fe:21:1b:66:d0:02:17:c7:11:00:c0:00:00:00:00:00:00:00:00:10:1f:00:02:02:00:00:00:01:00:00
+
+00:01:0a:98:44:02:10:30:99:09:73:55:f0:02:00:00:00:01:00:00:00:02:00
+
+Found msg (id: 0x47 (12 == 12)) with matching txn
+Got response for msg {id: 0x47, txn: 12}: {id: 0x47, txn: 12} (rc: 0)
+Waiting for response to msg {id: 0x2f, txn: 13}
+Sending to service 'QMI_SERVICE_UIM'
+QRTR TX:
+00:0d:00:2f:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_UIM, msg_id: 0x2f, txn: 13, type: 2
+QRTR RX:
+02:0d:00:2f:00:55:00:02:04:00:00:00:00:00:16:09:00:02:00:00:00:00:00:00:00:00:15:03:00:02:00:00:11:03:00:02:02:02:10:33:00:ff:ff:ff:ff:ff:ff:ff:ff:02:01:00:00:00:00:01:02:01:00:0b:00:00:10:a0
+
+00:00:00:87:10:02:ff:ff:ff:ff:89:03:02:00:00:00:00:00:00:00:00:00:02:00:00:00:03:00
+
+Found msg (id: 0x2f (13 == 13)) with matching txn
+Got response for msg {id: 0x2f, txn: 13}: {id: 0x2f, txn: 13} (rc: 0)
+index_gw_primary: 65535, index_1x_primary: 65535, index_gw_secondary: 65535, index_1x_secondary: 65535, cards_n: 2
+card 0:
+	card_state: 1, upin_state: 0, upin_retries: 0, upuk_retries: 0, error_code: 0, applications_n: 1,
+	application 0:
+		type: 2, state: 1, personalization_state: 0, personalization_feature: 11, personalization_retries: 0, application_identifier_value_n: 16,
+		application identifier
+			[160], [0], [0], [0], [135], [16], [2], [255], [255], [255], [255], [137], [3], [2], [0], [0],
+		pin2_state: 0, pin2_retries: 0, puk2_retries: 0,
+card 1:
+	card_state: 2, upin_state: 0, upin_retries: 0, upuk_retries: 0, error_code: 3, applications_n: 0,
+xRadioConfig::getSimSlotsStatus
+Waiting for response to msg {id: 0x47, txn: 14}
+Sending to service 'QMI_SERVICE_UIM'
+QRTR TX:
+00:0e:00:47:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_UIM, msg_id: 0x47, txn: 14, type: 2
+QRTR RX:
+02:0e:00:47:00:50:00:02:04:00:00:00:00:00:11:24:00:02:02:00:00:00:00:15:3b:9e:95:80:1f:c7:80:31:e0:73:fe:21:1b:66:d0:02:17:c7:11:00:c0:00:00:00:00:00:00:00:00:10:1f:00:02:02:00:00:00:01:00:00
+
+00:01:0a:98:44:02:10:30:99:09:73:55:f0:02:00:00:00:01:00:00:00:02:00
+
+Found msg (id: 0x47 (14 == 14)) with matching txn
+Got response for msg {id: 0x47, txn: 14}: {id: 0x47, txn: 14} (rc: 0)
+Slot 0
+	cardState: 1
+	logicalSlotId: 0
+	portActive: 1
+	FIXME! should start with 3B!!! ATR: 39981c83e7f216d01c10c0
+	EID:
+	ICCID: 8420099350
+xRadioVoice::getCurrentCalls
+xRadioModem::getBasebandVersion
+Waiting for response to msg {id: 0x23, txn: 15}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:0f:00:23:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x23, txn: 15, type: 2
+QRTR RX:
+02:0f:00:23:00:60:00:02:04:00:00:00:00:00:01:56:00:4d:50:53:53:2e:41:54:2e:34:2e:30:2e:63:32:2e:31:35:2d:30:30:30:30:37:2d:53:44:4d:38:34DEBUG android.hardware.radio-service: Freeing msg {id: 23, txn: 15}
+DEBUG android.hardware.radio-service: Freeing msg {id: 25, txn: 16}
+DEBUG android.hardware.radio-service: Operating mode:
+	mode: 1
+	hw_restriced: No
+
+DEBUG android.hardware.radio-service: Freeing msg {id: 2d, txn: 17}
+DEBUG android.hardware.radio-service: Freeing msg {id: 2e, txn: 18}
+DEBUG android.hardware.radio-service: Operating mode:
+	mode: 0
+	hw_restriced: No
+
+DEBUG android.hardware.radio-service: Freeing msg {id: 2d, txn: 19}
+:35:5f:47:45:4e:5f:50:41:43:4b:2d:31:2e:33:35:38:38:38
+
+30:2e:31:2e:33:39:39:32:35:36:2e:32:20:20:31:20:20:5b:4d:61:79:20:30:39:20:32:30:32:31:20:32:32:3a:30:30:3a:30:30:5d
+
+Found msg (id: 0x23 (15 == 15)) with matching txn
+Got response for msg {id: 0x23, txn: 15}: {id: 0x23, txn: 15} (rc: 0)
+xRadioNetwork::setSignalStrengthReportingCriteria
+xRadioSim::areUiccApplicationsEnabled
+xRadioModem::getDeviceIdentity
+Waiting for response to msg {id: 0x25, txn: 16}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:10:00:25:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x25, txn: 16, type: 2
+QRTR RX:
+02:10:00:25:00:39:00:02:04:00:00:00:00:00:10:08:00:38:30:31:38:45:36:34:37:11:0f:00:38:36:39:32:39:35:30:33:38:33:30:39:33:35:33:12:0e:00:39:39:30:30:31:32:30:32:38:39:36:34:36:37:13:01:00:32
+
+Found msg (id: 0x25 (16 == 16)) with matching txn
+Got response for msg {id: 0x25, txn: 16}: {id: 0x25, txn: 16} (rc: 0)
+xRadioNetwork::setSignalStrengthReportingCriteria
+xRadioModem::getRadioCapability
+xRadioNetwork::getOperator
+xRadioModem::setRadioPower
+Waiting for response to msg {id: 0x2d, txn: 17}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:11:00:2d:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x2d, txn: 17, type: 2
+QRTR RX:
+02:11:00:2d:00:0b:00:02:04:00:00:00:00:00:01:01:00:01
+
+Found msg (id: 0x2d (17 == 17)) with matching txn
+Got response for msg {id: 0x2d, txn: 17}: {id: 0x2d, txn: 17} (rc: 0)
+Waiting for response to msg {id: 0x2e, txn: 18}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:12:00:2e:00:04:00:01:01:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x2e, txn: 18, type: 2
+QRTR RX:
+02:12:00:2e:00:07:00:02:04:00:00:00:00:00
+
+Found msg (id: 0x2e (18 == 18)) with matching txn
+Got response for msg {id: 0x2e, txn: 18}: {id: 0x2e, txn: 18} (rc: 0)
+Set operating mode to 0
+xRadioNetwork::getNetworkSelectionMode
+xRadioModem::setRadioPower
+Waiting for response to msg {id: 0x2d, txn: 19}
+Sending to service 'QMI_SERVICE_DMS'
+QRTR TX:
+00:13:00:2d:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x2d, txn: 19, type: 2
+QRTR RX:
+02:13:00:2d:00:0b:00:02:04:00:00:00:00:00:01:01:00:00
+
+Found msg (id: 0x2d (19 == 19)) with matching txn
+Got response for msg {id: 0x2d, txn: 19}: {id: 0x2d, txn: 19} (rc: 0)
+xRadioNetwork::getOperator
+xRadioModem::sendDeviceState
+xRadioNetwork::getNetworkSelectionMode
+xRadioModem::sendDeviceState
+xRadioNetwork::setIndicationFilter
+xRadioModem::sendDeviceState
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioModem::sendDeviceState
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioModem::sendDeviceState
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioModem::sendDeviceState
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioNetwork::setIndicationFilter
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioNetwork::setLinkCapacityReportingCriteria
+xRadioModem::getModemStackStatus
+xRadioConfig::getPhoneCapability
+xRadioSim::iccOpenLogicalChannel
+xRadioConfig::setPreferredDataModem
+(nop) Setting modem to 0
+xRadioNetwork::getOperator
+xRadioNetwork::getNetworkSelectionMode
+xRadioVoice::getCurrentCalls
+xRadioNetwork::getImsRegistrationState
+xRadioNetwork::getVoiceRadioTechnology
+xRadioSim::getCdmaSubscriptionSource
+xRadioNetwork::setIndicationFilter
+xRadioNetwork::getBarringInfo
+Waiting for response to msg {id: 0xac, txn: 20}
+Sending to service 'QMI_SERVICE_NAS'
+QRTR TX:
+00:14:00:ac:00:00:00
+
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0xac, txn: 20, type: 2
+QRTR RX:
+02:14:00:ac:00:07:00:02:04:00:01:00:4a:00
+
+Found msg (id: 0xac (20 == 20)) with matching txn
+Got response for msg {id: 0xac, txn: 20}: {id: 0xac, txn: 20} (rc: 0)
+xRadioConfig::setPreferredDataModem
+(nop) Setting modem to 0
+xRadioNetwork::setSignalStrengthReportingCriteria
+xRadioSim::iccOpenLogicalChannel
+[QRTR] data packet from QMI_SERVICE_NAS, msg_id: 0x24, txn: 9, type: 4
+QRTR RX:
+04:09:00:2DEBUG android.hardware.radio-service: Freeing msg {id: 24, txn: 9}
+DEBUG android.hardware.radio-service: Freeing msg {id: 24, txn: 10}
+DEBUG android.hardware.radio-service: Freeing msg {id: 51, txn: 11}
+DEBUG android.hardware.radio-service: Freeing msg {id: 53, txn: 12}
+DEBUG android.hardware.radio-service: Freeing msg {id: 24, txn: 13}
