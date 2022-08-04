@@ -170,6 +170,7 @@ int main(int argc, char **argv)
 	uint8_t *buf = malloc(MAX_LEN);
 	size_t buf_len;
 	struct qmi_tlv *tlv;
+	bool read_file = false;
 
 	memset(buf, 0, MAX_LEN);
 
@@ -177,6 +178,7 @@ int main(int argc, char **argv)
 		switch (opt) {
 		case 'f':
 			source_path = optarg;
+			read_file = true;
 			break;
 		default:
 			fprintf(stderr, "Unknown arg %c\n", opt);
@@ -184,21 +186,25 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (!source_path) {
-		fprintf(stderr, "tlv_dump -f <file>\n");
-		return 1;
-	}
+	if (read_file) {
+		if (!source_path) {
+			fprintf(stderr, "tlv_dump -f <file>\n");
+			return 1;
+		}
 
-	if (!stat(source_path, &sb) == 0 || S_ISDIR(sb.st_mode)) {
-		fprintf(stderr, "File %s doesn't exist!\n", source_path);
-		return 1;
-	}
+		if (!stat(source_path, &sb) == 0 || S_ISDIR(sb.st_mode)) {
+			fprintf(stderr, "File %s doesn't exist!\n", source_path);
+			return 1;
+		}
 
-	sourcefile = fopen(source_path, "r");
-	if (!sourcefile) {
-		fprintf(stderr, "Failed to open '%s' (%d: %s)\n", source_path,
-			errno, strerror(errno));
-		return EXIT_FAILURE;
+		sourcefile = fopen(source_path, "r");
+		if (!sourcefile) {
+			fprintf(stderr, "Failed to open '%s' (%d: %s)\n", source_path,
+				errno, strerror(errno));
+			return EXIT_FAILURE;
+		}
+	} else {
+		sourcefile = fmemopen(argv[1], strlen(argv[1]), "rw");
 	}
 
 	buf_len = parse(buf);
