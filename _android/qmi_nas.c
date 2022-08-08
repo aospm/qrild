@@ -2,15 +2,23 @@
 #include <string.h>
 #include "qmi_nas.h"
 
-const struct qmi_tlv_msg_name nas_msg_name_map[9] = {
+const struct qmi_tlv_msg_name nas_msg_name_map[17] = {
 	{ .msg_id = 3, .msg_name = "nas_register_indications_req" },
 	{ .msg_id = 32, .msg_name = "nas_get_signal_strength_req" },
 	{ .msg_id = 32, .msg_name = "nas_get_signal_strength_resp" },
+	{ .msg_id = 34, .msg_name = "nas_initiate_network_register" },
 	{ .msg_id = 36, .msg_name = "nas_serving_system_ind" },
 	{ .msg_id = 46, .msg_name = "nas_set_operating_mode_req" },
 	{ .msg_id = 46, .msg_name = "nas_set_operating_mode_resp" },
+	{ .msg_id = 51, .msg_name = "nas_set_system_prefs" },
+	{ .msg_id = 52, .msg_name = "nas_get_system_prefs" },
 	{ .msg_id = 57, .msg_name = "nas_get_operator_name_resp" },
+	{ .msg_id = 58, .msg_name = "nas_operator_name_ind" },
 	{ .msg_id = 67, .msg_name = "nas_get_cell_loc_info" },
+	{ .msg_id = 68, .msg_name = "nas_get_plmn_name_req" },
+	{ .msg_id = 68, .msg_name = "nas_get_plmn_name_resp" },
+	{ .msg_id = 79, .msg_name = "nas_get_signal_info" },
+	{ .msg_id = 81, .msg_name = "nas_signal_info_ind" },
 	{ .msg_id = 172, .msg_name = "nas_get_lte_cphy_ca_info_resp" },
 };
 
@@ -106,7 +114,18 @@ int nas_register_indications_req_set_rf_band_information(struct nas_register_ind
 
 int nas_register_indications_req_set_network_reject_information(struct nas_register_indications_req *register_indications_req, struct nas_network_reject_info *val)
 {
-	return qmi_tlv_set((struct qmi_tlv*)register_indications_req, 33, val, sizeof(struct nas_network_reject_info));
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->enable_network_reject_indications;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->suppress_system_info_indications;
+	len += 1;
+	rc = qmi_tlv_set((struct qmi_tlv*)register_indications_req, 33, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 struct nas_get_signal_strength_req *nas_get_signal_strength_req_alloc(unsigned txn)
@@ -194,17 +213,24 @@ void nas_get_signal_strength_resp_free(struct nas_get_signal_strength_resp *get_
 
 struct nas_signal_strength *nas_get_signal_strength_resp_get_strength(struct nas_get_signal_strength_resp *get_signal_strength_resp)
 {
-	size_t len;
-	void *ptr;
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_signal_strength *out;
 
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 1, &len);
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 1, &buf_sz);
 	if (!ptr)
 		return NULL;
 
-	if (len != sizeof(struct nas_signal_strength))
-		return NULL;
+	out = malloc(sizeof(struct nas_signal_strength));
+	out->strength = get_next(int8_t, 1);
+	out->interface = get_next(int8_t, 1);
 
-	return ptr;
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
 struct nas_signal_strength *nas_get_signal_strength_resp_get_strength_list(struct nas_get_signal_strength_resp *get_signal_strength_resp, size_t *count)
@@ -213,7 +239,7 @@ struct nas_signal_strength *nas_get_signal_strength_resp_get_strength_list(struc
 	size_t len;
 	void *ptr;
 
-	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 16, 16, &len, &size);
+	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 16, 2, &len, &size);
 	if (!ptr)
 		return NULL;
 
@@ -230,7 +256,7 @@ struct nas_ss_value *nas_get_signal_strength_resp_get_rssi_list(struct nas_get_s
 	size_t len;
 	void *ptr;
 
-	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 17, 16, &len, &size);
+	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 17, 2, &len, &size);
 	if (!ptr)
 		return NULL;
 
@@ -247,7 +273,7 @@ struct nas_ss_value *nas_get_signal_strength_resp_get_ecio_list(struct nas_get_s
 	size_t len;
 	void *ptr;
 
-	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 18, 16, &len, &size);
+	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 18, 2, &len, &size);
 	if (!ptr)
 		return NULL;
 
@@ -296,7 +322,7 @@ struct nas_ss_value *nas_get_signal_strength_resp_get_err_rate_list(struct nas_g
 	size_t len;
 	void *ptr;
 
-	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 21, 16, &len, &size);
+	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 21, 2, &len, &size);
 	if (!ptr)
 		return NULL;
 
@@ -309,17 +335,24 @@ struct nas_ss_value *nas_get_signal_strength_resp_get_err_rate_list(struct nas_g
 
 struct nas_ss_value *nas_get_signal_strength_resp_get_rsrq(struct nas_get_signal_strength_resp *get_signal_strength_resp)
 {
-	size_t len;
-	void *ptr;
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_value *out;
 
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 22, &len);
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_strength_resp, 22, &buf_sz);
 	if (!ptr)
 		return NULL;
 
-	if (len != sizeof(struct nas_ss_value))
-		return NULL;
+	out = malloc(sizeof(struct nas_ss_value));
+	out->val = get_next(uint8_t, 1);
+	out->interface = get_next(int8_t, 1);
 
-	return ptr;
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
 int nas_get_signal_strength_resp_get_lte_snr(struct nas_get_signal_strength_resp *get_signal_strength_resp, int16_t *val)
@@ -354,6 +387,26 @@ int nas_get_signal_strength_resp_get_lte_rsrp(struct nas_get_signal_strength_res
 	return 0;
 }
 
+struct nas_initiate_network_register *nas_initiate_network_register_alloc(unsigned txn)
+{
+	return (struct nas_initiate_network_register*)qmi_tlv_init(txn, 34, 0);
+}
+
+void *nas_initiate_network_register_encode(struct nas_initiate_network_register *initiate_network_register, size_t *len)
+{
+	return qmi_tlv_encode((struct qmi_tlv*)initiate_network_register, len);
+}
+
+void nas_initiate_network_register_free(struct nas_initiate_network_register *initiate_network_register)
+{
+	qmi_tlv_free((struct qmi_tlv*)initiate_network_register);
+}
+
+int nas_initiate_network_register_set_action(struct nas_initiate_network_register *initiate_network_register, uint8_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)initiate_network_register, 1, &val, sizeof(uint8_t));
+}
+
 struct nas_serving_system_ind *nas_serving_system_ind_alloc(unsigned txn)
 {
 	return (struct nas_serving_system_ind*)qmi_tlv_init(txn, 36, 4);
@@ -376,8 +429,8 @@ void nas_serving_system_ind_getall(struct nas_serving_system_ind *serving_system
 
 	data->system = nas_serving_system_ind_get_system(serving_system_ind);
 	data->system_valid = !!data->system;
-	rc = nas_serving_system_ind_get_data_service_cap(serving_system_ind, &data->data_service_cap);
-	data->data_service_cap_valid = rc >= 0;
+	data->data_service_cap = nas_serving_system_ind_get_data_service_cap(serving_system_ind, &data->data_service_cap_n);
+	data->data_service_cap_valid = !!data->data_service_cap_n;
 	data->plmn = nas_serving_system_ind_get_plmn(serving_system_ind);
 	data->plmn_valid = !!data->plmn;
 	data->status = nas_serving_system_ind_get_status(serving_system_ind);
@@ -390,6 +443,9 @@ void nas_serving_system_ind_data_free(struct nas_serving_system_ind_data *data)
 	if(data->system_valid) {
 		nas_serving_system_free(data->system);
 		free(data->system);
+	}
+	if(data->data_service_cap_valid) {
+		free(data->data_service_cap);
 	}
 	if(data->plmn_valid) {
 		nas_current_plmn_free(data->plmn);
@@ -448,7 +504,7 @@ struct nas_serving_system *nas_serving_system_ind_get_system(struct nas_serving_
 	out->selected_network = get_next(uint8_t, 1);
 	out->radio_interfaces_n = get_next(uint8_t, 1);
 	size_t radio_interfaces_sz = 1;
-	out->radio_interfaces = malloc(radio_interfaces_sz * out->radio_interfaces_n);
+	out->radio_interfaces = malloc(1 + radio_interfaces_sz * out->radio_interfaces_n);
 	for(size_t i = 0; i < out->radio_interfaces_n; i++) {
 		out->radio_interfaces[i] = get_next(uint8_t, 1);
 	}
@@ -461,25 +517,29 @@ err_wrong_len:
 	return NULL;
 }
 
-int nas_serving_system_ind_set_data_service_cap(struct nas_serving_system_ind *serving_system_ind, uint8_t val)
+int nas_serving_system_ind_set_data_service_cap(struct nas_serving_system_ind *serving_system_ind, uint8_t *val, size_t count)
 {
-	return qmi_tlv_set((struct qmi_tlv*)serving_system_ind, 17, &val, sizeof(uint8_t));
+	return qmi_tlv_set_array((struct qmi_tlv*)serving_system_ind, 17, 1, val, count, sizeof(uint8_t));
 }
 
-int nas_serving_system_ind_get_data_service_cap(struct nas_serving_system_ind *serving_system_ind, uint8_t *val)
+uint8_t *nas_serving_system_ind_get_data_service_cap(struct nas_serving_system_ind *serving_system_ind, size_t *count)
 {
-	uint8_t *ptr;
+	uint8_t *ptr, *out;
+	size_t size;
 	size_t len;
 
-	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_ind, 17, &len);
+	ptr = qmi_tlv_get_array((struct qmi_tlv*)serving_system_ind, 17, 1, &len, &size);
 	if (!ptr)
-		return -ENOENT;
+		return NULL;
 
-	if (len != sizeof(uint8_t))
-		return -EINVAL;
+	if (size != sizeof(uint8_t))
+		return NULL;
 
-	*val = *(uint8_t*)ptr;
-	return 0;
+	out = malloc(len);
+	memcpy(out, ptr, len);
+
+	*count = len;
+	return out;
 }
 
 int nas_serving_system_ind_set_plmn(struct nas_serving_system_ind *serving_system_ind, struct nas_current_plmn *val)
@@ -513,7 +573,7 @@ struct nas_current_plmn *nas_serving_system_ind_get_plmn(struct nas_serving_syst
 	out = malloc(sizeof(struct nas_current_plmn));
 	out->mcc = get_next(uint16_t, 2);
 	out->mnc = get_next(uint16_t, 2);
-	out->description = malloc(strlen(ptr + len));
+	out->description = malloc(strlen(ptr + len) + 1);
 	strcpy(out->description, ptr + len); len += strlen(ptr + len);
 
 	return out;
@@ -526,22 +586,49 @@ err_wrong_len:
 
 int nas_serving_system_ind_set_status(struct nas_serving_system_ind *serving_system_ind, struct nas_service_status *val)
 {
-	return qmi_tlv_set((struct qmi_tlv*)serving_system_ind, 34, val, sizeof(struct nas_service_status));
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->status;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->capability;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->hdr_status;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->hdr_hybrid;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->forbidden;
+	len += 1;
+	rc = qmi_tlv_set((struct qmi_tlv*)serving_system_ind, 34, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 struct nas_service_status *nas_serving_system_ind_get_status(struct nas_serving_system_ind *serving_system_ind)
 {
-	size_t len;
-	void *ptr;
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_service_status *out;
 
-	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_ind, 34, &len);
+	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_ind, 34, &buf_sz);
 	if (!ptr)
 		return NULL;
 
-	if (len != sizeof(struct nas_service_status))
-		return NULL;
+	out = malloc(sizeof(struct nas_service_status));
+	out->status = get_next(uint8_t, 1);
+	out->capability = get_next(uint8_t, 1);
+	out->hdr_status = get_next(uint8_t, 1);
+	out->hdr_hybrid = get_next(uint8_t, 1);
+	out->forbidden = get_next(uint8_t, 1);
 
-	return ptr;
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
 struct nas_set_operating_mode_req *nas_set_operating_mode_req_alloc(unsigned txn)
@@ -579,6 +666,82 @@ void nas_set_operating_mode_resp_free(struct nas_set_operating_mode_resp *set_op
 	qmi_tlv_free((struct qmi_tlv*)set_operating_mode_resp);
 }
 
+struct nas_set_system_prefs *nas_set_system_prefs_alloc(unsigned txn)
+{
+	return (struct nas_set_system_prefs*)qmi_tlv_init(txn, 51, 0);
+}
+
+void *nas_set_system_prefs_encode(struct nas_set_system_prefs *set_system_prefs, size_t *len)
+{
+	return qmi_tlv_encode((struct qmi_tlv*)set_system_prefs, len);
+}
+
+void nas_set_system_prefs_free(struct nas_set_system_prefs *set_system_prefs)
+{
+	qmi_tlv_free((struct qmi_tlv*)set_system_prefs);
+}
+
+int nas_set_system_prefs_set_network_selection(struct nas_set_system_prefs *set_system_prefs, struct nas_network_selection_pref *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->mode;
+	len += 1;
+	*((uint16_t*)(ptr + len)) = val->mcc;
+	len += 2;
+	*((uint16_t*)(ptr + len)) = val->mnc;
+	len += 2;
+	rc = qmi_tlv_set((struct qmi_tlv*)set_system_prefs, 22, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_get_system_prefs *nas_get_system_prefs_parse(void *buf, size_t len)
+{
+	return (struct nas_get_system_prefs*)qmi_tlv_decode(buf, len);
+}
+
+void nas_get_system_prefs_getall(struct nas_get_system_prefs *get_system_prefs, struct nas_get_system_prefs_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_system_prefs, 2, NULL), sizeof(struct qmi_response_type_v01));
+	rc = nas_get_system_prefs_get_network_selection(get_system_prefs, &data->network_selection);
+	data->network_selection_valid = rc >= 0;
+}
+
+void nas_get_system_prefs_data_free(struct nas_get_system_prefs_data *data)
+{
+
+		free(data->res);
+}
+
+void nas_get_system_prefs_free(struct nas_get_system_prefs *get_system_prefs)
+{
+	qmi_tlv_free((struct qmi_tlv*)get_system_prefs);
+}
+
+int nas_get_system_prefs_get_network_selection(struct nas_get_system_prefs *get_system_prefs, uint8_t *val)
+{
+	uint8_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_system_prefs, 22, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(uint8_t))
+		return -EINVAL;
+
+	*val = *(uint8_t*)ptr;
+	return 0;
+}
+
 struct nas_get_operator_name_resp *nas_get_operator_name_resp_parse(void *buf, size_t len)
 {
 	return (struct nas_get_operator_name_resp*)qmi_tlv_decode(buf, len);
@@ -593,9 +756,9 @@ void nas_get_operator_name_resp_getall(struct nas_get_operator_name_resp *get_op
 	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_operator_name_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
 	data->provider_name = nas_get_operator_name_resp_get_provider_name(get_operator_name_resp);
 	data->provider_name_valid = !!data->provider_name;
-	data->operator_plmn_list = nas_get_operator_name_resp_get_operator_plmn_list(get_operator_name_resp, &data->operator_plmn_list_n);
-	data->operator_plmn_list_valid = !!data->operator_plmn_list;
-	data->operator_plmn_names = nas_get_operator_name_resp_get_operator_plmn_names(get_operator_name_resp, &data->operator_plmn_names_n);
+	data->operator_plmns = nas_get_operator_name_resp_get_operator_plmns(get_operator_name_resp);
+	data->operator_plmns_valid = !!data->operator_plmns;
+	data->operator_plmn_names = nas_get_operator_name_resp_get_operator_plmn_names(get_operator_name_resp);
 	data->operator_plmn_names_valid = !!data->operator_plmn_names;
 	data->operator_string_name = nas_get_operator_name_resp_get_operator_string_name(get_operator_name_resp);
 	data->operator_string_name_valid = !!data->operator_string_name;
@@ -611,11 +774,12 @@ void nas_get_operator_name_resp_data_free(struct nas_get_operator_name_resp_data
 		nas_service_provider_name_free(data->provider_name);
 		free(data->provider_name);
 	}
-	if(data->operator_plmn_list_valid) {
-		free(data->operator_plmn_list);
+	if(data->operator_plmns_valid) {
+		nas_operator_plmn_arr_free(data->operator_plmns);
+		free(data->operator_plmns);
 	}
 	if(data->operator_plmn_names_valid) {
-		nas_operator_plmn_name_free(data->operator_plmn_names);
+		nas_operator_plmn_name_arr_free(data->operator_plmn_names);
 		free(data->operator_plmn_names);
 	}
 	if(data->operator_string_name_valid) {
@@ -644,7 +808,7 @@ struct nas_service_provider_name *nas_get_operator_name_resp_get_provider_name(s
 
 	out = malloc(sizeof(struct nas_service_provider_name));
 	out->display_condition = get_next(uint8_t, 1);
-	out->name = malloc(strlen(ptr + len));
+	out->name = malloc(strlen(ptr + len) + 1);
 	strcpy(out->name, ptr + len); len += strlen(ptr + len);
 
 	return out;
@@ -655,38 +819,77 @@ err_wrong_len:
 	return NULL;
 }
 
-struct nas_operator_plmn *nas_get_operator_name_resp_get_operator_plmn_list(struct nas_get_operator_name_resp *get_operator_name_resp, size_t *count)
+struct nas_operator_plmn_arr *nas_get_operator_name_resp_get_operator_plmns(struct nas_get_operator_name_resp *get_operator_name_resp)
 {
-	size_t size;
-	size_t len;
-	void *ptr;
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_operator_plmn_arr *out;
 
-	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_operator_name_resp, 17, 64, &len, &size);
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_operator_name_resp, 17, &buf_sz);
 	if (!ptr)
 		return NULL;
 
-	if (size != sizeof(struct nas_operator_plmn))
-		return NULL;
+	out = malloc(sizeof(struct nas_operator_plmn_arr));
+	out->operators_n = get_next(uint16_t, 2);
+	size_t operators_sz = sizeof(struct operator_plmn_arr_operators);
+	out->operators = malloc(1 + operators_sz * out->operators_n);
+	for(size_t i = 0; i < out->operators_n; i++) {
+		memcpy(&out->operators[i].mcc, ptr + len, 3 * 1);
+		len += 3 * 1;
+		memcpy(&out->operators[i].mnc, ptr + len, 3 * 1);
+		len += 3 * 1;
+		out->operators[i].lac1 = get_next(uint16_t, 2);
+		out->operators[i].lac2 = get_next(uint16_t, 2);
+		out->operators[i].name_record_indicator = get_next(uint8_t, 1);
+	}
 
-	*count = len;
-	return ptr;
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
-struct nas_operator_plmn_name *nas_get_operator_name_resp_get_operator_plmn_names(struct nas_get_operator_name_resp *get_operator_name_resp, size_t *count)
+struct nas_operator_plmn_name_arr *nas_get_operator_name_resp_get_operator_plmn_names(struct nas_get_operator_name_resp *get_operator_name_resp)
 {
-	size_t size;
-	size_t len;
-	void *ptr;
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_operator_plmn_name_arr *out;
 
-	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_operator_name_resp, 18, 64, &len, &size);
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_operator_name_resp, 18, &buf_sz);
 	if (!ptr)
 		return NULL;
 
-	if (size != sizeof(struct nas_operator_plmn_name))
-		return NULL;
+	out = malloc(sizeof(struct nas_operator_plmn_name_arr));
+	out->operators_n = get_next(uint8_t, 1);
+	size_t operators_sz = sizeof(struct operator_plmn_name_arr_operators);
+	out->operators = malloc(1 + operators_sz * out->operators_n);
+	for(size_t i = 0; i < out->operators_n; i++) {
+		out->operators[i].name_encoding = get_next(uint8_t, 1);
+		out->operators[i].short_country_initials = get_next(uint8_t, 1);
+		out->operators[i].long_name_spare_bits = get_next(uint8_t, 1);
+		out->operators[i].short_name_spare_bits = get_next(uint8_t, 1);
+		out->operators[i].long_name_n = get_next(uint8_t, 1);
+		size_t long_name_sz = 1;
+		out->operators[i].long_name = malloc(1 + long_name_sz * out->operators[i].long_name_n);
+		for(size_t ii = 0; ii < out->operators[i].long_name_n; ii++) {
+			out->operators[i].long_name[ii] = get_next(uint8_t, 1);
+		}
+		out->operators[i].short_name_n = get_next(uint8_t, 1);
+		size_t short_name_sz = 1;
+		out->operators[i].short_name = malloc(1 + short_name_sz * out->operators[i].short_name_n);
+		for(size_t ii = 0; ii < out->operators[i].short_name_n; ii++) {
+			out->operators[i].short_name[ii] = get_next(uint8_t, 1);
+		}
+	}
 
-	*count = len;
-	return ptr;
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
 char *nas_get_operator_name_resp_get_operator_string_name(struct nas_get_operator_name_resp *get_operator_name_resp)
@@ -727,13 +930,342 @@ struct nas_operator_plmn_name *nas_get_operator_name_resp_get_nitz_info(struct n
 	out->short_name_spare_bits = get_next(uint8_t, 1);
 	out->long_name_n = get_next(uint8_t, 1);
 	size_t long_name_sz = 1;
-	out->long_name = malloc(long_name_sz * out->long_name_n);
+	out->long_name = malloc(1 + long_name_sz * out->long_name_n);
 	for(size_t i = 0; i < out->long_name_n; i++) {
 		out->long_name[i] = get_next(uint8_t, 1);
 	}
 	out->short_name_n = get_next(uint8_t, 1);
 	size_t short_name_sz = 1;
-	out->short_name = malloc(short_name_sz * out->short_name_n);
+	out->short_name = malloc(1 + short_name_sz * out->short_name_n);
+	for(size_t i = 0; i < out->short_name_n; i++) {
+		out->short_name[i] = get_next(uint8_t, 1);
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+struct nas_operator_name_ind *nas_operator_name_ind_alloc(unsigned txn)
+{
+	return (struct nas_operator_name_ind*)qmi_tlv_init(txn, 58, 4);
+}
+
+void *nas_operator_name_ind_encode(struct nas_operator_name_ind *operator_name_ind, size_t *len)
+{
+	return qmi_tlv_encode((struct qmi_tlv*)operator_name_ind, len);
+}
+
+struct nas_operator_name_ind *nas_operator_name_ind_parse(void *buf, size_t len)
+{
+	return (struct nas_operator_name_ind*)qmi_tlv_decode(buf, len);
+}
+
+void nas_operator_name_ind_getall(struct nas_operator_name_ind *operator_name_ind, struct nas_operator_name_ind_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->provider_name = nas_operator_name_ind_get_provider_name(operator_name_ind);
+	data->provider_name_valid = !!data->provider_name;
+	data->operator_plmns = nas_operator_name_ind_get_operator_plmns(operator_name_ind);
+	data->operator_plmns_valid = !!data->operator_plmns;
+	data->operator_plmn_names = nas_operator_name_ind_get_operator_plmn_names(operator_name_ind);
+	data->operator_plmn_names_valid = !!data->operator_plmn_names;
+	data->operator_string_name = nas_operator_name_ind_get_operator_string_name(operator_name_ind);
+	data->operator_string_name_valid = !!data->operator_string_name;
+	data->nitz_info = nas_operator_name_ind_get_nitz_info(operator_name_ind);
+	data->nitz_info_valid = !!data->nitz_info;
+}
+
+void nas_operator_name_ind_data_free(struct nas_operator_name_ind_data *data)
+{
+
+	if(data->provider_name_valid) {
+		nas_service_provider_name_free(data->provider_name);
+		free(data->provider_name);
+	}
+	if(data->operator_plmns_valid) {
+		nas_operator_plmn_arr_free(data->operator_plmns);
+		free(data->operator_plmns);
+	}
+	if(data->operator_plmn_names_valid) {
+		nas_operator_plmn_name_arr_free(data->operator_plmn_names);
+		free(data->operator_plmn_names);
+	}
+	if(data->operator_string_name_valid) {
+		free(data->operator_string_name);
+	}
+	if(data->nitz_info_valid) {
+		nas_operator_plmn_name_free(data->nitz_info);
+		free(data->nitz_info);
+	}
+}
+
+void nas_operator_name_ind_free(struct nas_operator_name_ind *operator_name_ind)
+{
+	qmi_tlv_free((struct qmi_tlv*)operator_name_ind);
+}
+
+int nas_operator_name_ind_set_provider_name(struct nas_operator_name_ind *operator_name_ind, struct nas_service_provider_name *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->display_condition;
+	len += 1;
+	strcpy(ptr + len, val->name);
+	len += strlen(val->name);
+	rc = qmi_tlv_set((struct qmi_tlv*)operator_name_ind, 16, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_service_provider_name *nas_operator_name_ind_get_provider_name(struct nas_operator_name_ind *operator_name_ind)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_service_provider_name *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)operator_name_ind, 16, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_service_provider_name));
+	out->display_condition = get_next(uint8_t, 1);
+	out->name = malloc(strlen(ptr + len) + 1);
+	strcpy(out->name, ptr + len); len += strlen(ptr + len);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_operator_name_ind_set_operator_plmns(struct nas_operator_name_ind *operator_name_ind, struct nas_operator_plmn_arr *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint16_t*)(ptr + len)) = val->operators_n;
+	len += 2;
+	for(size_t i = 0; i < val->operators_n; i++) {
+		memcpy(ptr + len, &val->operators[i].mcc, 3 * 1);
+		len += 3 * 1;
+		memcpy(ptr + len, &val->operators[i].mnc, 3 * 1);
+		len += 3 * 1;
+		*((uint16_t*)(ptr + len)) = val->operators[i].lac1;
+		len += 2;
+		*((uint16_t*)(ptr + len)) = val->operators[i].lac2;
+		len += 2;
+		*((uint8_t*)(ptr + len)) = val->operators[i].name_record_indicator;
+		len += 1;
+	}
+	rc = qmi_tlv_set((struct qmi_tlv*)operator_name_ind, 17, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_operator_plmn_arr *nas_operator_name_ind_get_operator_plmns(struct nas_operator_name_ind *operator_name_ind)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_operator_plmn_arr *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)operator_name_ind, 17, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_operator_plmn_arr));
+	out->operators_n = get_next(uint16_t, 2);
+	size_t operators_sz = sizeof(struct operator_plmn_arr_operators);
+	out->operators = malloc(1 + operators_sz * out->operators_n);
+	for(size_t i = 0; i < out->operators_n; i++) {
+		memcpy(&out->operators[i].mcc, ptr + len, 3 * 1);
+		len += 3 * 1;
+		memcpy(&out->operators[i].mnc, ptr + len, 3 * 1);
+		len += 3 * 1;
+		out->operators[i].lac1 = get_next(uint16_t, 2);
+		out->operators[i].lac2 = get_next(uint16_t, 2);
+		out->operators[i].name_record_indicator = get_next(uint8_t, 1);
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_operator_name_ind_set_operator_plmn_names(struct nas_operator_name_ind *operator_name_ind, struct nas_operator_plmn_name_arr *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->operators_n;
+	len += 1;
+	for(size_t i = 0; i < val->operators_n; i++) {
+		*((uint8_t*)(ptr + len)) = val->operators[i].name_encoding;
+		len += 1;
+		*((uint8_t*)(ptr + len)) = val->operators[i].short_country_initials;
+		len += 1;
+		*((uint8_t*)(ptr + len)) = val->operators[i].long_name_spare_bits;
+		len += 1;
+		*((uint8_t*)(ptr + len)) = val->operators[i].short_name_spare_bits;
+		len += 1;
+		*((uint8_t*)(ptr + len)) = val->operators[i].long_name_n;
+		len += 1;
+		for(size_t ii = 0; ii < val->operators[i].long_name_n; ii++) {
+			*((uint8_t*)(ptr + len)) = val->operators[i].long_name[ii];
+			len += 1;
+		}
+		*((uint8_t*)(ptr + len)) = val->operators[i].short_name_n;
+		len += 1;
+		for(size_t ii = 0; ii < val->operators[i].short_name_n; ii++) {
+			*((uint8_t*)(ptr + len)) = val->operators[i].short_name[ii];
+			len += 1;
+		}
+	}
+	rc = qmi_tlv_set((struct qmi_tlv*)operator_name_ind, 18, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_operator_plmn_name_arr *nas_operator_name_ind_get_operator_plmn_names(struct nas_operator_name_ind *operator_name_ind)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_operator_plmn_name_arr *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)operator_name_ind, 18, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_operator_plmn_name_arr));
+	out->operators_n = get_next(uint8_t, 1);
+	size_t operators_sz = sizeof(struct operator_plmn_name_arr_operators);
+	out->operators = malloc(1 + operators_sz * out->operators_n);
+	for(size_t i = 0; i < out->operators_n; i++) {
+		out->operators[i].name_encoding = get_next(uint8_t, 1);
+		out->operators[i].short_country_initials = get_next(uint8_t, 1);
+		out->operators[i].long_name_spare_bits = get_next(uint8_t, 1);
+		out->operators[i].short_name_spare_bits = get_next(uint8_t, 1);
+		out->operators[i].long_name_n = get_next(uint8_t, 1);
+		size_t long_name_sz = 1;
+		out->operators[i].long_name = malloc(1 + long_name_sz * out->operators[i].long_name_n);
+		for(size_t ii = 0; ii < out->operators[i].long_name_n; ii++) {
+			out->operators[i].long_name[ii] = get_next(uint8_t, 1);
+		}
+		out->operators[i].short_name_n = get_next(uint8_t, 1);
+		size_t short_name_sz = 1;
+		out->operators[i].short_name = malloc(1 + short_name_sz * out->operators[i].short_name_n);
+		for(size_t ii = 0; ii < out->operators[i].short_name_n; ii++) {
+			out->operators[i].short_name[ii] = get_next(uint8_t, 1);
+		}
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_operator_name_ind_set_operator_string_name(struct nas_operator_name_ind *operator_name_ind, char *buf, size_t len)
+{
+	return qmi_tlv_set((struct qmi_tlv*)operator_name_ind, 19, buf, len);
+}
+
+char *nas_operator_name_ind_get_operator_string_name(struct nas_operator_name_ind *operator_name_ind)
+{
+	char *ptr = NULL, *out;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)operator_name_ind, 19, &len);
+	if (!ptr)
+		return NULL;
+
+	if (!ptr[len-1]) {
+		out = malloc(len);
+		memcpy(out, ptr, len);
+	} else {
+		out = malloc(len + 1);
+		memcpy(out, ptr, len);
+		out[len] = '\0';
+	}
+
+	return out;
+}
+
+int nas_operator_name_ind_set_nitz_info(struct nas_operator_name_ind *operator_name_ind, struct nas_operator_plmn_name *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->name_encoding;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->short_country_initials;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->long_name_spare_bits;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->short_name_spare_bits;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->long_name_n;
+	len += 1;
+	for(size_t i = 0; i < val->long_name_n; i++) {
+		*((uint8_t*)(ptr + len)) = val->long_name[i];
+		len += 1;
+	}
+	*((uint8_t*)(ptr + len)) = val->short_name_n;
+	len += 1;
+	for(size_t i = 0; i < val->short_name_n; i++) {
+		*((uint8_t*)(ptr + len)) = val->short_name[i];
+		len += 1;
+	}
+	rc = qmi_tlv_set((struct qmi_tlv*)operator_name_ind, 20, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_operator_plmn_name *nas_operator_name_ind_get_nitz_info(struct nas_operator_name_ind *operator_name_ind)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_operator_plmn_name *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)operator_name_ind, 20, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_operator_plmn_name));
+	out->name_encoding = get_next(uint8_t, 1);
+	out->short_country_initials = get_next(uint8_t, 1);
+	out->long_name_spare_bits = get_next(uint8_t, 1);
+	out->short_name_spare_bits = get_next(uint8_t, 1);
+	out->long_name_n = get_next(uint8_t, 1);
+	size_t long_name_sz = 1;
+	out->long_name = malloc(1 + long_name_sz * out->long_name_n);
+	for(size_t i = 0; i < out->long_name_n; i++) {
+		out->long_name[i] = get_next(uint8_t, 1);
+	}
+	out->short_name_n = get_next(uint8_t, 1);
+	size_t short_name_sz = 1;
+	out->short_name = malloc(1 + short_name_sz * out->short_name_n);
 	for(size_t i = 0; i < out->short_name_n; i++) {
 		out->short_name[i] = get_next(uint8_t, 1);
 	}
@@ -754,6 +1286,582 @@ struct nas_get_cell_loc_info *nas_get_cell_loc_info_parse(void *buf, size_t len)
 void nas_get_cell_loc_info_free(struct nas_get_cell_loc_info *get_cell_loc_info)
 {
 	qmi_tlv_free((struct qmi_tlv*)get_cell_loc_info);
+}
+
+struct nas_get_plmn_name_req *nas_get_plmn_name_req_alloc(unsigned txn)
+{
+	return (struct nas_get_plmn_name_req*)qmi_tlv_init(txn, 68, 0);
+}
+
+void *nas_get_plmn_name_req_encode(struct nas_get_plmn_name_req *get_plmn_name_req, size_t *len)
+{
+	return qmi_tlv_encode((struct qmi_tlv*)get_plmn_name_req, len);
+}
+
+void nas_get_plmn_name_req_free(struct nas_get_plmn_name_req *get_plmn_name_req)
+{
+	qmi_tlv_free((struct qmi_tlv*)get_plmn_name_req);
+}
+
+int nas_get_plmn_name_req_set_plmn(struct nas_get_plmn_name_req *get_plmn_name_req, struct nas_plmn_id *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint16_t*)(ptr + len)) = val->mcc;
+	len += 2;
+	*((uint16_t*)(ptr + len)) = val->mnc;
+	len += 2;
+	rc = qmi_tlv_set((struct qmi_tlv*)get_plmn_name_req, 1, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+int nas_get_plmn_name_req_set_send_all_info(struct nas_get_plmn_name_req *get_plmn_name_req, uint8_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)get_plmn_name_req, 22, &val, sizeof(uint8_t));
+}
+
+struct nas_get_plmn_name_resp *nas_get_plmn_name_resp_parse(void *buf, size_t len)
+{
+	return (struct nas_get_plmn_name_resp*)qmi_tlv_decode(buf, len);
+}
+
+void nas_get_plmn_name_resp_getall(struct nas_get_plmn_name_resp *get_plmn_name_resp, struct nas_get_plmn_name_resp_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_plmn_name_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
+	data->plmn_name = nas_get_plmn_name_resp_get_plmn_name(get_plmn_name_resp);
+	data->plmn_name_valid = !!data->plmn_name;
+}
+
+void nas_get_plmn_name_resp_data_free(struct nas_get_plmn_name_resp_data *data)
+{
+
+		free(data->res);
+	if(data->plmn_name_valid) {
+		nas_eons_plmn_name_free(data->plmn_name);
+		free(data->plmn_name);
+	}
+}
+
+void nas_get_plmn_name_resp_free(struct nas_get_plmn_name_resp *get_plmn_name_resp)
+{
+	qmi_tlv_free((struct qmi_tlv*)get_plmn_name_resp);
+}
+
+struct nas_eons_plmn_name *nas_get_plmn_name_resp_get_plmn_name(struct nas_get_plmn_name_resp *get_plmn_name_resp)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_eons_plmn_name *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_plmn_name_resp, 16, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_eons_plmn_name));
+	out->sp_name_encoding = get_next(uint8_t, 1);
+	out->sp_name_n = get_next(uint8_t, 1);
+	size_t sp_name_sz = 1;
+	out->sp_name = malloc(1 + sp_name_sz * out->sp_name_n);
+	for(size_t i = 0; i < out->sp_name_n; i++) {
+		out->sp_name[i] = get_next(uint8_t, 1);
+	}
+	out->short_name_encoding = get_next(uint8_t, 1);
+	out->short_name_country_initials = get_next(uint8_t, 1);
+	out->short_name_spare_bits = get_next(uint8_t, 1);
+	out->short_name_n = get_next(uint8_t, 1);
+	size_t short_name_sz = 1;
+	out->short_name = malloc(1 + short_name_sz * out->short_name_n);
+	for(size_t i = 0; i < out->short_name_n; i++) {
+		out->short_name[i] = get_next(uint8_t, 1);
+	}
+	out->long_name_encoding = get_next(uint8_t, 1);
+	out->long_name_country_initials = get_next(uint8_t, 1);
+	out->long_name_spare_bits = get_next(uint8_t, 1);
+	out->long_name_n = get_next(uint8_t, 1);
+	size_t long_name_sz = 1;
+	out->long_name = malloc(1 + long_name_sz * out->long_name_n);
+	for(size_t i = 0; i < out->long_name_n; i++) {
+		out->long_name[i] = get_next(uint8_t, 1);
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+struct nas_get_signal_info *nas_get_signal_info_parse(void *buf, size_t len)
+{
+	return (struct nas_get_signal_info*)qmi_tlv_decode(buf, len);
+}
+
+void nas_get_signal_info_getall(struct nas_get_signal_info *get_signal_info, struct nas_get_signal_info_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_signal_info, 2, NULL), sizeof(struct qmi_response_type_v01));
+	data->cdma = nas_get_signal_info_get_cdma(get_signal_info);
+	data->cdma_valid = !!data->cdma;
+	data->hdr = nas_get_signal_info_get_hdr(get_signal_info);
+	data->hdr_valid = !!data->hdr;
+	rc = nas_get_signal_info_get_gsm(get_signal_info, &data->gsm);
+	data->gsm_valid = rc >= 0;
+	data->wcdma = nas_get_signal_info_get_wcdma(get_signal_info);
+	data->wcdma_valid = !!data->wcdma;
+	data->lte = nas_get_signal_info_get_lte(get_signal_info);
+	data->lte_valid = !!data->lte;
+	rc = nas_get_signal_info_get_tdma(get_signal_info, &data->tdma);
+	data->tdma_valid = rc >= 0;
+	data->tdma_ext = nas_get_signal_info_get_tdma_ext(get_signal_info);
+	data->tdma_ext_valid = !!data->tdma_ext;
+}
+
+void nas_get_signal_info_data_free(struct nas_get_signal_info_data *data)
+{
+
+		free(data->res);
+	if(data->cdma_valid) {
+		free(data->cdma);
+	}
+	if(data->hdr_valid) {
+		free(data->hdr);
+	}
+	if(data->wcdma_valid) {
+		free(data->wcdma);
+	}
+	if(data->lte_valid) {
+		free(data->lte);
+	}
+	if(data->tdma_ext_valid) {
+		free(data->tdma_ext);
+	}
+}
+
+void nas_get_signal_info_free(struct nas_get_signal_info *get_signal_info)
+{
+	qmi_tlv_free((struct qmi_tlv*)get_signal_info);
+}
+
+struct nas_ss_cdma *nas_get_signal_info_get_cdma(struct nas_get_signal_info *get_signal_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_cdma *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_info, 16, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_cdma));
+	out->rssi = get_next(int8_t, 1);
+	out->ecio = get_next(int16_t, 2);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+struct nas_ss_hdr *nas_get_signal_info_get_hdr(struct nas_get_signal_info *get_signal_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_hdr *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_info, 17, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_hdr));
+	out->rssi = get_next(int8_t, 1);
+	out->ecio = get_next(int16_t, 2);
+	out->sinr = get_next(uint8_t, 1);
+	out->io = get_next(int32_t, 4);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_get_signal_info_get_gsm(struct nas_get_signal_info *get_signal_info, int8_t *val)
+{
+	int8_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_info, 18, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(int8_t))
+		return -EINVAL;
+
+	*val = *(int8_t*)ptr;
+	return 0;
+}
+
+struct nas_ss_wcdma *nas_get_signal_info_get_wcdma(struct nas_get_signal_info *get_signal_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_wcdma *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_info, 19, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_wcdma));
+	out->rssi = get_next(int8_t, 1);
+	out->ecio = get_next(int16_t, 2);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+struct nas_ss_lte *nas_get_signal_info_get_lte(struct nas_get_signal_info *get_signal_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_lte *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_info, 20, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_lte));
+	out->rssi = get_next(int8_t, 1);
+	out->rsrq = get_next(int8_t, 1);
+	out->rsrp = get_next(int16_t, 2);
+	out->snr = get_next(int16_t, 2);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_get_signal_info_get_tdma(struct nas_get_signal_info *get_signal_info, int8_t *val)
+{
+	int8_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_info, 21, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(int8_t))
+		return -EINVAL;
+
+	*val = *(int8_t*)ptr;
+	return 0;
+}
+
+struct nas_ss_tdma_ext *nas_get_signal_info_get_tdma_ext(struct nas_get_signal_info *get_signal_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_tdma_ext *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_signal_info, 22, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_tdma_ext));
+	out->rssi = get_next(uint32_t, 4);
+	out->rscp = get_next(int32_t, 4);
+	out->ecio = get_next(int32_t, 4);
+	out->sinr = get_next(int32_t, 4);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+struct nas_signal_info_ind *nas_signal_info_ind_alloc(unsigned txn)
+{
+	return (struct nas_signal_info_ind*)qmi_tlv_init(txn, 81, 4);
+}
+
+void *nas_signal_info_ind_encode(struct nas_signal_info_ind *signal_info_ind, size_t *len)
+{
+	return qmi_tlv_encode((struct qmi_tlv*)signal_info_ind, len);
+}
+
+struct nas_signal_info_ind *nas_signal_info_ind_parse(void *buf, size_t len)
+{
+	return (struct nas_signal_info_ind*)qmi_tlv_decode(buf, len);
+}
+
+void nas_signal_info_ind_getall(struct nas_signal_info_ind *signal_info_ind, struct nas_signal_info_ind_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->cdma = nas_signal_info_ind_get_cdma(signal_info_ind);
+	data->cdma_valid = !!data->cdma;
+	data->hdr = nas_signal_info_ind_get_hdr(signal_info_ind);
+	data->hdr_valid = !!data->hdr;
+	rc = nas_signal_info_ind_get_gsm(signal_info_ind, &data->gsm);
+	data->gsm_valid = rc >= 0;
+	data->wcdma = nas_signal_info_ind_get_wcdma(signal_info_ind);
+	data->wcdma_valid = !!data->wcdma;
+	data->lte = nas_signal_info_ind_get_lte(signal_info_ind);
+	data->lte_valid = !!data->lte;
+	rc = nas_signal_info_ind_get_tdma(signal_info_ind, &data->tdma);
+	data->tdma_valid = rc >= 0;
+}
+
+void nas_signal_info_ind_data_free(struct nas_signal_info_ind_data *data)
+{
+
+	if(data->cdma_valid) {
+		free(data->cdma);
+	}
+	if(data->hdr_valid) {
+		free(data->hdr);
+	}
+	if(data->wcdma_valid) {
+		free(data->wcdma);
+	}
+	if(data->lte_valid) {
+		free(data->lte);
+	}
+}
+
+void nas_signal_info_ind_free(struct nas_signal_info_ind *signal_info_ind)
+{
+	qmi_tlv_free((struct qmi_tlv*)signal_info_ind);
+}
+
+int nas_signal_info_ind_set_cdma(struct nas_signal_info_ind *signal_info_ind, struct nas_ss_cdma *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((int8_t*)(ptr + len)) = val->rssi;
+	len += 1;
+	*((int16_t*)(ptr + len)) = val->ecio;
+	len += 2;
+	rc = qmi_tlv_set((struct qmi_tlv*)signal_info_ind, 16, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_ss_cdma *nas_signal_info_ind_get_cdma(struct nas_signal_info_ind *signal_info_ind)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_cdma *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)signal_info_ind, 16, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_cdma));
+	out->rssi = get_next(int8_t, 1);
+	out->ecio = get_next(int16_t, 2);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_signal_info_ind_set_hdr(struct nas_signal_info_ind *signal_info_ind, struct nas_ss_hdr *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((int8_t*)(ptr + len)) = val->rssi;
+	len += 1;
+	*((int16_t*)(ptr + len)) = val->ecio;
+	len += 2;
+	*((uint8_t*)(ptr + len)) = val->sinr;
+	len += 1;
+	*((int32_t*)(ptr + len)) = val->io;
+	len += 4;
+	rc = qmi_tlv_set((struct qmi_tlv*)signal_info_ind, 17, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_ss_hdr *nas_signal_info_ind_get_hdr(struct nas_signal_info_ind *signal_info_ind)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_hdr *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)signal_info_ind, 17, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_hdr));
+	out->rssi = get_next(int8_t, 1);
+	out->ecio = get_next(int16_t, 2);
+	out->sinr = get_next(uint8_t, 1);
+	out->io = get_next(int32_t, 4);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_signal_info_ind_set_gsm(struct nas_signal_info_ind *signal_info_ind, int8_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)signal_info_ind, 18, &val, sizeof(int8_t));
+}
+
+int nas_signal_info_ind_get_gsm(struct nas_signal_info_ind *signal_info_ind, int8_t *val)
+{
+	int8_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)signal_info_ind, 18, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(int8_t))
+		return -EINVAL;
+
+	*val = *(int8_t*)ptr;
+	return 0;
+}
+
+int nas_signal_info_ind_set_wcdma(struct nas_signal_info_ind *signal_info_ind, struct nas_ss_wcdma *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((int8_t*)(ptr + len)) = val->rssi;
+	len += 1;
+	*((int16_t*)(ptr + len)) = val->ecio;
+	len += 2;
+	rc = qmi_tlv_set((struct qmi_tlv*)signal_info_ind, 19, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_ss_wcdma *nas_signal_info_ind_get_wcdma(struct nas_signal_info_ind *signal_info_ind)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_wcdma *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)signal_info_ind, 19, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_wcdma));
+	out->rssi = get_next(int8_t, 1);
+	out->ecio = get_next(int16_t, 2);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_signal_info_ind_set_lte(struct nas_signal_info_ind *signal_info_ind, struct nas_ss_lte *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((int8_t*)(ptr + len)) = val->rssi;
+	len += 1;
+	*((int8_t*)(ptr + len)) = val->rsrq;
+	len += 1;
+	*((int16_t*)(ptr + len)) = val->rsrp;
+	len += 2;
+	*((int16_t*)(ptr + len)) = val->snr;
+	len += 2;
+	rc = qmi_tlv_set((struct qmi_tlv*)signal_info_ind, 20, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct nas_ss_lte *nas_signal_info_ind_get_lte(struct nas_signal_info_ind *signal_info_ind)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_ss_lte *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)signal_info_ind, 20, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_ss_lte));
+	out->rssi = get_next(int8_t, 1);
+	out->rsrq = get_next(int8_t, 1);
+	out->rsrp = get_next(int16_t, 2);
+	out->snr = get_next(int16_t, 2);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_signal_info_ind_set_tdma(struct nas_signal_info_ind *signal_info_ind, int8_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)signal_info_ind, 21, &val, sizeof(int8_t));
+}
+
+int nas_signal_info_ind_get_tdma(struct nas_signal_info_ind *signal_info_ind, int8_t *val)
+{
+	int8_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)signal_info_ind, 21, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(int8_t))
+		return -EINVAL;
+
+	*val = *(int8_t*)ptr;
+	return 0;
 }
 
 struct nas_get_lte_cphy_ca_info_resp *nas_get_lte_cphy_ca_info_resp_parse(void *buf, size_t len)
@@ -806,41 +1914,89 @@ int nas_get_lte_cphy_ca_info_resp_get_dl_bandwidth(struct nas_get_lte_cphy_ca_in
 
 struct nas_lte_cphy_agg_scell *nas_get_lte_cphy_ca_info_resp_get_phy_scell_info(struct nas_get_lte_cphy_ca_info_resp *get_lte_cphy_ca_info_resp)
 {
-	size_t len;
-	void *ptr;
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_lte_cphy_agg_scell *out;
 
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_lte_cphy_ca_info_resp, 18, &len);
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_lte_cphy_ca_info_resp, 18, &buf_sz);
 	if (!ptr)
 		return NULL;
 
-	if (len != sizeof(struct nas_lte_cphy_agg_scell))
-		return NULL;
+	out = malloc(sizeof(struct nas_lte_cphy_agg_scell));
+	out->pci = get_next(uint16_t, 2);
+	out->rx_chan = get_next(uint16_t, 2);
+	out->dl_bandwidth = get_next(uint32_t, 4);
+	out->lte_band = get_next(uint16_t, 2);
+	out->state = get_next(uint32_t, 4);
 
-	return ptr;
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
 void nas_serving_system_free(struct nas_serving_system *val)
 {
-	free(val->radio_interfaces);
+	if(val->radio_interfaces)
+		free(val->radio_interfaces);
 
 }
 
 void nas_current_plmn_free(struct nas_current_plmn *val)
 {
-	free(val->description);
+	if(val->description)
+		free(val->description);
 
 }
 
 void nas_service_provider_name_free(struct nas_service_provider_name *val)
 {
-	free(val->name);
+	if(val->name)
+		free(val->name);
+
+}
+
+void nas_operator_plmn_arr_free(struct nas_operator_plmn_arr *val)
+{
+	for(size_t i = 0; i < val->operators_n; i++) {
+	}
+	if(val->operators)
+		free(val->operators);
 
 }
 
 void nas_operator_plmn_name_free(struct nas_operator_plmn_name *val)
 {
-	free(val->long_name);
-	free(val->short_name);
+	if(val->long_name)
+		free(val->long_name);
+	if(val->short_name)
+		free(val->short_name);
+
+}
+
+void nas_operator_plmn_name_arr_free(struct nas_operator_plmn_name_arr *val)
+{
+	for(size_t i = 0; i < val->operators_n; i++) {
+		if(val->operators[i].long_name)
+			free(val->operators[i].long_name);
+		if(val->operators[i].short_name)
+			free(val->operators[i].short_name);
+	}
+	if(val->operators)
+		free(val->operators);
+
+}
+
+void nas_eons_plmn_name_free(struct nas_eons_plmn_name *val)
+{
+	if(val->sp_name)
+		free(val->sp_name);
+	if(val->short_name)
+		free(val->short_name);
+	if(val->long_name)
+		free(val->long_name);
 
 }
 

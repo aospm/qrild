@@ -21,9 +21,11 @@ extern "C" {
 })
 
 #define QMI_DMS_GET_REVISION 35
+#define QMI_DMS_GET_MSISDN 36
 #define QMI_DMS_GET_IDS 37
 #define QMI_DMS_GET_OPERATING_MODE 45
 #define QMI_DMS_SET_OPERATING_MODE 46
+#define QMI_DMS_UIM_GET_IMSI 67
 #define QMI_DMS_OPERATING_MODE_ONLINE 0
 #define QMI_DMS_OPERATING_MODE_LOW_POWER 1
 #define QMI_DMS_OPERATING_MODE_FACTORY_TEST 2
@@ -53,10 +55,12 @@ struct dms_get_operating_mode_req;
 struct dms_get_operating_mode_resp;
 struct dms_set_operating_mode_req;
 struct dms_set_operating_mode_resp;
+struct dms_get_msisdn;
+struct dms_uim_get_imsi;
 
 
-#define QMI_NUM_MESSAGES_DMS 8
-extern const struct qmi_tlv_msg_name dms_msg_name_map[8];
+#define QMI_NUM_MESSAGES_DMS 10
+extern const struct qmi_tlv_msg_name dms_msg_name_map[10];
 
 /*
  * dms_get_revision_req message
@@ -149,6 +153,11 @@ int dms_get_operating_mode_resp_get_hardware_restricted(struct dms_get_operating
 /*
  * dms_set_operating_mode_req message
  */
+
+struct dms_set_operating_mode_req_data {
+	uint8_t mode;
+};
+
 struct dms_set_operating_mode_req *dms_set_operating_mode_req_alloc(unsigned txn);
 void *dms_set_operating_mode_req_encode(struct dms_set_operating_mode_req *set_operating_mode_req, size_t *len);
 void dms_set_operating_mode_req_free(struct dms_set_operating_mode_req *set_operating_mode_req);
@@ -157,9 +166,52 @@ int dms_set_operating_mode_req_set_mode(struct dms_set_operating_mode_req *set_o
 /*
  * dms_set_operating_mode_resp message
  */
+
+struct dms_set_operating_mode_resp_data {
+	struct qmi_response_type_v01 *res;
+};
+
 struct dms_set_operating_mode_resp *dms_set_operating_mode_resp_alloc(unsigned txn);
 void *dms_set_operating_mode_resp_encode(struct dms_set_operating_mode_resp *set_operating_mode_resp, size_t *len);
 void dms_set_operating_mode_resp_free(struct dms_set_operating_mode_resp *set_operating_mode_resp);
+
+/*
+ * dms_get_msisdn message
+ */
+
+struct dms_get_msisdn_data {
+	struct qmi_response_type_v01 *res;
+	bool msisdn_valid;
+	char *msisdn;
+	bool imsi_valid;
+	char *imsi;
+};
+
+struct dms_get_msisdn *dms_get_msisdn_parse(void *buf, size_t len);
+void dms_get_msisdn_getall(struct dms_get_msisdn *get_msisdn, struct dms_get_msisdn_data *data);
+void dms_get_msisdn_data_free(struct dms_get_msisdn_data *data);
+void dms_get_msisdn_free(struct dms_get_msisdn *get_msisdn);
+
+char *dms_get_msisdn_get_msisdn(struct dms_get_msisdn *get_msisdn);
+
+char *dms_get_msisdn_get_imsi(struct dms_get_msisdn *get_msisdn);
+
+/*
+ * dms_uim_get_imsi message
+ */
+
+struct dms_uim_get_imsi_data {
+	struct qmi_response_type_v01 *res;
+	bool imsi_valid;
+	char *imsi;
+};
+
+struct dms_uim_get_imsi *dms_uim_get_imsi_parse(void *buf, size_t len);
+void dms_uim_get_imsi_getall(struct dms_uim_get_imsi *uim_get_imsi, struct dms_uim_get_imsi_data *data);
+void dms_uim_get_imsi_data_free(struct dms_uim_get_imsi_data *data);
+void dms_uim_get_imsi_free(struct dms_uim_get_imsi *uim_get_imsi);
+
+char *dms_uim_get_imsi_get_imsi(struct dms_uim_get_imsi *uim_get_imsi);
 
 #ifdef __cplusplus
 }

@@ -40,6 +40,13 @@ extern const struct qmi_tlv_msg_name dpm_msg_name_map[2];
 /*
  * dpm_open_port_req message
  */
+
+struct dpm_open_port_req_data {
+	bool port_list_valid;
+	size_t port_list_n;
+	struct dpm_control_port *port_list;
+};
+
 struct dpm_open_port_req *dpm_open_port_req_alloc(unsigned txn);
 void *dpm_open_port_req_encode(struct dpm_open_port_req *open_port_req, size_t *len);
 void dpm_open_port_req_free(struct dpm_open_port_req *open_port_req);

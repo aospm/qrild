@@ -106,7 +106,6 @@ struct uim_physical_slot_info {
 	} *slots;
 };
 
-struct uim_get_card_status_req;
 struct uim_get_card_status_resp;
 struct uim_change_provisioning_session_req;
 struct uim_change_provisioning_session_resp;
@@ -117,15 +116,8 @@ struct uim_get_slot_status_resp;
 struct uim_get_slot_status_ind;
 
 
-#define QMI_NUM_MESSAGES_UIM 9
-extern const struct qmi_tlv_msg_name uim_msg_name_map[9];
-
-/*
- * uim_get_card_status_req message
- */
-struct uim_get_card_status_req *uim_get_card_status_req_alloc(unsigned txn);
-void *uim_get_card_status_req_encode(struct uim_get_card_status_req *get_card_status_req, size_t *len);
-void uim_get_card_status_req_free(struct uim_get_card_status_req *get_card_status_req);
+#define QMI_NUM_MESSAGES_UIM 8
+extern const struct qmi_tlv_msg_name uim_msg_name_map[8];
 
 /*
  * uim_get_card_status_resp message
@@ -148,6 +140,14 @@ void uim_card_status_free(struct uim_card_status *val);
 /*
  * uim_change_provisioning_session_req message
  */
+
+struct uim_change_provisioning_session_req_data {
+	bool session_change_valid;
+	struct uim_provisioning_session_change *session_change;
+	bool application_information_valid;
+	struct uim_provisioning_session_application *application_information;
+};
+
 struct uim_change_provisioning_session_req *uim_change_provisioning_session_req_alloc(unsigned txn);
 void *uim_change_provisioning_session_req_encode(struct uim_change_provisioning_session_req *change_provisioning_session_req, size_t *len);
 void uim_change_provisioning_session_req_free(struct uim_change_provisioning_session_req *change_provisioning_session_req);
@@ -172,6 +172,16 @@ void uim_change_provisioning_session_resp_free(struct uim_change_provisioning_se
 /*
  * uim_icc_open_logical_channel_req message
  */
+
+struct uim_icc_open_logical_channel_req_data {
+	uint8_t slot;
+	bool application_id_valid;
+	size_t application_id_n;
+	uint8_t *application_id;
+	bool fileControlInfo_valid;
+	uint8_t fileControlInfo;
+};
+
 struct uim_icc_open_logical_channel_req *uim_icc_open_logical_channel_req_alloc(unsigned txn);
 void *uim_icc_open_logical_channel_req_encode(struct uim_icc_open_logical_channel_req *icc_open_logical_channel_req, size_t *len);
 void uim_icc_open_logical_channel_req_free(struct uim_icc_open_logical_channel_req *icc_open_logical_channel_req);

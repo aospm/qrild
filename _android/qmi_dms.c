@@ -2,7 +2,7 @@
 #include <string.h>
 #include "qmi_dms.h"
 
-const struct qmi_tlv_msg_name dms_msg_name_map[8] = {
+const struct qmi_tlv_msg_name dms_msg_name_map[10] = {
 	{ .msg_id = 35, .msg_name = "dms_get_revision_req" },
 	{ .msg_id = 35, .msg_name = "dms_get_revision_resp" },
 	{ .msg_id = 37, .msg_name = "dms_get_ids_req" },
@@ -11,6 +11,8 @@ const struct qmi_tlv_msg_name dms_msg_name_map[8] = {
 	{ .msg_id = 45, .msg_name = "dms_get_operating_mode_resp" },
 	{ .msg_id = 46, .msg_name = "dms_set_operating_mode_req" },
 	{ .msg_id = 46, .msg_name = "dms_set_operating_mode_resp" },
+	{ .msg_id = 36, .msg_name = "dms_get_msisdn" },
+	{ .msg_id = 67, .msg_name = "dms_uim_get_imsi" },
 };
 
 struct dms_get_revision_req *dms_get_revision_req_alloc(unsigned txn)
@@ -344,12 +346,144 @@ void dms_set_operating_mode_resp_free(struct dms_set_operating_mode_resp *set_op
 	qmi_tlv_free((struct qmi_tlv*)set_operating_mode_resp);
 }
 
+struct dms_get_msisdn *dms_get_msisdn_parse(void *buf, size_t len)
+{
+	return (struct dms_get_msisdn*)qmi_tlv_decode(buf, len);
+}
+
+void dms_get_msisdn_getall(struct dms_get_msisdn *get_msisdn, struct dms_get_msisdn_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_msisdn, 2, NULL), sizeof(struct qmi_response_type_v01));
+	data->msisdn = dms_get_msisdn_get_msisdn(get_msisdn);
+	data->msisdn_valid = !!data->msisdn;
+	data->imsi = dms_get_msisdn_get_imsi(get_msisdn);
+	data->imsi_valid = !!data->imsi;
+}
+
+void dms_get_msisdn_data_free(struct dms_get_msisdn_data *data)
+{
+
+		free(data->res);
+	if(data->msisdn_valid) {
+		free(data->msisdn);
+	}
+	if(data->imsi_valid) {
+		free(data->imsi);
+	}
+}
+
+void dms_get_msisdn_free(struct dms_get_msisdn *get_msisdn)
+{
+	qmi_tlv_free((struct qmi_tlv*)get_msisdn);
+}
+
+char *dms_get_msisdn_get_msisdn(struct dms_get_msisdn *get_msisdn)
+{
+	char *ptr = NULL, *out;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_msisdn, 1, &len);
+	if (!ptr)
+		return NULL;
+
+	if (!ptr[len-1]) {
+		out = malloc(len);
+		memcpy(out, ptr, len);
+	} else {
+		out = malloc(len + 1);
+		memcpy(out, ptr, len);
+		out[len] = '\0';
+	}
+
+	return out;
+}
+
+char *dms_get_msisdn_get_imsi(struct dms_get_msisdn *get_msisdn)
+{
+	char *ptr = NULL, *out;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_msisdn, 17, &len);
+	if (!ptr)
+		return NULL;
+
+	if (!ptr[len-1]) {
+		out = malloc(len);
+		memcpy(out, ptr, len);
+	} else {
+		out = malloc(len + 1);
+		memcpy(out, ptr, len);
+		out[len] = '\0';
+	}
+
+	return out;
+}
+
+struct dms_uim_get_imsi *dms_uim_get_imsi_parse(void *buf, size_t len)
+{
+	return (struct dms_uim_get_imsi*)qmi_tlv_decode(buf, len);
+}
+
+void dms_uim_get_imsi_getall(struct dms_uim_get_imsi *uim_get_imsi, struct dms_uim_get_imsi_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)uim_get_imsi, 2, NULL), sizeof(struct qmi_response_type_v01));
+	data->imsi = dms_uim_get_imsi_get_imsi(uim_get_imsi);
+	data->imsi_valid = !!data->imsi;
+}
+
+void dms_uim_get_imsi_data_free(struct dms_uim_get_imsi_data *data)
+{
+
+		free(data->res);
+	if(data->imsi_valid) {
+		free(data->imsi);
+	}
+}
+
+void dms_uim_get_imsi_free(struct dms_uim_get_imsi *uim_get_imsi)
+{
+	qmi_tlv_free((struct qmi_tlv*)uim_get_imsi);
+}
+
+char *dms_uim_get_imsi_get_imsi(struct dms_uim_get_imsi *uim_get_imsi)
+{
+	char *ptr = NULL, *out;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)uim_get_imsi, 1, &len);
+	if (!ptr)
+		return NULL;
+
+	if (!ptr[len-1]) {
+		out = malloc(len);
+		memcpy(out, ptr, len);
+	} else {
+		out = malloc(len + 1);
+		memcpy(out, ptr, len);
+		out[len] = '\0';
+	}
+
+	return out;
+}
+
 void dms_ids_free(struct dms_ids *val)
 {
-	free(val->esn);
-	free(val->imei);
-	free(val->meid);
-	free(val->imei_ver);
+	if(val->esn)
+		free(val->esn);
+	if(val->imei)
+		free(val->imei);
+	if(val->meid)
+		free(val->meid);
+	if(val->imei_ver)
+		free(val->imei_ver);
 
 }
 

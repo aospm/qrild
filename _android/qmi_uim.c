@@ -2,8 +2,7 @@
 #include <string.h>
 #include "qmi_uim.h"
 
-const struct qmi_tlv_msg_name uim_msg_name_map[9] = {
-	{ .msg_id = 47, .msg_name = "uim_get_card_status_req" },
+const struct qmi_tlv_msg_name uim_msg_name_map[8] = {
 	{ .msg_id = 47, .msg_name = "uim_get_card_status_resp" },
 	{ .msg_id = 56, .msg_name = "uim_change_provisioning_session_req" },
 	{ .msg_id = 56, .msg_name = "uim_change_provisioning_session_resp" },
@@ -13,21 +12,6 @@ const struct qmi_tlv_msg_name uim_msg_name_map[9] = {
 	{ .msg_id = 71, .msg_name = "uim_get_slot_status_resp" },
 	{ .msg_id = 72, .msg_name = "uim_get_slot_status_ind" },
 };
-
-struct uim_get_card_status_req *uim_get_card_status_req_alloc(unsigned txn)
-{
-	return (struct uim_get_card_status_req*)qmi_tlv_init(txn, 47, 0);
-}
-
-void *uim_get_card_status_req_encode(struct uim_get_card_status_req *get_card_status_req, size_t *len)
-{
-	return qmi_tlv_encode((struct qmi_tlv*)get_card_status_req, len);
-}
-
-void uim_get_card_status_req_free(struct uim_get_card_status_req *get_card_status_req)
-{
-	qmi_tlv_free((struct qmi_tlv*)get_card_status_req);
-}
 
 struct uim_get_card_status_resp *uim_get_card_status_resp_parse(void *buf, size_t len)
 {
@@ -77,7 +61,7 @@ struct uim_card_status *uim_get_card_status_resp_get_status(struct uim_get_card_
 	out->index_1x_secondary = get_next(uint16_t, 2);
 	out->cards_n = get_next(uint8_t, 1);
 	size_t cards_sz = sizeof(struct card_status_cards);
-	out->cards = malloc(cards_sz * out->cards_n);
+	out->cards = malloc(1 + cards_sz * out->cards_n);
 	for(size_t i = 0; i < out->cards_n; i++) {
 		out->cards[i].card_state = get_next(uint8_t, 1);
 		out->cards[i].upin_state = get_next(uint8_t, 1);
@@ -86,7 +70,7 @@ struct uim_card_status *uim_get_card_status_resp_get_status(struct uim_get_card_
 		out->cards[i].error_code = get_next(uint8_t, 1);
 		out->cards[i].applications_n = get_next(uint8_t, 1);
 		size_t applications_sz = sizeof(struct card_status_cards_applications);
-		out->cards[i].applications = malloc(applications_sz * out->cards[i].applications_n);
+		out->cards[i].applications = malloc(1 + applications_sz * out->cards[i].applications_n);
 		for(size_t ii = 0; ii < out->cards[i].applications_n; ii++) {
 			out->cards[i].applications[ii].type = get_next(uint8_t, 1);
 			out->cards[i].applications[ii].state = get_next(uint8_t, 1);
@@ -96,7 +80,7 @@ struct uim_card_status *uim_get_card_status_resp_get_status(struct uim_get_card_
 			out->cards[i].applications[ii].personalization_unblock_retries = get_next(uint8_t, 1);
 			out->cards[i].applications[ii].application_identifier_value_n = get_next(uint8_t, 1);
 			size_t application_identifier_value_sz = 1;
-			out->cards[i].applications[ii].application_identifier_value = malloc(application_identifier_value_sz * out->cards[i].applications[ii].application_identifier_value_n);
+			out->cards[i].applications[ii].application_identifier_value = malloc(1 + application_identifier_value_sz * out->cards[i].applications[ii].application_identifier_value_n);
 			for(size_t iii = 0; iii < out->cards[i].applications[ii].application_identifier_value_n; iii++) {
 				out->cards[i].applications[ii].application_identifier_value[iii] = get_next(uint8_t, 1);
 			}
@@ -135,7 +119,18 @@ void uim_change_provisioning_session_req_free(struct uim_change_provisioning_ses
 
 int uim_change_provisioning_session_req_set_session_change(struct uim_change_provisioning_session_req *change_provisioning_session_req, struct uim_provisioning_session_change *val)
 {
-	return qmi_tlv_set((struct qmi_tlv*)change_provisioning_session_req, 1, val, sizeof(struct uim_provisioning_session_change));
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->session_type;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->activate;
+	len += 1;
+	rc = qmi_tlv_set((struct qmi_tlv*)change_provisioning_session_req, 1, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 int uim_change_provisioning_session_req_set_application_information(struct uim_change_provisioning_session_req *change_provisioning_session_req, struct uim_provisioning_session_application *val)
@@ -369,14 +364,14 @@ struct uim_physical_slot_state *uim_get_slot_status_resp_get_slot_state(struct u
 	out = malloc(sizeof(struct uim_physical_slot_state));
 	out->slots_n = get_next(uint8_t, 1);
 	size_t slots_sz = sizeof(struct physical_slot_state_slots);
-	out->slots = malloc(slots_sz * out->slots_n);
+	out->slots = malloc(1 + slots_sz * out->slots_n);
 	for(size_t i = 0; i < out->slots_n; i++) {
 		out->slots[i].card_state = get_next(uint32_t, 4);
 		out->slots[i].slot_state = get_next(uint32_t, 4);
 		out->slots[i].logical_slot = get_next(uint8_t, 1);
 		out->slots[i].iccid_n = get_next(uint8_t, 1);
 		size_t iccid_sz = 1;
-		out->slots[i].iccid = malloc(iccid_sz * out->slots[i].iccid_n);
+		out->slots[i].iccid = malloc(1 + iccid_sz * out->slots[i].iccid_n);
 		for(size_t ii = 0; ii < out->slots[i].iccid_n; ii++) {
 			out->slots[i].iccid[ii] = get_next(uint8_t, 1);
 		}
@@ -403,13 +398,13 @@ struct uim_physical_slot_info *uim_get_slot_status_resp_get_slot_info(struct uim
 	out = malloc(sizeof(struct uim_physical_slot_info));
 	out->slots_n = get_next(uint8_t, 1);
 	size_t slots_sz = sizeof(struct physical_slot_info_slots);
-	out->slots = malloc(slots_sz * out->slots_n);
+	out->slots = malloc(1 + slots_sz * out->slots_n);
 	for(size_t i = 0; i < out->slots_n; i++) {
 		out->slots[i].card_protocol = get_next(uint32_t, 4);
 		out->slots[i].valid_applications = get_next(uint8_t, 1);
 		out->slots[i].atr_value_n = get_next(uint8_t, 1);
 		size_t atr_value_sz = 1;
-		out->slots[i].atr_value = malloc(atr_value_sz * out->slots[i].atr_value_n);
+		out->slots[i].atr_value = malloc(1 + atr_value_sz * out->slots[i].atr_value_n);
 		for(size_t ii = 0; ii < out->slots[i].atr_value_n; ii++) {
 			out->slots[i].atr_value[ii] = get_next(uint8_t, 1);
 		}
@@ -531,14 +526,14 @@ struct uim_physical_slot_state *uim_get_slot_status_ind_get_slot_state(struct ui
 	out = malloc(sizeof(struct uim_physical_slot_state));
 	out->slots_n = get_next(uint8_t, 1);
 	size_t slots_sz = sizeof(struct physical_slot_state_slots);
-	out->slots = malloc(slots_sz * out->slots_n);
+	out->slots = malloc(1 + slots_sz * out->slots_n);
 	for(size_t i = 0; i < out->slots_n; i++) {
 		out->slots[i].card_state = get_next(uint32_t, 4);
 		out->slots[i].slot_state = get_next(uint32_t, 4);
 		out->slots[i].logical_slot = get_next(uint8_t, 1);
 		out->slots[i].iccid_n = get_next(uint8_t, 1);
 		size_t iccid_sz = 1;
-		out->slots[i].iccid = malloc(iccid_sz * out->slots[i].iccid_n);
+		out->slots[i].iccid = malloc(1 + iccid_sz * out->slots[i].iccid_n);
 		for(size_t ii = 0; ii < out->slots[i].iccid_n; ii++) {
 			out->slots[i].iccid[ii] = get_next(uint8_t, 1);
 		}
@@ -593,13 +588,13 @@ struct uim_physical_slot_info *uim_get_slot_status_ind_get_slot_info(struct uim_
 	out = malloc(sizeof(struct uim_physical_slot_info));
 	out->slots_n = get_next(uint8_t, 1);
 	size_t slots_sz = sizeof(struct physical_slot_info_slots);
-	out->slots = malloc(slots_sz * out->slots_n);
+	out->slots = malloc(1 + slots_sz * out->slots_n);
 	for(size_t i = 0; i < out->slots_n; i++) {
 		out->slots[i].card_protocol = get_next(uint32_t, 4);
 		out->slots[i].valid_applications = get_next(uint8_t, 1);
 		out->slots[i].atr_value_n = get_next(uint8_t, 1);
 		size_t atr_value_sz = 1;
-		out->slots[i].atr_value = malloc(atr_value_sz * out->slots[i].atr_value_n);
+		out->slots[i].atr_value = malloc(1 + atr_value_sz * out->slots[i].atr_value_n);
 		for(size_t ii = 0; ii < out->slots[i].atr_value_n; ii++) {
 			out->slots[i].atr_value[ii] = get_next(uint8_t, 1);
 		}
@@ -643,35 +638,43 @@ void uim_card_status_free(struct uim_card_status *val)
 {
 	for(size_t i = 0; i < val->cards_n; i++) {
 		for(size_t ii = 0; ii < val->cards[i].applications_n; ii++) {
-			free(val->cards[i].applications[ii].application_identifier_value);
+			if(val->cards[i].applications[ii].application_identifier_value)
+				free(val->cards[i].applications[ii].application_identifier_value);
 		}
-		free(val->cards[i].applications);
+		if(val->cards[i].applications)
+			free(val->cards[i].applications);
 	}
-	free(val->cards);
+	if(val->cards)
+		free(val->cards);
 
 }
 
 void uim_provisioning_session_application_free(struct uim_provisioning_session_application *val)
 {
-	free(val->application_identifier_value);
+	if(val->application_identifier_value)
+		free(val->application_identifier_value);
 
 }
 
 void uim_physical_slot_state_free(struct uim_physical_slot_state *val)
 {
 	for(size_t i = 0; i < val->slots_n; i++) {
-		free(val->slots[i].iccid);
+		if(val->slots[i].iccid)
+			free(val->slots[i].iccid);
 	}
-	free(val->slots);
+	if(val->slots)
+		free(val->slots);
 
 }
 
 void uim_physical_slot_info_free(struct uim_physical_slot_info *val)
 {
 	for(size_t i = 0; i < val->slots_n; i++) {
-		free(val->slots[i].atr_value);
+		if(val->slots[i].atr_value)
+			free(val->slots[i].atr_value);
 	}
-	free(val->slots);
+	if(val->slots)
+		free(val->slots);
 
 }
 

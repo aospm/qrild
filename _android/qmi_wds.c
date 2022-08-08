@@ -46,7 +46,18 @@ int wds_start_network_interface_req_set_ip_family_preference(struct wds_start_ne
 
 int wds_start_network_interface_req_set_ep_type(struct wds_start_network_interface_req *start_network_interface_req, struct wds_ep_type_iface_id *val)
 {
-	return qmi_tlv_set((struct qmi_tlv*)start_network_interface_req, 59, val, sizeof(struct wds_ep_type_iface_id));
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint32_t*)(ptr + len)) = val->ep_type;
+	len += 4;
+	*((uint32_t*)(ptr + len)) = val->iface_id;
+	len += 4;
+	rc = qmi_tlv_set((struct qmi_tlv*)start_network_interface_req, 59, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 int wds_start_network_interface_req_set_bring_up_by_apn_name(struct wds_start_network_interface_req *start_network_interface_req, uint8_t val)
@@ -131,17 +142,24 @@ int wds_start_network_interface_resp_get_call_end_reason(struct wds_start_networ
 
 struct wds_call_end_reason_ext *wds_start_network_interface_resp_get_ext(struct wds_start_network_interface_resp *start_network_interface_resp)
 {
-	size_t len;
-	void *ptr;
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct wds_call_end_reason_ext *out;
 
-	ptr = qmi_tlv_get((struct qmi_tlv*)start_network_interface_resp, 17, &len);
+	ptr = qmi_tlv_get((struct qmi_tlv*)start_network_interface_resp, 17, &buf_sz);
 	if (!ptr)
 		return NULL;
 
-	if (len != sizeof(struct wds_call_end_reason_ext))
-		return NULL;
+	out = malloc(sizeof(struct wds_call_end_reason_ext));
+	out->call_end_reason_type = get_next(uint16_t, 2);
+	out->call_end_reason = get_next(uint16_t, 2);
 
-	return ptr;
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
 struct wds_get_pkt_srvc_status_ind *wds_get_pkt_srvc_status_ind_alloc(unsigned txn)
@@ -186,22 +204,40 @@ void wds_get_pkt_srvc_status_ind_free(struct wds_get_pkt_srvc_status_ind *get_pk
 
 int wds_get_pkt_srvc_status_ind_set_status(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind, struct wds_pkt_srvc_status *val)
 {
-	return qmi_tlv_set((struct qmi_tlv*)get_pkt_srvc_status_ind, 1, val, sizeof(struct wds_pkt_srvc_status));
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->connection_status;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->reconfiguration_required;
+	len += 1;
+	rc = qmi_tlv_set((struct qmi_tlv*)get_pkt_srvc_status_ind, 1, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 struct wds_pkt_srvc_status *wds_get_pkt_srvc_status_ind_get_status(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind)
 {
-	size_t len;
-	void *ptr;
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct wds_pkt_srvc_status *out;
 
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_pkt_srvc_status_ind, 1, &len);
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_pkt_srvc_status_ind, 1, &buf_sz);
 	if (!ptr)
 		return NULL;
 
-	if (len != sizeof(struct wds_pkt_srvc_status))
-		return NULL;
+	out = malloc(sizeof(struct wds_pkt_srvc_status));
+	out->connection_status = get_next(uint8_t, 1);
+	out->reconfiguration_required = get_next(uint8_t, 1);
 
-	return ptr;
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
 int wds_get_pkt_srvc_status_ind_set_ip_family(struct wds_get_pkt_srvc_status_ind *get_pkt_srvc_status_ind, uint8_t val)
@@ -419,7 +455,18 @@ void wds_bind_mux_data_port_req_free(struct wds_bind_mux_data_port_req *bind_mux
 
 int wds_bind_mux_data_port_req_set_ep_id(struct wds_bind_mux_data_port_req *bind_mux_data_port_req, struct wds_ep_type_iface_id *val)
 {
-	return qmi_tlv_set((struct qmi_tlv*)bind_mux_data_port_req, 16, val, sizeof(struct wds_ep_type_iface_id));
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint32_t*)(ptr + len)) = val->ep_type;
+	len += 4;
+	*((uint32_t*)(ptr + len)) = val->iface_id;
+	len += 4;
+	rc = qmi_tlv_set((struct qmi_tlv*)bind_mux_data_port_req, 16, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 int wds_bind_mux_data_port_req_set_mux_id(struct wds_bind_mux_data_port_req *bind_mux_data_port_req, uint8_t val)

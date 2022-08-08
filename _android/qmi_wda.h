@@ -38,6 +38,22 @@ extern const struct qmi_tlv_msg_name wda_msg_name_map[2];
 /*
  * wda_set_data_format_req message
  */
+
+struct wda_set_data_format_req_data {
+	bool link_prot_valid;
+	uint32_t link_prot;
+	bool ul_data_aggregation_protocol_valid;
+	uint32_t ul_data_aggregation_protocol;
+	bool dl_data_aggregation_protocol_valid;
+	uint32_t dl_data_aggregation_protocol;
+	bool dl_data_aggretation_max_datagrams_valid;
+	uint32_t dl_data_aggretation_max_datagrams;
+	bool dl_data_aggregation_max_size_valid;
+	uint32_t dl_data_aggregation_max_size;
+	bool ep_type_valid;
+	struct wda_ep_type_iface_id *ep_type;
+};
+
 struct wda_set_data_format_req *wda_set_data_format_req_alloc(unsigned txn);
 void *wda_set_data_format_req_encode(struct wda_set_data_format_req *set_data_format_req, size_t *len);
 void wda_set_data_format_req_free(struct wda_set_data_format_req *set_data_format_req);

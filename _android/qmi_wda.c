@@ -49,7 +49,18 @@ int wda_set_data_format_req_set_dl_data_aggregation_max_size(struct wda_set_data
 
 int wda_set_data_format_req_set_ep_type(struct wda_set_data_format_req *set_data_format_req, struct wda_ep_type_iface_id *val)
 {
-	return qmi_tlv_set((struct qmi_tlv*)set_data_format_req, 23, val, sizeof(struct wda_ep_type_iface_id));
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint32_t*)(ptr + len)) = val->ep_type;
+	len += 4;
+	*((uint32_t*)(ptr + len)) = val->iface_id;
+	len += 4;
+	rc = qmi_tlv_set((struct qmi_tlv*)set_data_format_req, 23, ptr, len);
+	free(ptr);
+	return rc;
 }
 
 struct wda_set_data_format_resp *wda_set_data_format_resp_parse(void *buf, size_t len)

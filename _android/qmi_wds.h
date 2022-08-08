@@ -64,6 +64,24 @@ extern const struct qmi_tlv_msg_name wds_msg_name_map[9];
 /*
  * wds_start_network_interface_req message
  */
+
+struct wds_start_network_interface_req_data {
+	bool apn_name_valid;
+	char *apn_name;
+	bool apn_type_valid;
+	uint32_t apn_type;
+	bool ip_family_preference_valid;
+	uint8_t ip_family_preference;
+	bool ep_type_valid;
+	struct wds_ep_type_iface_id *ep_type;
+	bool bring_up_by_apn_name_valid;
+	uint8_t bring_up_by_apn_name;
+	bool call_type_valid;
+	uint8_t call_type;
+	bool profile_index_valid;
+	uint8_t profile_index;
+};
+
 struct wds_start_network_interface_req *wds_start_network_interface_req_alloc(unsigned txn);
 void *wds_start_network_interface_req_encode(struct wds_start_network_interface_req *start_network_interface_req, size_t *len);
 void wds_start_network_interface_req_free(struct wds_start_network_interface_req *start_network_interface_req);
@@ -138,6 +156,12 @@ int wds_get_pkt_srvc_status_ind_get_xlat_capable(struct wds_get_pkt_srvc_status_
 /*
  * wds_get_current_settings_req message
  */
+
+struct wds_get_current_settings_req_data {
+	bool requested_settings_valid;
+	uint32_t requested_settings;
+};
+
 struct wds_get_current_settings_req *wds_get_current_settings_req_alloc(unsigned txn);
 void *wds_get_current_settings_req_encode(struct wds_get_current_settings_req *get_current_settings_req, size_t *len);
 void wds_get_current_settings_req_free(struct wds_get_current_settings_req *get_current_settings_req);
@@ -179,6 +203,14 @@ int wds_get_current_settings_resp_get_ip_family(struct wds_get_current_settings_
 /*
  * wds_bind_mux_data_port_req message
  */
+
+struct wds_bind_mux_data_port_req_data {
+	bool ep_id_valid;
+	struct wds_ep_type_iface_id *ep_id;
+	bool mux_id_valid;
+	uint8_t mux_id;
+};
+
 struct wds_bind_mux_data_port_req *wds_bind_mux_data_port_req_alloc(unsigned txn);
 void *wds_bind_mux_data_port_req_encode(struct wds_bind_mux_data_port_req *bind_mux_data_port_req, size_t *len);
 void wds_bind_mux_data_port_req_free(struct wds_bind_mux_data_port_req *bind_mux_data_port_req);
@@ -202,6 +234,12 @@ void wds_bind_mux_data_port_resp_free(struct wds_bind_mux_data_port_resp *bind_m
 /*
  * wds_bind_subscription_req message
  */
+
+struct wds_bind_subscription_req_data {
+	bool subscription_valid;
+	uint32_t subscription;
+};
+
 struct wds_bind_subscription_req *wds_bind_subscription_req_alloc(unsigned txn);
 void *wds_bind_subscription_req_encode(struct wds_bind_subscription_req *bind_subscription_req, size_t *len);
 void wds_bind_subscription_req_free(struct wds_bind_subscription_req *bind_subscription_req);
