@@ -3,10 +3,16 @@ package_type client;
 
 const QMI_NAS_EVENT_REPORT = 0x02;
 const QMI_NAS_REGISTER_INDICATIONS = 0x03;
+const QMI_NAS_INITIATE_NETWORK_REGISTER = 0x22;
 const QMI_NAS_SERVING_SYSTEM_REPORT = 0x24;
+const QMI_NAS_SET_SYSTEM_PREFS = 0x33;
+const QMI_NAS_GET_SYSTEM_PREFS = 0x34;
 const QMI_NAS_GET_OPERATOR_NAME = 0x39;
+const QMI_NAS_GET_PLMN_NAME = 0x44;
 # https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/gobi-api/GobiAPI_2013-07-31-1347/Core/QMIEnum.h#L474
 const QMI_NAS_SUBSCRIPTION_INFO_REPORT = 0x48;
+const QMI_NAS_GET_SIGNAL_INFO = 0x4F;
+const QMI_NAS_SIGNAL_INFO_REPORT = 0x51;
 const QMI_NAS_ERROR_RATE_REPORT = 0x53;
 const QMI_NAS_RF_BAND_INFO_REPORT = 0x66;
 const QMI_NAS_GET_LTE_CPY_CA_INFO = 0xAC;
@@ -141,9 +147,14 @@ response get_signal_strength_resp {
 	optional i16 lte_rsrp = 0x18;
 } = 0x0020;
 
+request initiate_network_register {
+	required u8 action = 0x01; # 1 -> automatic, 2 -> manual
+	# Other optional TLVs for manual registration
+} = 0x0022;
+
 indication serving_system_ind {
 	optional serving_system system = 0x01;
-	optional u8 data_service_cap = 0x11; # do we have data?
+	optional u8 data_service_cap(16) = 0x11; # do we have data?
 	optional current_plmn plmn = 0x12;
 	optional service_status status = 0x22;
 } = 0x0024;
@@ -169,6 +180,17 @@ struct operator_plmn {
 	u8 name_record_indicator;
 };
 
+struct operator_plmn_arr {
+	u16 operators_n;
+	struct {
+		char mcc[3];
+		char mnc[3];
+		u16 lac1;
+		u16 lac2;
+		u8 name_record_indicator;
+	} *operators;
+};
+
 struct operator_plmn_name {
 	u8 name_encoding;
 	u8 short_country_initials;
@@ -180,22 +202,55 @@ struct operator_plmn_name {
 	u8 *short_name;
 };
 
+struct operator_plmn_name_arr {
+	u8 operators_n;
+	struct {
+		u8 name_encoding;
+		u8 short_country_initials;
+		u8 long_name_spare_bits;
+		u8 short_name_spare_bits;
+		u8 long_name_n;
+		u8 *long_name;
+		u8 short_name_n;
+		u8 *short_name;
+	} *operators;
+};
+
+######### System selection preference
+
+struct network_selection_pref {
+	u8 mode; # 0 - auto, 1 - manual
+	u16 mcc;
+	u16 mnc;
+};
+
+request set_system_prefs {
+	optional network_selection_pref network_selection = 0x16;
+} = 0x0033;
+
+response get_system_prefs {
+	required qmi_response_type_v01 res = 0x02;
+	optional u8 network_selection = 0x16;
+} = 0x0034;
+
+######### operator name
+
 response get_operator_name_resp {
 	required qmi_response_type_v01 res = 0x02;
 	optional service_provider_name provider_name = 0x10;
-	optional operator_plmn operator_plmn_list(64) = 0x11;
-	optional operator_plmn_name operator_plmn_names(64) = 0x12;
+	optional operator_plmn_arr operator_plmns = 0x11;
+	optional operator_plmn_name_arr operator_plmn_names = 0x12;
 	optional string operator_string_name = 0x13;
 	optional operator_plmn_name nitz_info = 0x14;
 } = 0x0039;
 
-#indication get_operator_name_ind {
-#	optional service_provider_name provider_name = 0x10;
-#	optional operator_plmn operator_plmn_list(64) = 0x11;
-#	optional operator_plmn_name operator_plmn_names(64) = 0x12;
-#	optional string operator_string_name = 0x13;
-#	optional operator_plmn_name nitz_info = 0x14;
-#} = 0x003A;
+indication operator_name_ind {
+	optional service_provider_name provider_name = 0x10;
+	optional operator_plmn_arr operator_plmns = 0x11;
+	optional operator_plmn_name_arr operator_plmn_names = 0x12;
+	optional string operator_string_name = 0x13;
+	optional operator_plmn_name nitz_info = 0x14;
+} = 0x003A;
 
 struct geran_info {
 	u8 x;
@@ -203,6 +258,92 @@ struct geran_info {
 
 response get_cell_loc_info {
 } = 0x0043;
+
+struct plmn_id {
+	u16 mcc;
+	u16 mnc;
+};
+
+struct eons_plmn_name {
+	u8 sp_name_encoding; # Service Provider name encoding
+	u8 sp_name_n;
+	u8 *sp_name;
+	u8 short_name_encoding;
+	u8 short_name_country_initials;
+	u8 short_name_spare_bits;
+	u8 short_name_n;
+	u8 *short_name;
+	u8 long_name_encoding;
+	u8 long_name_country_initials;
+	u8 long_name_spare_bits;
+	u8 long_name_n;
+	u8 *long_name;
+};
+
+request get_plmn_name_req {
+	required plmn_id plmn = 0x01;
+	# FIXME: add other optional TLVs
+	optional u8 send_all_info = 0x16;
+} = 0x0044;
+
+response get_plmn_name_resp {
+	required qmi_response_type_v01 res = 0x02;
+	optional eons_plmn_name plmn_name = 0x10;
+} = 0x0044;
+
+struct ss_cdma {
+	i8 rssi;
+	i16 ecio;
+};
+
+# EVDO i think?
+struct ss_hdr {
+	i8 rssi;
+	i16 ecio;
+	u8 sinr;
+	i32 io;
+};
+
+struct ss_wcdma {
+	i8 rssi;
+	i16 ecio;
+};
+
+struct ss_lte {
+	i8 rssi;
+	i8 rsrq;
+	i16 rsrp;
+	i16 snr;
+};
+
+struct ss_tdma_ext {
+	u32 rssi;
+	i32 rscp;
+	i32 ecio;
+	i32 sinr;
+};
+
+response get_signal_info {
+	required qmi_response_type_v01 res = 0x02;
+	optional ss_cdma cdma = 0x10;
+	optional ss_hdr hdr = 0x11;
+	optional i8 gsm = 0x12;
+	optional ss_wcdma wcdma = 0x13;
+	optional ss_lte lte = 0x14;
+	optional i8 tdma = 0x15;
+	optional ss_tdma_ext tdma_ext = 0x16;
+	# ignoring 5g stuff
+} = 0x004F;
+
+indication signal_info_ind {
+	optional ss_cdma cdma = 0x10;
+	optional ss_hdr hdr = 0x11;
+	optional i8 gsm = 0x12;
+	optional ss_wcdma wcdma = 0x13;
+	optional ss_lte lte = 0x14;
+	optional i8 tdma = 0x15;
+	# ignoring 5g stuff
+} = 0x0051;
 
 response get_lte_cphy_ca_info_resp {
 	required qmi_response_type_v01 res = 0x02;

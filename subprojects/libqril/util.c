@@ -190,7 +190,6 @@ const char *qmi_tlv_msg_get_name(int qmi_svc, int msg_id)
 		n_messages = QMI_NUM_MESSAGES_WDS;
 		break;
 	default:
-		log_error("Can't find map for service: %d\n", qmi_svc);
 		return NULL;
 	}
 
@@ -198,8 +197,6 @@ const char *qmi_tlv_msg_get_name(int qmi_svc, int msg_id)
 		if (msg_name_map[i].msg_id == msg_id)
 			return msg_name_map[i].msg_name;
 	}
-
-	log_warn("Couldn't find name of msg %d for service %d\n", msg_id, qmi_svc);
 
 	return NULL;
 }

@@ -2,9 +2,11 @@ package dms;
 package_type client;
 
 const QMI_DMS_GET_REVISION = 0x23;
+const QMI_DMS_GET_MSISDN = 0x24;
 const QMI_DMS_GET_IDS = 0x25;
 const QMI_DMS_GET_OPERATING_MODE = 0x2D;
 const QMI_DMS_SET_OPERATING_MODE = 0x2E;
+const QMI_DMS_UIM_GET_IMSI = 0x43;
 
 const QMI_DMS_OPERATING_MODE_ONLINE = 0;
 const QMI_DMS_OPERATING_MODE_LOW_POWER = 1;
@@ -65,3 +67,13 @@ request set_operating_mode_resp {
 	required qmi_response_type_v01 res = 0x02;
 } = 0x002E;
 
+response get_msisdn {
+	required qmi_response_type_v01 res = 0x02;
+	optional string msisdn = 0x01;
+	optional string imsi = 0x11;
+} = 0x0024;
+
+response uim_get_imsi {
+	required qmi_response_type_v01 res = 0x02;
+	optional string imsi = 0x01;
+} = 0x0043;

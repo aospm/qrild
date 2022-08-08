@@ -91,9 +91,6 @@ struct physical_slot_info {
 	} *slots;
 };
 
-request get_card_status_req {
-} = 0x002F;
-
 response get_card_status_resp {
 	required qmi_response_type_v01 result = 0x02;
 	optional card_status status = 0x10;

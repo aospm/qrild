@@ -57,9 +57,9 @@ int qrild_qmi_dms_get_operating_mode(struct rild_state *state)
 	dms_get_operating_mode_resp_get_mode(resp, &mode);
 	dms_get_operating_mode_resp_get_hardware_restricted(resp, &hw_restricted);
 	log_debug("Operating mode:"
-	     "\tmode: %u"
-	     "\thw_restriced: %s",
-	     mode, hw_restricted ? "Yes" : "No");
+		  "\tmode: %u"
+		  "\thw_restriced: %s",
+		  mode, hw_restricted ? "Yes" : "No");
 
 	dms_get_operating_mode_resp_free(resp);
 
@@ -246,7 +246,8 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 	return QRILD_STATE_DONE;
 }
 
-int qrild_qmi_uim_get_card_status(struct rild_state *state, struct uim_get_card_status_resp_data *data)
+int qrild_qmi_uim_get_card_status(struct rild_state *state,
+				  struct uim_get_card_status_resp_data *data)
 {
 	struct qrild_msg *msg = NULL;
 	struct uim_get_card_status_resp *resp;
@@ -311,43 +312,34 @@ out_free:
 	return ret;
 }
 
-int qrild_qmi_uim_set_provisioning(struct rild_state *state)
+/**
+ * Provision the SIM primary application.
+ * @state: RIL state
+ * @slot: Logical slot to provision - index starts at 1
+ * @aid: application ID to provision
+ * @aid_len: Length of AID
+ */
+int qrild_qmi_uim_set_provisioning(struct rild_state *state, int slot, uint8_t *aid,
+				   uint8_t aid_len)
 {
 	struct uim_provisioning_session_change change;
 	struct uim_provisioning_session_application application;
-	struct card_status_cards_applications *appn = NULL;
 	struct uim_change_provisioning_session_req *req;
 	struct qmi_response_type_v01 res;
-	int rc, i = 0;
+	int rc;
 	void *buf;
 	size_t buf_sz;
 
 	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_UIM, QRILD_STATE_PENDING);
 
-	if (!state->card_status) {
-		log_error("Card status not set!");
-		return QRILD_STATE_PENDING;
-	}
-
-	while (!appn && i < state->card_status->cards_n) {
-		if (state->card_status->cards[i].applications)
-			appn = state->card_status->cards[i].applications;
-		i++;
-	}
-
-	if (!appn) {
-		log_error("No valid application found!");
-		return QRILD_STATE_ERROR;
-	}
-
-	log_info("Provisioning slot %d!", i);
+	log_info("Provisioning slot %d!", slot);
 
 	change.session_type = QMI_UIM_SESSION_TYPE_PRIMARY_GW_PROVISIONING;
 	change.activate = true;
 
-	application.slot = i;
-	application.application_identifier_value_n = appn->application_identifier_value_n;
-	application.application_identifier_value = appn->application_identifier_value;
+	application.slot = slot;
+	application.application_identifier_value_n = aid_len;
+	application.application_identifier_value = aid;
 
 	req = uim_change_provisioning_session_req_alloc(qrild_next_transaction_id());
 	uim_change_provisioning_session_req_set_session_change(req, &change);
@@ -408,7 +400,7 @@ int qrild_qmi_uim_icc_open_logical_channel(struct rild_state *state, int slot, c
 	}
 
 	uim_icc_open_logical_channel_resp_getall(
-		uim_change_provisioning_session_resp_parse(msg->buf, msg->buf_len), resp_data);
+		uim_icc_open_logical_channel_resp_parse(msg->buf, msg->buf_len), resp_data);
 
 	return QRILD_STATE_DONE;
 }
@@ -594,23 +586,25 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state,
 	return QRILD_STATE_DONE;
 }
 
-#define nas_ss_print(data, name, val) ({ \
-	int i = 0; \
-	if (data->name ## _valid) { \
-		log_info("\t" #name": "); \
-		for (i = 0; i < data->name ## _n; i++) { \
-			log_info("\t\tinterface: %d, rssi: %d", data->name[i].interface, data->name[i].val); \
-		} \
-	} \
-})
+#define nas_ss_print(data, name, val)                                                              \
+	({                                                                                         \
+		int i = 0;                                                                         \
+		if (data->name##_valid) {                                                          \
+			log_info("\t" #name ": ");                                                 \
+			for (i = 0; i < data->name##_n; i++) {                                     \
+				log_info("\t\tinterface: %d, rssi: %d", data->name[i].interface,   \
+					 data->name[i].val);                                       \
+			}                                                                          \
+		}                                                                                  \
+	})
 
 int qrild_qmi_nas_show_signal_strength(struct nas_get_signal_strength_resp_data *data)
 {
 	struct nas_signal_strength *s;
 	log_info("Signal strength info:");
 	if (data->strength_valid)
-		log_info("\tinterface: %d, strength: %d",
-		       data->strength->interface, data->strength->strength);
+		log_info("\tinterface: %d, strength: %d", data->strength->interface,
+			 data->strength->strength);
 
 	nas_ss_print(data, strength_list, strength);
 	nas_ss_print(data, rssi_list, val);
@@ -628,7 +622,6 @@ int qrild_qmi_nas_show_signal_strength(struct nas_get_signal_strength_resp_data 
 
 	if (data->io_valid)
 		log_info("\tIO: %d", data->io);
-
 
 	return QRILD_STATE_DONE;
 }
@@ -653,8 +646,180 @@ int qrild_qmi_nas_get_lte_cphy_ca_info(struct rild_state *state,
 		return QRILD_STATE_ERROR;
 
 	resp = nas_get_lte_cphy_ca_info_resp_parse(msg->buf, msg->buf_len);
+	if (!resp) {
+		return QRILD_STATE_ERROR;
+	}
 
 	nas_get_lte_cphy_ca_info_resp_getall(resp, data);
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_nas_get_system_prefs(struct rild_state *state, struct nas_get_system_prefs_data *data)
+{
+	struct nas_get_system_prefs *resp;
+	struct qrild_msg *msg;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS, QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_NAS, QMI_NAS_GET_SYSTEM_PREFS,
+					       &msg);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = nas_get_system_prefs_parse(msg->buf, msg->buf_len);
+	if (!resp) {
+		return QRILD_STATE_ERROR;
+	}
+
+	nas_get_system_prefs_getall(resp, data);
+
+	return QRILD_STATE_DONE;
+}
+
+/**
+ * @brief Register with a network
+ * NOTE: Only AUTOMATIC registration support, the TLVs for manual aren't implemented
+ * 
+ * @state: ril state object
+ * @action: 1 - automatic registration, 2 - manual registration
+ * 
+ * @returns 0 on success, 1 if the QMI service is unavailable, -QMI_ERR on error
+ */
+int qrild_qmi_nas_network_register(struct rild_state *state, uint8_t action) {
+	struct nas_initiate_network_register *req;
+	struct qmi_response_type_v01 res;
+	void *buf;
+	size_t buf_sz;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS, QRILD_STATE_PENDING);
+
+	if (action != 1) {
+		log_error("Only automatic network registration is supported!!!");
+		return -QMI_ERR_QRILD;
+	}
+
+	req = nas_initiate_network_register_alloc(qrild_next_transaction_id());
+
+	nas_initiate_network_register_set_action(req, action);
+
+	buf = nas_initiate_network_register_encode(req, &buf_sz);
+
+	rc = qrild_msg_send_resp_check(state, QMI_SERVICE_NAS, buf, buf_sz, TIMEOUT_DEFAULT, &res);
+
+	nas_initiate_network_register_free(req);
+	if (rc < 0) {
+		log_error("Failed to initiate network register");
+		return -res.error;
+	}
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_dms_uim_get_imsi(struct rild_state *state, struct dms_uim_get_imsi_data *data)
+{
+	struct dms_uim_get_imsi *resp;
+	struct qrild_msg *msg;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS, QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_DMS, QMI_DMS_UIM_GET_IMSI, &msg);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = dms_uim_get_imsi_parse(msg->buf, msg->buf_len);
+	if (!resp) {
+		return QRILD_STATE_ERROR;
+	}
+
+	dms_uim_get_imsi_getall(resp, data);
+	qrild_msg_free(msg);
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_dms_get_msisdn(struct rild_state *state, struct dms_get_msisdn_data *data)
+{
+	struct dms_get_msisdn *resp;
+	struct qrild_msg *msg;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_DMS, QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_DMS, QMI_DMS_GET_MSISDN, &msg);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = dms_get_msisdn_parse(msg->buf, msg->buf_len);
+	if (!resp) {
+		return QRILD_STATE_ERROR;
+	}
+
+	dms_get_msisdn_getall(resp, data);
+	qrild_msg_free(msg);
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_nas_get_operator_name(struct rild_state *state,
+				    struct nas_get_operator_name_resp_data *data)
+{
+	struct nas_get_operator_name_resp *resp;
+	struct qrild_msg *msg;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS, QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_NAS, QMI_NAS_GET_OPERATOR_NAME,
+					       &msg);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = nas_get_operator_name_resp_parse(msg->buf, msg->buf_len);
+	if (!resp) {
+		return QRILD_STATE_ERROR;
+	}
+
+	log_debug("Getting all data");
+
+	nas_get_operator_name_resp_getall(resp, data);
+	qrild_msg_free(msg);
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_nas_get_plmn_name(struct rild_state *state, struct nas_get_plmn_name_req_data *req_data,
+			    struct nas_get_plmn_name_resp_data *data)
+{
+	struct nas_get_plmn_name_req *req;
+	struct nas_get_plmn_name_resp *resp;
+	struct qrild_msg *msg;
+	void *buf;
+	size_t buf_sz;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS, QRILD_STATE_PENDING);
+
+	req = nas_get_plmn_name_req_alloc(qrild_next_transaction_id());
+	nas_get_plmn_name_req_set_plmn(req, req_data->plmn);
+	if (req_data->send_all_info_valid)
+		nas_get_plmn_name_req_set_send_all_info(req, req_data->send_all_info);
+
+	buf = nas_get_plmn_name_req_encode(req, &buf_sz);
+
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_NAS, buf, buf_sz, TIMEOUT_DEFAULT, &msg);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = nas_get_plmn_name_resp_parse(msg->buf, msg->buf_len);
+	if (!resp) {
+		return QRILD_STATE_ERROR;
+	}
+
+	nas_get_plmn_name_resp_getall(resp, data);
+	qrild_msg_free(msg);
 
 	return QRILD_STATE_DONE;
 }
@@ -784,7 +949,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state)
 	}
 	sub.s_addr = htonl(val);
 	log_info("IPv4 Subnet Mask: %s (NL endienness: 0x%x, host endianness: 0x%x)",
-	       inet_ntoa(sub), sub.s_addr, val);
+		 inet_ntoa(sub), sub.s_addr, val);
 
 	rc = wds_get_current_settings_resp_get_mtu(resp, &val);
 	if (rc < 0) {
@@ -815,7 +980,19 @@ const char *qmi_service_to_string(enum qmi_service service, bool short_name)
 		v++;
 	}
 
-	return NULL;
+	return "NULL";
+}
+
+const char *qmi_error_string(uint16_t err)
+{
+	const struct enum_value *v = &qmi_error_names[0];
+	while (v->value_str) {
+		if (v->value == err)
+			return v->value_str;
+		v++;
+	}
+
+	return "NULL";
 }
 
 static int qrild_qmi_handle_wds_pkt_srvc(struct rild_state *state, struct qrild_msg *msg)
