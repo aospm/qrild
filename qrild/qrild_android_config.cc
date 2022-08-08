@@ -16,6 +16,7 @@
 
 #define LOG_TAG "qrild.IConfig"
 #include <android-base/logging.h>
+#include <q_log.h>
 
 #include <string>
 
@@ -28,11 +29,11 @@
 #include "qrild_radio.hh"
 
 RadioConfig::RadioConfig(struct rild_state *state) : mState(state) {
-    printf("xRadioConfig::%s\n", __func__);
+    log_debug("xRadioConfig::%s\n", __func__);
 }
 
 ndk::ScopedAStatus RadioConfig::getHalDeviceCapabilities(int32_t in_serial) {
-    printf("xRadioConfig::%s\n", __func__);
+    log_debug("xRadioConfig::%s\n", __func__);
 
     mRep->getHalDeviceCapabilitiesResponse(RESP_OK(in_serial), true);
 
@@ -40,7 +41,7 @@ ndk::ScopedAStatus RadioConfig::getHalDeviceCapabilities(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioConfig::getNumOfLiveModems(int32_t in_serial) {
-    printf("xRadioConfig::%s\n", __func__);
+    log_debug("xRadioConfig::%s\n", __func__);
 
     // We only have 1 modem
     mRep->getNumOfLiveModemsResponse(RESP_OK(in_serial), 1);
@@ -49,7 +50,7 @@ ndk::ScopedAStatus RadioConfig::getNumOfLiveModems(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioConfig::getPhoneCapability(int32_t in_serial) {
-    printf("xRadioConfig::%s\n", __func__);
+    log_debug("xRadioConfig::%s\n", __func__);
 
     config::PhoneCapability cap = config::PhoneCapability();
 
@@ -64,7 +65,7 @@ ndk::ScopedAStatus RadioConfig::getPhoneCapability(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
-    printf("xRadioConfig::%s\n", __func__);
+    log_debug("xRadioConfig::%s\n", __func__);
     int rc;
     struct uim_get_slot_status_resp_data status;
     auto slots = std::vector<config::SimSlotStatus>();
@@ -93,7 +94,7 @@ ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
     port->logicalSlotId = status.slot_state->slots[0].logical_slot - 1;
     port->portActive = status.slot_state->slots[0].slot_state;
 
-    printf("Slot %d\n\tcardState: %d\n\tlogicalSlotId: %d\n\tportActive: %d\n", 0, slot->cardState, port->logicalSlotId, port->portActive);
+    log_debug("Slot %d\n\tcardState: %d\n\tlogicalSlotId: %d\n\tportActive: %d\n", 0, slot->cardState, port->logicalSlotId, port->portActive);
 
     // if (slot->cardState != QMI_UIM_CARD_STATE_PRESENT)
     //     goto cont;
@@ -105,7 +106,7 @@ ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
         LOG(DEBUG) << __func__ << ": not EUICC -> no EID";
     port->iccId = decode_iccid(status.slot_state->slots[0].iccid, status.slot_state->slots[0].iccid_n);
 
-    printf("\tFIXME! should start with 3B!!! ATR: %s\n\tEID: %s\n\tICCID: %s\n", slot->atr.c_str(), slot->eid.c_str(), port->iccId.c_str());
+    log_debug("\tFIXME! should start with 3B!!! ATR: %s\n\tEID: %s\n\tICCID: %s\n", slot->atr.c_str(), slot->eid.c_str(), port->iccId.c_str());
 
     //cont:
         slot->portInfo.push_back(*port);
@@ -119,14 +120,14 @@ out:
 }
 
 ndk::ScopedAStatus RadioConfig::setNumOfLiveModems(int32_t in_serial, int8_t in_numOfLiveModems) {
-    printf("FIXME! TODO: RadioConfig::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioConfig::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioConfig::setPreferredDataModem(int32_t in_serial, int8_t in_modemId) {
-    printf("xRadioConfig::%s\n", __func__);
+    log_debug("xRadioConfig::%s\n", __func__);
 
-    printf("(nop) Setting modem to %d\n", in_modemId);
+    log_debug("(nop) Setting modem to %d\n", in_modemId);
     mRep->setPreferredDataModemResponse(RESP_OK(in_serial));
 
     return ndk::ScopedAStatus::ok();
@@ -135,7 +136,7 @@ ndk::ScopedAStatus RadioConfig::setPreferredDataModem(int32_t in_serial, int8_t 
 ndk::ScopedAStatus RadioConfig::setResponseFunctions(
       const std::shared_ptr<config::IRadioConfigResponse> &in_radioConfigResponse,
       const std::shared_ptr<config::IRadioConfigIndication> &in_radioConfigIndication) {
-    printf("xRadioConfig::%s\n", __func__);
+    log_debug("xRadioConfig::%s\n", __func__);
 
     mRep = in_radioConfigResponse;
     mInd = in_radioConfigIndication;
@@ -145,11 +146,11 @@ ndk::ScopedAStatus RadioConfig::setResponseFunctions(
 
 ndk::ScopedAStatus RadioConfig::setSimSlotsMapping(
       int32_t in_serial, const std::vector<config::SlotPortMapping> &in_slotMap) {
-    printf("FIXME! TODO: RadioConfig::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioConfig::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
-void RadioConfig::handleQmiIndications()
+void RadioConfig::_handleQmiIndications()
 {
 
 }

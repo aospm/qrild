@@ -26,11 +26,6 @@ cc_library {
         "subprojects/libqril",
         "_android",
     ],
-    local_include_dirs: [
-        "subprojects/libqril",
-        "subprojects/libqril/include",
-        "_android",
-    ],
 }
 
 cc_binary {

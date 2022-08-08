@@ -43,7 +43,7 @@
 #include "qrild_android_interface.h"
 
 static int process_pending(struct rild_state *state) {
-	struct uim_get_card_status_resp_data card_status;
+	static struct uim_get_card_status_resp_data card_status;
 	struct nas_get_signal_strength_resp_data signal_strength;
 	int rc = QRILD_STATE_PENDING;
 
@@ -61,7 +61,7 @@ static int process_pending(struct rild_state *state) {
 		state->card_status = card_status.status;
 		break;
 	case QRILD_ACTION_PROVISION:
-		rc = qrild_qmi_uim_set_provisioning(state);
+		//rc = qrild_qmi_uim_set_provisioning(state, 1, card_status.status->cards[0].applications[0].application_identifier_value);
 		break;
 	case QRILD_ACTION_OPEN_PORT:
 		rc = qrild_qmi_dpm_open_port(state);

@@ -16,6 +16,7 @@
 
 #define LOG_TAG "qrild.IModem"
 #include <android-base/logging.h>
+#include <q_log.h>
 
 #include <qrild.h>
 #include <util.h>
@@ -28,9 +29,9 @@
 #include <aidl/android/hardware/radio/RadioAccessFamily.h>
 
 RadioModem::RadioModem(struct rild_state *state) : mState(state) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
 
-    LOG(INFO) << "HACK: Powering on modem...";
+    LOG(INFO) << "Powering on modem...";
     qrild_qmi_powerup(mState);
 
     mCaps.logicalModemUuid = "org.linaro.qrild.lm1";
@@ -42,7 +43,7 @@ RadioModem::RadioModem(struct rild_state *state) : mState(state) {
 }
 
 ndk::ScopedAStatus RadioModem::enableModem(int32_t in_serial, bool in_on) {
-    printf("FIXME! TODO: RadioModem::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioModem::%s\n", __func__);
 
     LOG(INFO) << (in_on ? "en" : "dis") << "abling modem";
 
@@ -52,7 +53,7 @@ ndk::ScopedAStatus RadioModem::enableModem(int32_t in_serial, bool in_on) {
 }
 
 ndk::ScopedAStatus RadioModem::getBasebandVersion(int32_t in_serial) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
     char *revision = nullptr;
     int rc;
     RadioResponseInfo r_info;
@@ -75,7 +76,7 @@ ndk::ScopedAStatus RadioModem::getBasebandVersion(int32_t in_serial) {
 
 #define MAX_LEN 255
 ndk::ScopedAStatus RadioModem::getDeviceIdentity(int32_t in_serial) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
     struct dms_get_ids_resp_data ids;
     int rc;
     auto r_info = RESP_OK(in_serial);
@@ -98,7 +99,7 @@ ndk::ScopedAStatus RadioModem::getDeviceIdentity(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioModem::getHardwareConfig(int32_t in_serial) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
     uint8_t operating_mode;
     auto hw_config = std::vector<modem::HardwareConfig>();
     auto modem = modem::HardwareConfig();
@@ -165,10 +166,14 @@ ndk::ScopedAStatus RadioModem::getHardwareConfig(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioModem::getModemActivityInfo(int32_t in_serial) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("DISABLED: RadioModem::%s\n", __func__);
     static int multiplier = 1;
     auto activity = modem::ActivityStatsInfo();
     auto techSpecific = modem::ActivityStatsTechSpecificInfo();
+    auto r_info = RESP_OK(in_serial);
+    r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+    mRep->getModemActivityInfoResponse(r_info, activity);
+    goto out;
 
     activity.sleepModeTimeMs = 0;
     activity.idleModeTimeMs = 0;
@@ -191,11 +196,12 @@ ndk::ScopedAStatus RadioModem::getModemActivityInfo(int32_t in_serial) {
 
     multiplier++;
 
+out:
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioModem::getModemStackStatus(int32_t in_serial) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
 
     LOG(INFO) << __func__ << ": " << mEnabled;
 
@@ -205,7 +211,7 @@ ndk::ScopedAStatus RadioModem::getModemStackStatus(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioModem::getRadioCapability(int32_t in_serial) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
 
     mRep->getRadioCapabilityResponse(RESP_OK(in_serial), mCaps);
 
@@ -213,38 +219,38 @@ ndk::ScopedAStatus RadioModem::getRadioCapability(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioModem::nvReadItem(int32_t in_serial, modem::NvItem in_itemId) {
-    printf("FIXME! TODO: RadioModem::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioModem::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioModem::nvResetConfig(int32_t in_serial, modem::ResetNvType in_resetType) {
-    printf("FIXME! TODO: RadioModem::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioModem::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioModem::nvWriteCdmaPrl(
       int32_t in_serial, const std::vector<uint8_t> &in_prl) {
-    printf("FIXME! TODO: RadioModem::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioModem::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioModem::nvWriteItem(int32_t in_serial, const modem::NvWriteItem &in_item) {
-    printf("FIXME! TODO: RadioModem::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioModem::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioModem::requestShutdown(int32_t in_serial) {
-    printf("FIXME! TODO: RadioModem::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioModem::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioModem::responseAcknowledgement() {
-    printf("FIXME! TODO: RadioModem::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioModem::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 };
 ndk::ScopedAStatus RadioModem::sendDeviceState(
       int32_t in_serial, modem::DeviceStateType in_deviceStateType, bool in_state) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
 
     LOG(INFO) << "Got device state: " << modem::toString(in_deviceStateType);
 
@@ -256,7 +262,7 @@ ndk::ScopedAStatus RadioModem::sendDeviceState(
 // FIXME: finish this
 ndk::ScopedAStatus RadioModem::setRadioCapability(
       int32_t in_serial, const modem::RadioCapability &in_rc) {
-    printf("FIXME! TODO: RadioModem::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioModem::%s\n", __func__);
     int32_t filter_bit = 0b1;
     RadioResponseInfo r_info;
     r_info.serial = in_serial;
@@ -287,7 +293,7 @@ ndk::ScopedAStatus RadioModem::setRadioCapability(
 
 ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
       bool in_forEmergencyCall, bool in_preferredForEmergencyCall) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
     struct qmi_response_type_v01 res;
     RadioResponseInfo r_info = RESP_OK(in_serial);
 
@@ -325,10 +331,12 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
             }
         } else {
             LOG(INFO) << "Set modem operating mode to: " << (int)desired_mode << "!";
-            printf("Set operating mode to %u\n", desired_mode);
-            mEnabled = in_powerOn || in_forEmergencyCall || in_preferredForEmergencyCall;
+            log_debug("Set operating mode to %u\n", desired_mode);
+            mEnabled = desired_mode == QMI_DMS_OPERATING_MODE_ONLINE;
             switch (desired_mode) {
             case QMI_DMS_OPERATING_MODE_ONLINE:
+                if (services.initialised)
+                    services.sim->_provisionDefaultSim();
                 mInd->radioStateChanged(RadioIndicationType::UNSOLICITED, modem::RadioState::ON);
                 break;
             case QMI_DMS_OPERATING_MODE_LOW_POWER:
@@ -353,7 +361,7 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
 ndk::ScopedAStatus RadioModem::setResponseFunctions(
       const std::shared_ptr<modem::IRadioModemResponse> &in_radioModemResponse,
       const std::shared_ptr<modem::IRadioModemIndication> &in_radioModemIndication) {
-    printf("xRadioModem::%s\n", __func__);
+    log_debug("xRadioModem::%s\n", __func__);
     auto state = modem::RadioState::UNAVAILABLE;
 
     mRep = in_radioModemResponse;
@@ -387,7 +395,7 @@ ndk::ScopedAStatus RadioModem::setResponseFunctions(
     return ndk::ScopedAStatus::ok();
 }
 
-void RadioModem::handleQmiIndications()
+void RadioModem::_handleQmiIndications()
 {
 
 }

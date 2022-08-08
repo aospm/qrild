@@ -29,6 +29,7 @@
 #include <aidl/android/hardware/radio/network/BnRadioNetworkIndication.h>
 #include <aidl/android/hardware/radio/network/BnRadioNetworkResponse.h>
 #include <aidl/android/hardware/radio/network/IndicationFilter.h>
+#include <aidl/android/hardware/radio/network/CellInfo.h>
 
 #include <aidl/android/hardware/radio/sim/BnRadioSim.h>
 #include <aidl/android/hardware/radio/sim/BnRadioSimIndication.h>
@@ -52,7 +53,7 @@ public:
        * NOTE: rild_state.msg_mutex is locked when this method
        * is called!
        */
-      virtual void handleQmiIndications() = 0;
+      virtual void _handleQmiIndications() = 0;
 };
 
 /*****************************************************
@@ -77,7 +78,7 @@ class RadioConfig : public config::BnRadioConfig, public IHandlesQmiIndications 
 
 public:
     RadioConfig(struct rild_state *state);
-    void handleQmiIndications() override;
+    void _handleQmiIndications() override;
 };
 
 class RadioData : public data::BnRadioData, public IHandlesQmiIndications {
@@ -113,7 +114,7 @@ class RadioData : public data::BnRadioData, public IHandlesQmiIndications {
 
 public:
     RadioData(struct rild_state *state);
-    void handleQmiIndications() override;
+    void _handleQmiIndications() override;
 };
 
 class RadioMessaging : public messaging::BnRadioMessaging, public IHandlesQmiIndications {
@@ -154,7 +155,7 @@ class RadioMessaging : public messaging::BnRadioMessaging, public IHandlesQmiInd
 
 public:
     RadioMessaging(struct rild_state *state);
-    void handleQmiIndications() override;
+    void _handleQmiIndications() override;
 };
 
 class RadioModem : public modem::BnRadioModem, public IHandlesQmiIndications {
@@ -182,12 +183,12 @@ class RadioModem : public modem::BnRadioModem, public IHandlesQmiIndications {
     std::shared_ptr<modem::IRadioModemResponse> mRep;
     std::shared_ptr<modem::IRadioModemIndication> mInd;
     modem::RadioCapability mCaps;
-    bool mEnabled;
     struct rild_state *mState;
 
 public:
     RadioModem(struct rild_state *state);
-    void handleQmiIndications() override;
+    bool mEnabled;
+    void _handleQmiIndications() override;
 };
 
 class RadioNetwork : public network::BnRadioNetwork, public IHandlesQmiIndications {
@@ -243,12 +244,17 @@ class RadioNetwork : public network::BnRadioNetwork, public IHandlesQmiIndicatio
     std::shared_ptr<network::IRadioNetworkResponse> mRep;
     std::shared_ptr<network::IRadioNetworkIndication> mInd;
     struct rild_state *mState;
-    int32_t indicationFilter;
+    int32_t mIndicationFilter;
     network::RegStateResult mRegStateRes;
+    unsigned long mLastCellInfoListUpdateMs;
+    std::vector<network::CellInfo> mCellInfoList;
+
+    int _registerAndProvision();
+    int updateCellInfoList();
 
 public:
     RadioNetwork(struct rild_state *state);
-    void handleQmiIndications() override;
+    void _handleQmiIndications() override;
 };
 
 class RadioSim : public sim::BnRadioSim, public IHandlesQmiIndications {
@@ -307,9 +313,13 @@ class RadioSim : public sim::BnRadioSim, public IHandlesQmiIndications {
     std::shared_ptr<sim::IRadioSimIndication> mInd;
     struct rild_state *mState;
 
+    sim::CardStatus mCardStatus;
+
 public:
     RadioSim(struct rild_state *state);
-    void handleQmiIndications() override;
+    void _handleQmiIndications() override;
+    int _provisionDefaultSim();
+    bool mProvisioned;
 };
 
 class RadioVoice : public voice::BnRadioVoice, public IHandlesQmiIndications {
@@ -363,8 +373,21 @@ class RadioVoice : public voice::BnRadioVoice, public IHandlesQmiIndications {
 
 public:
     RadioVoice(struct rild_state *state);
-    void handleQmiIndications() override;
+    void _handleQmiIndications() override;
 };
+
+struct RadioServices {
+      std::shared_ptr<RadioConfig> config;
+      std::shared_ptr<RadioData> data;
+      std::shared_ptr<RadioMessaging> messaging;
+      std::shared_ptr<RadioModem> modem;
+      std::shared_ptr<RadioNetwork> network;
+      std::shared_ptr<RadioSim> sim;
+      std::shared_ptr<RadioVoice> voice;
+      bool initialised;
+};
+
+extern RadioServices services;
 
 /*****************************************************
  * Helpers
@@ -430,5 +453,6 @@ static inline std::string decode_bytes(uint8_t *bytes, size_t len) {
 }
 
 int QmiUimPhysicalCardStateToCardState(int physical_card_state);
+enum RadioTechnology QmiNasRadioInterfaceToRadioTechnology(int radio_interface);
 
 #endif // __QRILD_RADIO_HH__

@@ -16,6 +16,7 @@
 
 #define LOG_TAG "qrild.INetwork"
 #include <android-base/logging.h>
+#include <q_log.h>
 
 #include <limits.h>
 
@@ -23,40 +24,43 @@
 #include <qrild.h>
 #include <qrild_qmi.h>
 #include <qrild_msg.h>
-#include "qmi_nas.h"
+#include <qmi_nas.h>
 
 #include "qrild_radio.hh"
+#include <aidl/android/hardware/radio/RadioAccessFamily.h>
 #include <list.h>
 
 RadioNetwork::RadioNetwork(struct rild_state *state) : mState(state) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
     int rc;
 
     mRegStateRes.regState = network::RegState::UNKNOWN;
     rc = qrild_qmi_nas_register_indications(mState);
     if (rc) {
-        fprintf(stderr, "Failed to register NAS indications!");
+        log_error("Failed to register NAS indications!");
         mState->exit = true;
     }
+
+    mLastCellInfoListUpdateMs = 0;
 }
 
 ndk::ScopedAStatus RadioNetwork::getAllowedNetworkTypesBitmap(int32_t in_serial) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getAvailableBandModes(int32_t in_serial) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getAvailableNetworks(int32_t in_serial) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
     network::CellIdentityLte i_lte;
     network::CellIdentity ident(i_lte);
     auto band = network::EutranBands::BAND_1;
@@ -67,10 +71,15 @@ ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
     int rc;
 
     rc = qrild_qmi_nas_get_lte_cphy_ca_info(mState, &data);
-    if (rc) {
+    if (rc < 0) {
         LOG(ERROR) << __func__ << ": Couldn't get lte CPhy CA info";
-        switch (rc) {
-        case QMI_ERR_INFO_UNAVAILABLE:
+        r_info.error = RadioError::INTERNAL_ERR;
+        goto no_info;
+    }
+    if (data.res->result) {
+        LOG(ERROR) << __func__ << ": modem returned error: " << (int)data.res->error;
+        switch (data.res->error) {
+        case QMI_ERR_INFORMATION_UNAVAILABLE:
             r_info.error = RadioError::RADIO_NOT_AVAILABLE;
             break;
         default:
@@ -147,12 +156,16 @@ no_info:
 }
 
 ndk::ScopedAStatus RadioNetwork::getCdmaRoamingPreference(int32_t in_serial) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
+int RadioNetwork::updateCellInfoList() {
+    return -1;
+}
+
 ndk::ScopedAStatus RadioNetwork::getCellInfoList(int32_t in_serial) {
-    printf("FIXME! WIP: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! WIP: RadioNetwork::%s\n", __func__);
     auto cellInfo = std::vector<network::CellInfo>();
 
     LOG(ERROR)
@@ -168,7 +181,7 @@ ndk::ScopedAStatus RadioNetwork::getCellInfoList(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioNetwork::getDataRegistrationState(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
 
     LOG(INFO) << __func__ << ": TODO! return: " << mRegStateRes.toString();
 
@@ -178,7 +191,7 @@ ndk::ScopedAStatus RadioNetwork::getDataRegistrationState(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioNetwork::getImsRegistrationState(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
     network::RegStateResult res;
 
     res.regState = network::RegState::UNKNOWN;
@@ -188,61 +201,124 @@ ndk::ScopedAStatus RadioNetwork::getImsRegistrationState(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioNetwork::getNetworkSelectionMode(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
+    struct nas_get_system_prefs_data data;
+    auto r_info = RESP_OK(in_serial);
+    bool selection_manual = false;
+    int rc;
 
-    mRep->getNetworkSelectionModeResponse(RESP_OK(in_serial), false);
+    rc = qrild_qmi_nas_get_system_prefs(mState, &data);
+    if (rc < 0) {
+        LOG(ERROR) << __func__ << ": Couldn't get system preferences: " << rc;
+        r_info.error = RadioError::RADIO_NOT_AVAILABLE;
+        goto out;
+    }
+    if (data.res->result) {
+        LOG(ERROR) << __func__ << ": Modem returned error: " << (int)data.res->error;
+        r_info.error = RadioError::MODEM_ERR;
+        goto out;
+    }
+    if (!data.network_selection_valid) {
+        LOG(ERROR) << __func__ << ": Couldn't get network selection";
+        r_info.error = RadioError::INTERNAL_ERR;
+        goto out;
+    }
+
+    selection_manual = !!data.network_selection;
+    LOG(DEBUG)
+          << __func__ << ": Manual selection? " << selection_manual;;
+
+out:
+    mRep->getNetworkSelectionModeResponse(r_info, selection_manual);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getOperator(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
-    struct qrild_msg *msg;
-    struct nas_get_operator_name_resp *resp;
+    log_debug("xRadioNetwork::%s\n", __func__);
     struct nas_get_operator_name_resp_data data;
-    std::string long_name, short_name, mccmnc;
+    struct nas_plmn_id plmn_id;
+    struct nas_get_plmn_name_req_data plmn_req;
+    struct nas_get_plmn_name_resp_data plmn_data;
+    std::string long_name, short_name, mcc, mnc;
     auto r_info = RESP_OK(in_serial);
     int rc, i;
 
-    rc = qrild_qmi_send_basic_request_sync(
-          mState, QMI_SERVICE_NAS, QMI_NAS_GET_OPERATOR_NAME, &msg);
+    rc = qrild_qmi_nas_get_operator_name(mState, &data);
     if (rc < 0) {
         LOG(ERROR) << __func__ << ": Failed to request operator name";
         r_info.error = RadioError::RADIO_NOT_AVAILABLE;
         goto out_err;
     }
-
-    resp = nas_get_operator_name_resp_parse(msg->buf, msg->buf_len);
-    if (!resp) {
-        LOG(ERROR) << __func__ << ": Failed to parse operator name";
-        r_info.error = RadioError::INTERNAL_ERR;
-        goto out_err;
-    }
-
-    nas_get_operator_name_resp_getall(resp, &data);
     if (data.res->result) {
         LOG(ERROR) << __func__ << ": Modem responded with error: " << (int)data.res->error;
-        switch(data.res->error) {
-            case QMI_ERR_INFO_UNAVAILABLE:
-                // FIXME: ehh
-                r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
-                break;
-            default:
-                r_info.error = RadioError::SYSTEM_ERR;
+        switch (data.res->error) {
+        case QMI_ERR_INFORMATION_UNAVAILABLE:
+            // FIXME: ehh
+            r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+            break;
+        default:
+            r_info.error = RadioError::MODEM_ERR;
         }
         goto out_err;
     }
 
-    long_name = data.operator_string_name;
-    short_name = data.provider_name->name;
-    // This is awful, the first 6 bytes of the struct are the mcc and mnc
-    // ASCII encoded, this reads those bytes into a string.
-    if (data.operator_plmn_list_n >= 1) {
-        for(i = 0; i < 6; i++)
-            mccmnc += *(((char*)data.operator_plmn_list)+i);
+    if (!data.operator_plmns_valid) {
+        LOG(ERROR) << __func__ << ": No PLMN provided";
+        r_info.error == RadioError::MODEM_ERR;
+        goto out_err;
     }
 
+    for (i = 0; i < 3; i++) {
+        mcc += data.operator_plmns->operators[0].mcc[i];
+        if (data.operator_plmns->operators[0].mnc[i] != 'F')
+            mnc += data.operator_plmns->operators[0].mnc[i];
+    }
+
+    LOG(DEBUG) << __func__ << ": Got MCC: " << mcc << ", MNC: " << mnc;
+
+    // FIXME: Exceptions disabled, add a check here
+    plmn_id.mcc = std::stoi(mcc);
+    plmn_id.mnc = std::stoi(mnc);
+
+    plmn_req.plmn = &plmn_id;
+    plmn_req.send_all_info = true;
+    plmn_req.send_all_info_valid = true;
+
+    rc = qrild_qmi_nas_get_plmn_name(mState, &plmn_req, &plmn_data);
+    if (rc < 0) {
+        LOG(ERROR) << __func__ << ": Failed to request plmn name";
+        r_info.error = RadioError::RADIO_NOT_AVAILABLE;
+        goto out_err;
+    }
+    if (data.res->result) {
+        LOG(ERROR) << __func__ << ": Modem responded with error: " << (int)data.res->error;
+        switch (data.res->error) {
+        case QMI_ERR_INFORMATION_UNAVAILABLE:
+            // FIXME: ehh
+            r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+            break;
+        default:
+            r_info.error = RadioError::SYSTEM_ERR;
+        }
+        goto out_only_mccmnc;
+    }
+
+    if (!plmn_data.plmn_name_valid) {
+        LOG(ERROR) << __func__ << ": No PLMN name provided";
+        goto out_only_mccmnc;
+    }
+
+    // Sure hope encoding is ASCII and not one of the other two ...
+    long_name =
+          std::string((char *)plmn_data.plmn_name->long_name, plmn_data.plmn_name->long_name_n);
+    
+    short_name =
+          std::string((char *)plmn_data.plmn_name->short_name, plmn_data.plmn_name->short_name_n);
+
+out_only_mccmnc:
+    LOG(INFO) << __func__ << ": Got long name: '" << long_name << "', short_name: '" << short_name << "', mcc+mnc: " << mcc << mnc;
     // Not sure if correct mcc/mnc
-    mRep->getOperatorResponse(r_info, long_name, short_name, mccmnc);
+    mRep->getOperatorResponse(r_info, long_name, short_name, mcc + mnc);
 
     return ndk::ScopedAStatus::ok();
 
@@ -251,26 +327,26 @@ out_err:
     return ndk::ScopedAStatus::ok();
 }
 
-static network::GsmSignalStrength getSignalStrengthGsm(
-      struct nas_get_signal_strength_resp_data *data) {
-    auto gsm = network::GsmSignalStrength();
+static bool getSignalStrengthGsm(
+      struct nas_get_signal_strength_resp_data *data,
+      network::GsmSignalStrength &gsm) {
 
     gsm.signalStrength = INT_MAX;
     gsm.timingAdvance = INT_MAX;
     gsm.bitErrorRate = INT_MAX;
 
     if (data->strength->interface != QMI_NAS_RADIO_INTERFACE_GSM)
-        return gsm;
+        return false;
 
     gsm.signalStrength = data->strength->strength;
 
-    return gsm;
+    return true;
 }
 
 // Apparently UMTS runs on top of W-CDMA, hopefully these match
-static network::WcdmaSignalStrength getSignalStrengthWcdma(
-      struct nas_get_signal_strength_resp_data *data) {
-    auto wcdma = network::WcdmaSignalStrength();
+static bool getSignalStrengthWcdma(
+      struct nas_get_signal_strength_resp_data *data,
+      network::WcdmaSignalStrength &wcdma) {
 
     wcdma.signalStrength = INT_MAX;
     wcdma.bitErrorRate = INT_MAX;
@@ -278,13 +354,13 @@ static network::WcdmaSignalStrength getSignalStrengthWcdma(
     wcdma.ecno = INT_MAX;
 
     if (data->strength->interface != QMI_NAS_RADIO_INTERFACE_UMTS)
-        return wcdma;
+        return false;
 
-    return wcdma;
+    return true;
 }
 
 ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
     auto strength = network::SignalStrength();
     auto gsm = network::GsmSignalStrength();
     auto cdma = network::CdmaSignalStrength();
@@ -342,7 +418,7 @@ ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
     }
     if (qmi_strength.res->result) {
         switch (qmi_strength.res->error) {
-        case QMI_ERR_INFO_UNAVAILABLE:
+        case QMI_ERR_INFORMATION_UNAVAILABLE:
             // Not an "error", we just have no signal
             lte.signalStrength = INT_MAX;
             goto out;
@@ -370,12 +446,12 @@ out:
 }
 
 ndk::ScopedAStatus RadioNetwork::getSystemSelectionChannels(int32_t in_serial) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getVoiceRadioTechnology(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
     RadioResponseInfo r_info = RESP_OK(in_serial);
     r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
 
@@ -384,59 +460,72 @@ ndk::ScopedAStatus RadioNetwork::getVoiceRadioTechnology(int32_t in_serial) {
 }
 
 ndk::ScopedAStatus RadioNetwork::getVoiceRegistrationState(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
-    network::RegStateResult res;
+    log_debug("xRadioNetwork::%s\n", __func__);
 
-    LOG(INFO) << __func__ << " FIXME: Always reporting unknown state";
-    res.regState = network::RegState::UNKNOWN;
-
-    mRep->getVoiceRegistrationStateResponse(RESP_OK(in_serial), res);
+    mRep->getVoiceRegistrationStateResponse(RESP_OK(in_serial), mRegStateRes);
 
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::isNrDualConnectivityEnabled(int32_t in_serial) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::responseAcknowledgement() {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setAllowedNetworkTypesBitmap(
       int32_t in_serial, int32_t in_networkTypeBitmap) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    int32_t filter = in_networkTypeBitmap;
+    int32_t filter_bit = 0b1;
+
+    std::string types = "\t";
+
+    // FIXME: don't hardcode this!
+    while (filter_bit < (int32_t)RadioAccessFamily::NR) {
+        if (filter & filter_bit)
+            types += toString(RadioAccessFamily(filter & filter_bit));
+        filter_bit <<= 1;
+    }
+
+    LOG(INFO) << __func__ << "(ignored) Allowed network types:\n"
+        << types;
+
+    mRep->setAllowedNetworkTypesBitmapResponse(RESP_OK(in_serial));
+
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setBandMode(int32_t in_serial, network::RadioBandMode in_mode) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setBarringPassword(int32_t in_serial,
       const std::string &in_facility, const std::string &in_oldPassword,
       const std::string &in_newPassword) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setCdmaRoamingPreference(
       int32_t in_serial, network::CdmaRoamingType in_type) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setCellInfoListRate(int32_t in_serial, int32_t in_rate) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setIndicationFilter(
       int32_t in_serial, int32_t in_indicationFilter) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
     int32_t filter = in_indicationFilter;
     int32_t filter_bit = 0b1;
 
@@ -449,7 +538,7 @@ ndk::ScopedAStatus RadioNetwork::setIndicationFilter(
         filter_bit <<= 1;
     }
 
-    indicationFilter = in_indicationFilter;
+    mIndicationFilter = in_indicationFilter;
 
     mRep->setIndicationFilterResponse(RESP_OK(in_serial));
     return ndk::ScopedAStatus::ok();
@@ -459,7 +548,7 @@ ndk::ScopedAStatus RadioNetwork::setLinkCapacityReportingCriteria(int32_t in_ser
       int32_t in_hysteresisMs, int32_t in_hysteresisDlKbps, int32_t in_hysteresisUlKbps,
       const std::vector<int32_t> &in_thresholdsDownlinkKbps,
       const std::vector<int32_t> &in_thresholdsUplinkKbps, AccessNetwork in_accessNetwork) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
 
     LOG(DEBUG) << __func__ << "(";
     LOG(DEBUG) << "\thysteresisMs: " << in_hysteresisMs;
@@ -483,23 +572,54 @@ ndk::ScopedAStatus RadioNetwork::setLinkCapacityReportingCriteria(int32_t in_ser
 }
 
 ndk::ScopedAStatus RadioNetwork::setLocationUpdates(int32_t in_serial, bool in_enable) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
+int RadioNetwork::_registerAndProvision() {
+    int rc;
+
+    rc = qrild_qmi_nas_network_register(mState, 1);
+    if (rc < 0) {
+        auto err = -rc;
+        LOG(ERROR) << __func__ << ": Couldn't register to network: " << err
+            << ": " << qmi_error_string(err);
+        return -1;
+    }
+
+    if (services.initialised) {
+        LOG(DEBUG) << __func__ << ": provisioning default sim";
+        rc = services.sim->_provisionDefaultSim();
+    } else {
+        return -2;
+    }
+    if (rc < 0) {
+        LOG(ERROR) << __func__ << ": Failed to provision SIM!";
+        rc = -3;
+    }
+
+    return rc;
+}
+
 ndk::ScopedAStatus RadioNetwork::setNetworkSelectionModeAutomatic(int32_t in_serial) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
+    int rc = 0;
+    auto r_info = RESP_OK(in_serial);
+    LOG(INFO) << __func__ << "WIP! Connect to network here";
 
-    LOG(INFO) << __func__;
+    rc = _registerAndProvision();
+    if (rc < 0)
+        r_info.error = RadioError::MODEM_ERR;
 
-    mRep->setNetworkSelectionModeAutomaticResponse(RESP_OK(in_serial));
+out:
+    mRep->setNetworkSelectionModeAutomaticResponse(r_info);
 
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setNetworkSelectionModeManual(
       int32_t in_serial, const std::string &in_operatorNumeric, AccessNetwork in_ran) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     RadioResponseInfo r_info = RESP_OK(in_serial);
 
     LOG(ERROR) << __func__ << " Can't handle manual network selection!";
@@ -511,26 +631,26 @@ ndk::ScopedAStatus RadioNetwork::setNetworkSelectionModeManual(
 
 ndk::ScopedAStatus RadioNetwork::setNrDualConnectivityState(
       int32_t in_serial, network::NrDualConnectivityState in_nrDualConnectivityState) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setResponseFunctions(
       const std::shared_ptr<network::IRadioNetworkResponse> &in_radioNetworkResponse,
       const std::shared_ptr<network::IRadioNetworkIndication> &in_radioNetworkIndication) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
 
     mRep = in_radioNetworkResponse;
     mInd = in_radioNetworkIndication;
 
-    qrild_qmi_send_basic_request_async(mState, QMI_SERVICE_NAS, 0x0043);
+    _registerAndProvision();
 
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setSignalStrengthReportingCriteria(
       int32_t in_serial, const std::vector<network::SignalThresholdInfo> &in_signalThresholdInfos) {
-    printf("xRadioNetwork::%s\n", __func__);
+    log_debug("xRadioNetwork::%s\n", __func__);
 
     LOG(DEBUG) << __func__;
     for (auto thresh : in_signalThresholdInfos) {
@@ -543,72 +663,73 @@ ndk::ScopedAStatus RadioNetwork::setSignalStrengthReportingCriteria(
 }
 
 ndk::ScopedAStatus RadioNetwork::setSuppServiceNotifications(int32_t in_serial, bool in_enable) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setSystemSelectionChannels(int32_t in_serial,
       bool in_specifyChannels, const std::vector<network::RadioAccessSpecifier> &in_specifiers) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::startNetworkScan(
       int32_t in_serial, const network::NetworkScanRequest &in_request) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::stopNetworkScan(int32_t in_serial) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::supplyNetworkDepersonalization(
       int32_t in_serial, const std::string &in_netPin) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::setUsageSetting(
       int32_t in_serial, network::UsageSetting in_usageSetting) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus RadioNetwork::getUsageSetting(int32_t in_serial) {
-    printf("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
     return ndk::ScopedAStatus::ok();
 }
 
 void RadioNetwork::reportSystemStatus(struct qrild_msg *msg) {
     struct nas_serving_system_ind *ind_msg = NULL;
     struct nas_serving_system_ind_data stat;
+    bool regStateChanged = false;
     int rc;
     auto cellInfo = network::CellInfo();
 
-    LOG(INFO) << __func__ << ": WIP!";
-
     ind_msg = nas_serving_system_ind_parse(msg->buf, msg->buf_len);
     if (!ind_msg) {
-        fprintf(stderr, "%s: Couldn't parse serving system report\n", __func__);
+        log_error("%s: Couldn't parse serving system report\n", __func__);
         return;
     }
     nas_serving_system_ind_getall(ind_msg, &stat);
     if (!stat.system_valid) {
-        fprintf(stderr, "%s: Couldn't parse serving system TLV\n", __func__);
+        log_error("%s: Couldn't parse serving system TLV\n", __func__);
         return;
     }
 
+    std::string interfaces;
+    for(int i = 0; i < stat.system->radio_interfaces_n; i++)
+        interfaces += ::android::internal::ToString((int)stat.system->radio_interfaces[i]) + " ";
+
     LOG(INFO) << __func__ << ": System {"
-              << " regState: " << (int)stat.system->registration_state
+              << "regState: " << (int)stat.system->registration_state
               << ", cs_attach: " << (int)stat.system->cs_attach_state
               << ", ps_attach: " << (int)stat.system->ps_attach_state
               << ", selectedNetwork: " << (int)stat.system->selected_network
-              << ", interfaces: " << (int)stat.system->radio_interfaces_n << ": ";
-    for (int i = 0; i < stat.system->radio_interfaces_n; i++) {
-        LOG(INFO) << "\t" << (int)stat.system->radio_interfaces[i];
-    }
+              << ", interfaces: " << (int)stat.system->radio_interfaces_n
+              << ": " << interfaces << "}";
 
     cellInfo.registered = stat.system->registration_state == QMI_NAS_REGISTRATION_STATE_REGISTERED;
     if (cellInfo.registered) {
@@ -618,24 +739,67 @@ void RadioNetwork::reportSystemStatus(struct qrild_msg *msg) {
             cellInfo.connectionStatus = network::CellConnectionStatus::SECONDARY_SERVING;
     }
 
-    if (stat.system->radio_interfaces_n) {
-        if (stat.system->radio_interfaces_n > 1)
-            LOG(WARNING) << __func__ << ": Serving more than 1 radio interface! Taking first";
-
-        switch (stat.system->radio_interfaces[0]) {
-        case QMI_NAS_RADIO_INTERFACE_GSM:
-            break;
-        }
+    if (!stat.system->radio_interfaces_n) {
+        LOG(WARNING) << __func__ << ": No radio interfaces reported";
+        goto out_free;
     }
 
+    if (stat.system->radio_interfaces_n > 1)
+        LOG(WARNING) << __func__ << ": Serving more than 1 radio interface! Taking first";
+
+    // Registration state
+    if (mRegStateRes.regState != network::RegState(stat.system->registration_state) &&
+          stat.system->registration_state < 5) {
+        mRegStateRes.regState = network::RegState(stat.system->registration_state);
+        regStateChanged = true;
+        LOG(DEBUG)
+              << __func__
+              << ": Updated registration state to: " << network::toString(mRegStateRes.regState);
+    }
+
+    if (mRegStateRes.regState == network::RegState::REG_HOME) {
+        auto rat = QmiNasRadioInterfaceToRadioTechnology(stat.system->radio_interfaces[0]);
+        if (mRegStateRes.rat != rat)
+            regStateChanged = true;
+        mRegStateRes.rat = rat;
+    } else {
+        mRegStateRes.rat = RadioTechnology::UNKNOWN;
+    }
+
+    if (mRegStateRes.regState == network::RegState::REG_DENIED ||
+          mRegStateRes.regState == network::RegState::REG_DENIED_EM) {
+        LOG(ERROR) << __func__ << ": Network registration denied! Everybody panic!!!";
+    }
+
+    if (stat.plmn) {
+        regStateChanged = true;
+        mRegStateRes.registeredPlmn = std::string();
+        mRegStateRes.registeredPlmn += ::android::internal::ToString(stat.plmn->mcc);
+        auto mnc = ::android::internal::ToString(stat.plmn->mnc);
+        if (mnc.length() < 2) {
+            mnc = "0" + mnc;
+        }
+        mRegStateRes.registeredPlmn += mnc;
+        LOG(INFO) << __func__ << ": Last registered PLMN: '" << stat.plmn->description
+                  << "', id: " << mRegStateRes.registeredPlmn;
+    }
+
+    switch (mRegStateRes.rat) {
+
+    }
+
+out_free:
     nas_serving_system_ind_data_free(&stat);
 
     auto arr = std::vector<network::CellInfo>();
     arr.push_back(cellInfo);
     mInd->cellInfoList(RadioIndicationType::UNSOLICITED, arr);
+
+    if (regStateChanged)
+        mInd->networkStateChanged(RadioIndicationType::UNSOLICITED);
 }
 
-void RadioNetwork::handleQmiIndications() {
+void RadioNetwork::_handleQmiIndications() {
     struct qrild_msg *msg;
     list_for_each_entry(msg, &mState->pending_rx, li) {
         if (msg->type != 0x4)
