@@ -34,6 +34,11 @@ RadioModem::RadioModem(struct rild_state *state) : mState(state) {
     LOG(INFO) << "Powering on modem...";
     qrild_qmi_powerup(mState);
 
+    int rc = qrild_qmi_nas_register_indications(mState);
+    if (rc) {
+        log_error("Failed to register NAS indications!: %d", rc);
+    }
+
     mCaps.logicalModemUuid = "org.linaro.qrild.lm1";
     mCaps.phase = modem::RadioCapability::PHASE_CONFIGURED;
     mCaps.raf = (int32_t)RadioAccessFamily::LTE;
@@ -128,9 +133,9 @@ ndk::ScopedAStatus RadioModem::getHardwareConfig(int32_t in_serial) {
     modemConfig.rilModel = 0;
     // hmmm
     modemConfig.rat = RadioTechnology::LTE;
-    modemConfig.maxVoiceCalls = 1;
+    modemConfig.maxVoiceCalls = 0;
     modemConfig.maxDataCalls = 1;
-    modemConfig.maxStandby = 2;
+    modemConfig.maxStandby = 1;
 
     modem.modem = std::vector<modem::HardwareConfigModem>();
     modem.modem.push_back(modemConfig);
@@ -301,16 +306,19 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
               << ", forEmergencyCall: " << in_forEmergencyCall
               << ", preferredForEmergencyCall: " << in_preferredForEmergencyCall << ")";
 
-    // if (!in_powerOn) {
-    //     LOG(DEBUG) << "Not powering modem off!";
-    //     mEnabled = false;
-    //     mRep->setRadioPowerResponse(r_info);
-    //     return ndk::ScopedAStatus::ok();
-    // }
+    if (!in_powerOn) {
+        LOG(DEBUG) << "Not powering modem off!";
+        //mEnabled = false;
+        mRep->setRadioPowerResponse(r_info);
+        return ndk::ScopedAStatus::ok();
+    }
 
     // FIXME: modem doesn't come back after setting to LOW_POWER ?
     uint8_t desired_mode =
           in_powerOn ? QMI_DMS_OPERATING_MODE_ONLINE : QMI_DMS_OPERATING_MODE_LOW_POWER;
+
+    if (!mEnabled)
+        mEnabled = desired_mode == QMI_DMS_OPERATING_MODE_ONLINE;
 
     if (in_forEmergencyCall || in_preferredForEmergencyCall)
         desired_mode = QMI_DMS_OPERATING_MODE_ONLINE;
@@ -332,7 +340,6 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
         } else {
             LOG(INFO) << "Set modem operating mode to: " << (int)desired_mode << "!";
             log_debug("Set operating mode to %u\n", desired_mode);
-            mEnabled = desired_mode == QMI_DMS_OPERATING_MODE_ONLINE;
             switch (desired_mode) {
             case QMI_DMS_OPERATING_MODE_ONLINE:
                 if (services.initialised)
@@ -352,6 +359,10 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
         LOG(WARNING) << "Modem already in mode: " << (int)desired_mode << " ignoring for now";
         r_info.error = RadioError::INVALID_ARGUMENTS;
     }
+
+    // FIXME: HACK!!!
+    if (mEnabled)
+        qrild_qmi_nas_register_indications(mState);
 
     mRep->setRadioPowerResponse(r_info);
 

@@ -247,10 +247,17 @@ class RadioNetwork : public network::BnRadioNetwork, public IHandlesQmiIndicatio
     int32_t mIndicationFilter;
     network::RegStateResult mRegStateRes;
     unsigned long mLastCellInfoListUpdateMs;
-    std::vector<network::CellInfo> mCellInfoList;
+    network::CellInfo mCellInfo;
 
     int _registerAndProvision();
-    int updateCellInfoList();
+    int updateCellInfo(struct nas_serving_system_ind_data *ss = nullptr);
+    network::CellInfoGsm createCellInfoGsm(struct nas_get_cell_loc_info_data *loc);
+    network::CellInfoWcdma createCellInfoWcdma(struct nas_get_cell_loc_info_data *loc);
+    network::CellInfoLte createCellInfoLte(struct nas_get_cell_loc_info_data *loc);
+
+    // Data for cellinfo/identity/signal strength stuff
+    RadioError updateOperatorInfo();
+    network::OperatorInfo mOperator;
 
 public:
     RadioNetwork(struct rild_state *state);

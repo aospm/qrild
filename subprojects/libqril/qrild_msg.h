@@ -14,6 +14,8 @@ void print_service(struct qmi_service_info *pkt);
 
 uint16_t qrild_next_transaction_id();
 
+void dump_messages(struct list_head *list);
+
 int qrild_qrtr_send_queued(struct rild_state *state);
 int qrild_qrtr_send_to_service(struct rild_state *state,
 			       enum qmi_service svc_id, const void *data,

@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <string.h>
+#include <sys/time.h>
 
 __BEGIN_DECLS
 
@@ -27,6 +28,7 @@ typedef struct {
   const char *file;
   const char *func;
   struct tm *time;
+  long time_ms;
   void *udata;
   int line;
   int level;

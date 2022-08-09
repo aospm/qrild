@@ -36,11 +36,14 @@ int qrild_qmi_wds_bind_mux_data_port(struct rild_state *state);
 int qrild_qmi_nas_get_signal_strength(struct rild_state *state,
 				      struct nas_get_signal_strength_resp_data *data);
 int qrild_qmi_nas_show_signal_strength(struct nas_get_signal_strength_resp_data *data);
+int qrild_qmi_nas_get_cell_loc_info(struct rild_state *state,
+				    struct nas_get_cell_loc_info_data *data);
 int qrild_qmi_nas_get_lte_cphy_ca_info(struct rild_state *state,
 				       struct nas_get_lte_cphy_ca_info_resp_data *data);
 int qrild_qmi_nas_get_system_prefs(struct rild_state *state,
 				   struct nas_get_system_prefs_data *data);
 int qrild_qmi_nas_network_register(struct rild_state *state, uint8_t action);
+int qrild_qmi_nas_get_serving_system(struct rild_state *state, struct nas_serving_system_resp_data *data);
 int qrild_qmi_dms_uim_get_imsi(struct rild_state *state, struct dms_uim_get_imsi_data *data);
 int qrild_qmi_dms_get_msisdn(struct rild_state *state, struct dms_get_msisdn_data *data);
 int qrild_qmi_nas_get_operator_name(struct rild_state *state,

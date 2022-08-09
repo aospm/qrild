@@ -8,6 +8,7 @@ const QMI_NAS_SERVING_SYSTEM_REPORT = 0x24;
 const QMI_NAS_SET_SYSTEM_PREFS = 0x33;
 const QMI_NAS_GET_SYSTEM_PREFS = 0x34;
 const QMI_NAS_GET_OPERATOR_NAME = 0x39;
+const QMI_NAS_GET_CELL_LOCATION_INFO = 0x43;
 const QMI_NAS_GET_PLMN_NAME = 0x44;
 # https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/gobi-api/GobiAPI_2013-07-31-1347/Core/QMIEnum.h#L474
 const QMI_NAS_SUBSCRIPTION_INFO_REPORT = 0x48;
@@ -15,6 +16,7 @@ const QMI_NAS_GET_SIGNAL_INFO = 0x4F;
 const QMI_NAS_SIGNAL_INFO_REPORT = 0x51;
 const QMI_NAS_ERROR_RATE_REPORT = 0x53;
 const QMI_NAS_RF_BAND_INFO_REPORT = 0x66;
+const QMI_NAS_FORCE_NETWORK_SEARCH = 0x67;
 const QMI_NAS_GET_LTE_CPY_CA_INFO = 0xAC;
 
 # get_lte_cphy_ca_info_resp.dl_bandwidth
@@ -152,10 +154,23 @@ request initiate_network_register {
 	# Other optional TLVs for manual registration
 } = 0x0022;
 
+# FIXME: this shouldn't be duped for the response and indication...
+response serving_system_resp {
+	required qmi_response_type_v01 res = 0x02;
+	optional serving_system system = 0x01;
+	optional u8 data_service_cap(16) = 0x11; # do we have data?
+	optional current_plmn plmn = 0x12;
+	optional u16 lac = 0x1d;
+	optional u16 cid = 0x1e;
+	optional service_status status = 0x22;
+} = 0x0024;
+
 indication serving_system_ind {
 	optional serving_system system = 0x01;
 	optional u8 data_service_cap(16) = 0x11; # do we have data?
 	optional current_plmn plmn = 0x12;
+	optional u16 lac = 0x1d;
+	optional u16 cid = 0x1e;
 	optional service_status status = 0x22;
 } = 0x0024;
 
@@ -253,10 +268,85 @@ indication operator_name_ind {
 } = 0x003A;
 
 struct geran_info {
-	u8 x;
+	u32 cell_id;
+	u8 plmn[3];
+	u16 lac;
+	u16 abs_channel_num;
+	u8 bsic;
+	u32 timing_advance;
+	u16 rx_level;
+	u8 cells_n;
+	struct {
+		u32 cell_id;
+		u8 plmn[3];
+		u16 lac;
+		u16 abs_channel_num;
+		u8 bsic;
+		u16 rx_level;
+	} *cells;
+};
+
+struct umts_info {
+	u16 cell_id;
+	u8 plmn[3];
+	u16 lac;
+	u16 abs_channel_num;
+	u16 psc;
+	i16 rscp;
+	i16 ecio;
+	u8 cells_n;
+	struct {
+		u16 abs_channel_num;
+		u16 psc;
+		i16 rscp;
+		i16 ecio;
+	} *cells;
+	u8 gerans_n;
+	struct {
+		u16 abs_channel_num;
+		u8 network_color_code;
+		u8 base_station_color_code;
+		i8 rssi;
+	} *gerans;
+};
+
+struct cdma_info {
+	u16 system_id;
+	u16 network_id;
+	u16 bsid;
+	u16 reference_pn;
+	u32 latitude;
+	u32 longitude;
+};
+
+struct intrafreq_lte_info {
+	u8 ue_idle;
+	u8 plmn[3];
+	u16 tac;
+	u32 global_cell_id;
+	u16 abs_channel_num;
+	u16 serving_cell_id;
+	u8 crp;
+	u8 s_non_intra_search_threshold;
+	u8 serving_cell_low_threshold;
+	u8 s_intra_search_threshold;
+	u8 cells_n;
+	struct {
+		u16 pci;
+		i16 rsrq;
+		i16 rsrp;
+		i16 rssi;
+		i16 rx_level;
+	} *cells;
 };
 
 response get_cell_loc_info {
+	required qmi_response_type_v01 res = 0x2;
+	optional geran_info geran = 0x10;
+	optional umts_info umts = 0x11;
+	optional cdma_info cdma = 0x12;
+	optional intrafreq_lte_info intra_lte = 0x13;
+	# FIXME: add extra missing TLVs
 } = 0x0043;
 
 struct plmn_id {

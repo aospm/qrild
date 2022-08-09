@@ -110,7 +110,8 @@ int RadioSim::_provisionDefaultSim() {
     data.status->cards[0].applications[0].application_identifier_value_n);
     if (!rc) {
         LOG(INFO) << __func__ << ": Successfully provisioned default sim";
-        mInd->simStatusChanged(RadioIndicationType::UNSOLICITED);
+        if (mInd) // This function might be called before setResponsefunctions() has been called.
+            mInd->simStatusChanged(RadioIndicationType::UNSOLICITED);
     } else {
         LOG(ERROR) << __func__ << ": Failed to provision default sim";
         return -1;
@@ -283,6 +284,8 @@ ndk::ScopedAStatus RadioSim::getImsiForApp(int32_t in_serial, const std::string 
     if (msisdn_data.res->result) {
         LOG(ERROR) << __func__ << ": MSISDN: Modem returned error: " << msisdn_data.res->error
                    << ": " << qmi_error_string(msisdn_data.res->error);
+    } else if (msisdn_data.imsi) {
+        imsi = msisdn_data.imsi;
     }
 
     if (msisdn_data.imsi_valid) {
@@ -293,6 +296,8 @@ ndk::ScopedAStatus RadioSim::getImsiForApp(int32_t in_serial, const std::string 
     }
 
     dms_get_msisdn_data_free(&msisdn_data);
+
+    LOG(INFO) << __func__ << ": Got imsi: " << imsi;
 
 // out_free_imsi:
 //     dms_uim_get_imsi_data_free(&imsi_data);

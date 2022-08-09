@@ -21,6 +21,7 @@
  */
 
 #include "q_log.h"
+#include <unistd.h>
 
 #define LOG_USE_COLOR 1
 
@@ -54,11 +55,12 @@ static const char *level_colors[] = {
 
 static void stdout_callback(log_Event *ev) {
   char buf[16];
+  pid_t tid = gettid();
   buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
 #ifdef LOG_USE_COLOR
   fprintf(
-    ev->udata, "%1$s %2$s%3$s\x1b[0m \x1b[90m%4$s:%5$d:\x1b[0m ",
-    buf, level_colors[ev->level], level_strings[ev->level],
+    ev->udata, "%1$s.%2$06d %3$s%4$s\x1b[0m (%5$d) \x1b[90m%6$s:%7$d:\x1b[0m ",
+    buf, ev->time_ms, level_colors[ev->level], level_strings[ev->level], tid,
     ev->file, ev->line);
 #else
   fprintf(
@@ -133,7 +135,10 @@ int log_add_fp(FILE *fp, int level) {
 static void init_event(log_Event *ev, void *udata) {
   if (!ev->time) {
     time_t t = time(NULL);
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
     ev->time = localtime(&t);
+    ev->time_ms = ts.tv_nsec / 1000;
   }
   ev->udata = udata;
 }

@@ -31,6 +31,8 @@ static inline void list_init(struct list_head *list)
 	list->head = list->tail = list;
 }
 
+#define LIST_INIT(l) { &(l), &(l) }
+
 static inline void list_append(struct list_head *list, struct list_head *item)
 {
 	struct list_head *tail = list->tail;

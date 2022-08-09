@@ -214,7 +214,7 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 	req = nas_register_indications_req_alloc(qrild_next_transaction_id());
 
 	nas_register_indications_req_set_system_selection_preference(req, false);
-	nas_register_indications_req_set_ddtm_events(req, false);
+	nas_register_indications_req_set_ddtm_events(req, true);
 	nas_register_indications_req_set_serving_system_events(req, true);
 	nas_register_indications_req_set_dual_standby_preference(req, false);
 	nas_register_indications_req_set_subscription_info(req, true);
@@ -583,6 +583,8 @@ int qrild_qmi_nas_get_signal_strength(struct rild_state *state,
 
 	nas_get_signal_strength_resp_getall(resp, strength);
 
+	qrild_msg_free(msg);
+
 	return QRILD_STATE_DONE;
 }
 
@@ -626,6 +628,37 @@ int qrild_qmi_nas_show_signal_strength(struct nas_get_signal_strength_resp_data 
 	return QRILD_STATE_DONE;
 }
 
+int qrild_qmi_nas_get_cell_loc_info(struct rild_state *state,
+				    struct nas_get_cell_loc_info_data *data)
+{
+	struct nas_get_cell_loc_info *resp;
+	struct nas_lte_cphy_agg_scell *scell_info;
+	uint32_t dl_bandwidth;
+	struct qmi_response_type_v01 *res;
+	struct qrild_msg *msg;
+	int rc, i;
+	void *buf;
+	size_t buf_len;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS, QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_NAS,
+					       QMI_NAS_GET_CELL_LOCATION_INFO, &msg);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = nas_get_cell_loc_info_parse(msg->buf, msg->buf_len);
+	if (!resp) {
+		return QRILD_STATE_ERROR;
+	}
+
+	nas_get_cell_loc_info_getall(resp, data);
+
+	qrild_msg_free(msg);
+
+	return QRILD_STATE_DONE;
+}
+
 int qrild_qmi_nas_get_lte_cphy_ca_info(struct rild_state *state,
 				       struct nas_get_lte_cphy_ca_info_resp_data *data)
 {
@@ -652,6 +685,8 @@ int qrild_qmi_nas_get_lte_cphy_ca_info(struct rild_state *state,
 
 	nas_get_lte_cphy_ca_info_resp_getall(resp, data);
 
+	qrild_msg_free(msg);
+
 	return QRILD_STATE_DONE;
 }
 
@@ -675,6 +710,34 @@ int qrild_qmi_nas_get_system_prefs(struct rild_state *state, struct nas_get_syst
 
 	nas_get_system_prefs_getall(resp, data);
 
+	qrild_msg_free(msg);
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_nas_get_serving_system(struct rild_state *state,
+				     struct nas_serving_system_resp_data *data)
+{
+	struct nas_serving_system_resp *resp;
+	struct qrild_msg *msg;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_NAS, QRILD_STATE_PENDING);
+
+	rc = qrild_qmi_send_basic_request_sync(state, QMI_SERVICE_NAS,
+					       QMI_NAS_SERVING_SYSTEM_REPORT, &msg);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = nas_serving_system_resp_parse(msg->buf, msg->buf_len);
+	if (!resp) {
+		return QRILD_STATE_ERROR;
+	}
+
+	nas_serving_system_resp_getall(resp, data);
+
+	qrild_msg_free(msg);
+
 	return QRILD_STATE_DONE;
 }
 
@@ -687,7 +750,8 @@ int qrild_qmi_nas_get_system_prefs(struct rild_state *state, struct nas_get_syst
  * 
  * @returns 0 on success, 1 if the QMI service is unavailable, -QMI_ERR on error
  */
-int qrild_qmi_nas_network_register(struct rild_state *state, uint8_t action) {
+int qrild_qmi_nas_network_register(struct rild_state *state, uint8_t action)
+{
 	struct nas_initiate_network_register *req;
 	struct qmi_response_type_v01 res;
 	void *buf;
@@ -782,16 +846,15 @@ int qrild_qmi_nas_get_operator_name(struct rild_state *state,
 		return QRILD_STATE_ERROR;
 	}
 
-	log_debug("Getting all data");
-
 	nas_get_operator_name_resp_getall(resp, data);
 	qrild_msg_free(msg);
 
 	return QRILD_STATE_DONE;
 }
 
-int qrild_qmi_nas_get_plmn_name(struct rild_state *state, struct nas_get_plmn_name_req_data *req_data,
-			    struct nas_get_plmn_name_resp_data *data)
+int qrild_qmi_nas_get_plmn_name(struct rild_state *state,
+				struct nas_get_plmn_name_req_data *req_data,
+				struct nas_get_plmn_name_resp_data *data)
 {
 	struct nas_get_plmn_name_req *req;
 	struct nas_get_plmn_name_resp *resp;
@@ -1002,9 +1065,9 @@ static int qrild_qmi_handle_wds_pkt_srvc(struct rild_state *state, struct qrild_
 	struct wds_pkt_srvc_status *status = wds_get_pkt_srvc_status_ind_get_status(ind);
 
 	log_info("Connection status: %u", status->connection_status);
-	pthread_mutex_lock(&state->connection_status_mutex);
+	q_thread_mutex_lock(&state->connection_status_mutex);
 	state->connection_status = status->connection_status;
-	pthread_mutex_unlock(&state->connection_status_mutex);
+	q_thread_mutex_unlock(&state->connection_status_mutex);
 
 	pthread_cond_broadcast(&state->connection_status_change);
 
@@ -1033,13 +1096,13 @@ int qrild_qmi_idle(struct rild_state *state)
 int qrild_qmi_process_indications(struct rild_state *state)
 {
 	struct qrild_msg *msg;
-	pthread_mutex_lock(&state->msg_mutex);
+	q_thread_mutex_lock(&state->msg_mutex);
 	list_for_each_entry(msg, &state->pending_rx, li)
 	{
 		if (msg->type != 0x4)
 			continue;
 
-		pthread_mutex_unlock(&state->msg_mutex);
+		q_thread_mutex_unlock(&state->msg_mutex);
 		// notify the indication processing thread
 		// FIXME: not sure this description offers much confidence
 		// in my implementation...
@@ -1062,7 +1125,7 @@ int qrild_qmi_process_indications(struct rild_state *state)
 		// }
 		// qrild_msg_free_locked(msg);
 	}
-	pthread_mutex_unlock(&state->msg_mutex);
+	q_thread_mutex_unlock(&state->msg_mutex);
 
 	return 0;
 }

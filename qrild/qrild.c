@@ -21,6 +21,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -28,6 +29,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#define _OPEN_THREADS
 #include <pthread.h>
 
 #include "q_log.h"
@@ -41,6 +43,8 @@
 #include "util.h"
 #include "qmi_uim.h"
 #include "qrild_android_interface.h"
+
+struct rild_state *g_state;
 
 static int process_pending(struct rild_state *state) {
 	static struct uim_get_card_status_resp_data card_status;
@@ -179,15 +183,25 @@ void usage() {
 
 void q_log_lock(bool lock, void *data) {
 	struct rild_state *state = data;
+	static pthread_mutex_t print_mtex = PTHREAD_MUTEX_INITIALIZER;
 
-	if (lock)
-		pthread_mutex_lock(&state->print_mutex);
-	else
-		pthread_mutex_unlock(&state->print_mutex);
+	if (lock) {
+		pthread_mutex_lock(&print_mtex);
+	} else {
+		pthread_mutex_unlock(&print_mtex);
+	}
+}
+
+void sighup_handler(int signum)
+{
+	log_info("Messages pending TX:");
+	dump_messages(&g_state->pending_tx);
+	log_info("Messaging pending RX:");
+	dump_messages(&g_state->pending_rx);
+	q_thread_dump_locks();
 }
 
 int main(int argc, char **argv) {
-	struct rild_state state;
 	int rc;
 	int opt;
 	const char *progname = basename(argv[0]);
@@ -196,27 +210,36 @@ int main(int argc, char **argv) {
 	pthread_mutexattr_t mattr;
 	pthread_condattr_t cattr;
 	pthread_t msg_thread;
+	struct sigaction action;
 
-	memset(&state, 0, sizeof(state));
+	g_state = zalloc(sizeof(struct rild_state));
 
-	log_set_lock(q_log_lock, &state);
+	log_set_lock(q_log_lock, g_state);
 
-	state.sock = -1;
-	list_init(&state.services);
-	list_init(&state.pending_rx);
-	list_init(&state.pending_tx);
-	state.no_configure_inet = false;
-	state.exit = false;
+	g_state->sock = -1;
+	list_init(&g_state->services);
+	list_init(&g_state->pending_rx);
+	list_init(&g_state->pending_tx);
+	g_state->no_configure_inet = false;
+	g_state->exit = false;
 
 	pthread_mutexattr_init(&mattr);
 	pthread_condattr_init(&cattr);
 
-	pthread_mutex_init(&state.services_mutex, &mattr);
-	pthread_mutex_init(&state.msg_mutex, &mattr);
-	pthread_cond_init(&state.msg_change, &cattr);
-	pthread_cond_init(&state.pending_indications, &cattr);
-	pthread_mutex_init(&state.connection_status_mutex, &mattr);
-	pthread_cond_init(&state.connection_status_change, &cattr);
+	memset(&action, 0, sizeof(action));
+	action.sa_handler = sighup_handler;
+	//sigaction(SIGTERM, &action, NULL);
+	//sigaction(SIGINT, &action, NULL);
+	sigaction(SIGHUP, &action, NULL);
+
+	//pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK);
+
+	pthread_mutex_init(&g_state->services_mutex, &mattr);
+	pthread_mutex_init(&g_state->msg_mutex, &mattr);
+	pthread_cond_init(&g_state->msg_change, &cattr);
+	pthread_cond_init(&g_state->pending_indications, &cattr);
+	pthread_mutex_init(&g_state->connection_status_mutex, &mattr);
+	pthread_cond_init(&g_state->connection_status_change, &cattr);
 
 	while ((opt = getopt(argc, argv, "hdni:g:")) != -1) {
 		switch (opt) {
@@ -224,7 +247,7 @@ int main(int argc, char **argv) {
 			log_error("FIXME: debug_print always enabled");
 			break;
 		case 'n':
-			state.no_configure_inet = true;
+			g_state->no_configure_inet = true;
 			break;
 		case 'i':
 			ip_str = optarg;
@@ -268,16 +291,16 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
-	if (pthread_create(&msg_thread, NULL, msg_loop, &state)) {
+	if (pthread_create(&msg_thread, NULL, msg_loop, g_state)) {
 		log_error("Failed to create msg thread!");
 		return 1;
 	}
 #ifdef ANDROID
-	qrild_android_main(&state);
+	qrild_android_main(g_state);
 #else
-	main_loop(&state);
+	main_loop(g_state);
 #endif
-	state.exit = true;
+	g_state->exit = true;
 	pthread_join(msg_thread, NULL);
 
 	

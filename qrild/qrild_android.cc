@@ -30,6 +30,7 @@
 #include <list.h>
 #include <q_log.h>
 
+#include "qrild.h"
 #include "qrild_android_interface.h"
 #include "qrild_radio.hh"
 
@@ -97,12 +98,14 @@ void *qmi_indications_loop(void *)
 {
     while (!state->exit) {
         /* Wait for a new indication, call each service to let them process it */
-        pthread_mutex_lock(&state->msg_mutex);
-        pthread_cond_wait(&state->pending_indications, &state->msg_mutex);
+        q_thread_mutex_lock(&state->msg_mutex);
+        q_thread_cond_wait(&state->pending_indications, &state->msg_mutex);
+        q_thread_mutex_unlock(&state->msg_mutex);
         for(auto svc : services_list) {
             svc->_handleQmiIndications();
         }
 
+        q_thread_mutex_lock(&state->msg_mutex);
         /* Free all indications */
         struct qrild_msg *msg;
         // FIXME: Should use list_for_each_entry_safe
@@ -115,7 +118,7 @@ void *qmi_indications_loop(void *)
 
         for(auto m : to_free)
             qrild_msg_free_locked(m);
-        pthread_mutex_unlock(&state->msg_mutex);
+        q_thread_mutex_unlock(&state->msg_mutex);
     }
 
     return NULL;
