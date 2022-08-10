@@ -920,11 +920,6 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state)
 	uint16_t txn = qrild_next_transaction_id();
 	char *apn_name = "three.co.uk";
 
-	if (!state->card_status) {
-		log_error("Card status not set!");
-		return QRILD_STATE_ERROR;
-	}
-
 	log_info("Starting net ifaces!");
 
 	req = wds_start_network_interface_req_alloc(txn);

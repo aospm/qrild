@@ -524,8 +524,6 @@ struct rild_state {
 	// Available QMI services
 	struct list_head services;
 	pthread_mutex_t services_mutex;
-
-	struct uim_card_status *card_status;
 };
 
 extern struct rild_state *g_state;
