@@ -106,7 +106,7 @@ ndk::ScopedAStatus RadioConfig::getSimSlotsStatus(int32_t in_serial) {
         LOG(DEBUG) << __func__ << ": not EUICC -> no EID";
     port->iccId = decode_iccid(status.slot_state->slots[0].iccid, status.slot_state->slots[0].iccid_n);
 
-    log_debug("\tFIXME! should start with 3B!!! ATR: %s\n\tEID: %s\n\tICCID: %s\n", slot->atr.c_str(), slot->eid.c_str(), port->iccId.c_str());
+    log_debug("\tATR: %s\n\tEID: %s\n\tICCID: %s\n", slot->atr.c_str(), slot->eid.c_str(), port->iccId.c_str());
 
     //cont:
         slot->portInfo.push_back(*port);

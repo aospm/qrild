@@ -283,6 +283,8 @@ network::CellInfoWcdma RadioNetwork::createCellInfoWcdma(struct nas_get_cell_loc
     wcdma.rscp = INT_MAX;
     wcdma.ecno = INT_MAX;
 
+    LOG(WARNING) << __func__ << ": FIXME: do signal strength crap properly!!!";
+
     if (strength.strength->interface != QMI_NAS_RADIO_INTERFACE_UMTS) {
         LOG(ERROR) << __func__ << ": Signal strength is for wrong interface!";
         return info;
@@ -291,6 +293,9 @@ network::CellInfoWcdma RadioNetwork::createCellInfoWcdma(struct nas_get_cell_loc
     for (int i = 0; i < strength.err_rate_list_n; i++)
         if (strength.err_rate_list[i].interface | QMI_NAS_RADIO_INTERFACE_UMTS)
             wcdma.bitErrorRate = strength.err_rate_list[i].val;
+
+    wcdma.signalStrength = 20;
+    wcdma.bitErrorRate = 5; // %
 
     wcdma.rscp = loc->umts->rscp;
     // FIXME: unreported, maybe undocumented QMI cmd?
@@ -548,9 +553,8 @@ out_err:
     return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
-    log_debug("xRadioNetwork::%s\n", __func__);
-    auto strength = network::SignalStrength();
+RadioError RadioNetwork::getSignalStrength_(network::SignalStrength &strength) {
+
     auto gsm = network::GsmSignalStrength();
     auto cdma = network::CdmaSignalStrength();
     auto evdo = network::EvdoSignalStrength();
@@ -558,7 +562,6 @@ ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
     auto tdscdma = network::TdscdmaSignalStrength();
     auto nr = network::NrSignalStrength();
     auto wcdmaCellInfo = network::CellInfoWcdma();
-    auto r_info = RESP_OK(in_serial);
 
     int16_t lte_snr;
     struct nas_get_signal_strength_resp_data qmi_strength;
@@ -585,24 +588,26 @@ ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
     tdscdma.signalStrength = INT_MAX;
     strength.tdscdma = tdscdma;
 
-    rc = qrild_qmi_nas_get_cell_loc_info(mState, &loc);
-    if (rc < 0) {
-        LOG(ERROR) << __func__ << ": Failed to get cell location info. rc: " << rc
-                   << ", QMI err (if applicable): " << loc.res->error << ": "
-                   << qmi_error_string(loc.res->error);
-        r_info.error = RadioError::MODEM_ERR;
-    }
-    if (loc.res && loc.res->result) {
-        switch(loc.res->error) {
-            case QMI_ERR_NO_NETWORK_FOUND:
-                r_info.error = RadioError::NO_NETWORK_FOUND;
-                goto out;
-            default:
-                r_info.error = RadioError::INTERNAL_ERR;
-                goto out;
-        }
-    }
-    wcdmaCellInfo = createCellInfoWcdma(&loc);
+    // rc = qrild_qmi_nas_get_cell_loc_info(mState, &loc);
+    // if (rc < 0) {
+    //     LOG(ERROR) << __func__ << ": Failed to get cell location info. rc: " << rc
+    //                << ", QMI err (if applicable): " << loc.res->error << ": "
+    //                << qmi_error_string(loc.res->error);
+    //     r_info.error = RadioError::MODEM_ERR;
+    // }
+    // if (loc.res && loc.res->result) {
+    //     switch(loc.res->error) {
+    //         case QMI_ERR_NO_NETWORK_FOUND:
+    //             r_info.error = RadioError::NO_NETWORK_FOUND;
+    //             goto out;
+    //         default:
+    //             r_info.error = RadioError::INTERNAL_ERR;
+    //             goto out;
+    //     }
+    // }
+    updateCellInfo();
+    wcdmaCellInfo = mCellInfo.ratSpecificInfo.get<network::CellInfoRatSpecificInfo::wcdma>();
+        //wcdmaCellInfo = createCellInfoWcdma(&loc);
 
     strength.wcdma = wcdmaCellInfo.signalStrengthWcdma;
 
@@ -622,31 +627,49 @@ ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
         LOG(ERROR) << __func__ << ": Couldn't get signal strength";
     }
     if (!qmi_strength.res)
-        goto out;
+        return RadioError::MODEM_ERR;
     if (qmi_strength.res->result) {
         switch (qmi_strength.res->error) {
         case QMI_ERR_INFORMATION_UNAVAILABLE:
             // Not an "error", we just have no signal
             lte.signalStrength = INT_MAX;
-            goto out;
+            goto no_strength;
         }
     }
 
     qrild_qmi_nas_show_signal_strength(&qmi_strength);
 
-    lte.signalStrength = qmi_strength.strength->strength;
-    lte.rsrp = 65;
-    lte.rsrq = 18;
-    lte.rssnr = 16;
-    lte.cqi = 13;
-    lte.timingAdvance = 647;
-    lte.cqiTableIndex = 5;
+no_strength:
+    lte.signalStrength = INT_MAX;
+    lte.rsrp = INT_MAX;
+    lte.rsrq = INT_MAX;
+    lte.rssnr = INT_MAX;
+    lte.cqi = INT_MAX;
+    lte.timingAdvance = INT_MAX;
+    lte.cqiTableIndex = INT_MAX;
+
+    // lte.signalStrength = qmi_strength.strength->strength;
+    // lte.rsrp = 65;
+    // lte.rsrq = 18;
+    // lte.rssnr = 16;
+    // lte.cqi = 13;
+    // lte.timingAdvance = 647;
+    // lte.cqiTableIndex = 5;
 
     strength.lte = lte;
 
     LOG(INFO) << __func__ << ": " << strength.toString();
 
-out:
+    return RadioError::NONE;
+}
+
+ndk::ScopedAStatus RadioNetwork::getSignalStrength(int32_t in_serial) {
+    log_debug("xRadioNetwork::%s\n", __func__);
+    auto strength = network::SignalStrength();
+    auto r_info = RESP_OK(in_serial);
+
+    r_info.error = getSignalStrength_(strength);
+
     mRep->getSignalStrengthResponse(r_info, strength);
 
     return ndk::ScopedAStatus::ok();
@@ -919,6 +942,13 @@ void RadioNetwork::reportSystemStatus(struct qrild_msg *msg) {
     int rc;
     auto cellInfo = network::CellInfo();
 
+    // FIXME: queue work to do this
+    /*
+    network::SignalStrength strength;
+    RadioError e = getSignalStrength_(strength);
+    mInd->currentSignalStrength(...)
+    */
+
     if (!mInd) {
         LOG(ERROR) << __func__ << ": Tried to process indication before android ready";
         return;
@@ -1017,6 +1047,11 @@ void RadioNetwork::reportSystemStatus(struct qrild_msg *msg) {
         LOG(WARNING) << __func__ << ": Forcing network search";
         qrild_qmi_send_basic_request_sync(mState, QMI_SERVICE_NAS, QMI_NAS_FORCE_NETWORK_SEARCH, NULL);
         _registerAndProvision();
+    }
+
+    if (mRegStateRes.regState == network::RegState::REG_HOME) {
+        log_info("Scheduling delayed work to configure data");
+        q_work_schedule_delayed(&services.data->setup_data_work, 50);
     }
 
     log_debug("Got mRegStateRes: %s", mRegStateRes.toString().c_str());

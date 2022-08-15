@@ -217,7 +217,11 @@ ndk::ScopedAStatus RadioVoice::setCallWaiting(int32_t in_serial, bool in_enable,
 }
 
 ndk::ScopedAStatus RadioVoice::setClir(int32_t in_serial, int32_t in_status) {
-    log_debug("FIXME! TODO: RadioVoice::%s\n", __func__);
+    log_debug("STUB: UNSUPPORTED: RadioVoice::%s\n", __func__);
+    auto r_info = RESP_OK(in_serial);
+    r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+
+    mRep->setClirResponse(r_info);
 
     return ndk::ScopedAStatus::ok();
 }

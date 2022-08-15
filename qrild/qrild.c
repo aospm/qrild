@@ -33,6 +33,7 @@
 #include <pthread.h>
 
 #include "q_log.h"
+#include "workqueue.h"
 
 #include "libqrtr.h"
 
@@ -62,7 +63,6 @@ static int process_pending(struct rild_state *state) {
 		break;
 	case QRILD_ACTION_SLOT_STATUS:
 		rc = qrild_qmi_uim_get_card_status(state, &card_status);
-		state->card_status = card_status.status;
 		break;
 	case QRILD_ACTION_PROVISION:
 		//rc = qrild_qmi_uim_set_provisioning(state, 1, card_status.status->cards[0].applications[0].application_identifier_value);
@@ -85,10 +85,10 @@ static int process_pending(struct rild_state *state) {
 			qrild_qmi_nas_show_signal_strength(&signal_strength);
 		break;
 	case QRILD_ACTION_START_NET_IFACES:
-		rc = qrild_qmi_wds_start_network_interface(state);
+		//rc = qrild_qmi_wds_start_network_interface(state);
 		break;
 	case QRILD_ACTION_GET_RUNTIME_SETTINGS:
-		rc = qrild_qmi_wds_get_current_settings(state);
+		//rc = qrild_qmi_wds_get_current_settings(state);
 		break;
 	// case QRILD_ACTION_NETLINK:
 	// 	rc = qrild_qmi_wds_get_current_settings(state);
@@ -215,6 +215,8 @@ int main(int argc, char **argv) {
 	g_state = zalloc(sizeof(struct rild_state));
 
 	log_set_lock(q_log_lock, g_state);
+
+	q_workqueue_init();
 
 	g_state->sock = -1;
 	list_init(&g_state->services);
