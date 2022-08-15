@@ -6,6 +6,10 @@
 __BEGIN_DECLS
 
 int qrild_link_configure(struct in_addr *addr, struct in_addr *mask, struct in_addr *gateway);
+/**
+ * @brief convert a subnet mask to CIDR notation
+ */
+uint32_t mask_to_prefix(struct in_addr *mask);
 
 __END_DECLS
 #endif

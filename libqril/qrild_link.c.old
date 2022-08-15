@@ -369,8 +369,10 @@ int qrild_link_configure(struct in_addr *addr, struct in_addr *mask, struct in_a
 	printf("before qrild_link_set_up2\n");
 	rc = rc ?: qrild_link_set_up("rmnet_data0");
 
+#ifndef ANDROID
 	printf("before qrild_link_add_default_route\n");
 	rc = rc ?: qrild_link_add_default_route("rmnet_data0", gateway);
+#endif
 
 	if (rc < 0) {
 		fprintf(stderr, "Failed to configure netlink\n");

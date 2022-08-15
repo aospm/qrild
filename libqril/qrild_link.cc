@@ -63,7 +63,7 @@ static int sndbuf = 32768;
 /**
  * Get the CIDR / notation for a subnet mask
  */
-static uint32_t mask_to_prefix(struct in_addr *mask)
+extern "C" uint32_t mask_to_prefix(struct in_addr *mask)
 {
 	uint32_t prefix = 0;
 	uint32_t n = ntohl(mask->s_addr);
@@ -364,15 +364,6 @@ int qrild_link_set_up(const char *dev_ifname)
 	return QRILD_STATE_DONE;
 }
 
-#ifdef ANDROID
-static int qrild_link_configure_android(struct in_addr *addr, struct in_addr *mask,
-					struct in_addr *gateway)
-{
-	return 0;
-}
-
-#endif
-
 extern "C" int qrild_link_configure(struct in_addr *addr, struct in_addr *mask,
 				    struct in_addr *gateway)
 {
@@ -395,14 +386,13 @@ extern "C" int qrild_link_configure(struct in_addr *addr, struct in_addr *mask,
 	log_info("before qrild_link_set_up2");
 	rc = rc ?: qrild_link_set_up(rmnet_iface);
 
-#ifdef ANDROID
-	close(sock_fd);
-
-#else
+#ifndef ANDROID
 	log_info("before qrild_link_add_default_route");
 	rc = rc ?: qrild_link_add_default_route("rmnet_data0", gateway);
 	close(sock_fd);
 #endif
+
+	close(sock_fd);
 
 	if (rc < 0) {
 		log_error("Failed to configure netlink");

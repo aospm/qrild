@@ -230,7 +230,7 @@ int qrild_qmi_nas_register_indications(struct rild_state *state)
 	// FIXME: the QMI message this sends isn't documented
 	nas_register_indications_req_set_rf_band_information(req, false);
 	reject_info.enable_network_reject_indications = true;
-	reject_info.suppress_system_info_indications = true;
+	reject_info.suppress_system_info_indications = false;
 	nas_register_indications_req_set_network_reject_information(req, &reject_info);
 
 	buf = nas_register_indications_req_encode(req, &buf_len);
@@ -910,10 +910,13 @@ int qrild_qmi_wds_start_network_interface_resp(struct rild_state *state, struct 
  * This can fail if data signal is weak, should be retried.
  * error 14: ERR_CALL_FAILED
  */
-int qrild_qmi_wds_start_network_interface(struct rild_state *state)
+int qrild_qmi_wds_start_network_interface(struct rild_state *state,
+					  struct wds_start_network_interface_resp_data *data)
 {
 	struct wds_start_network_interface_req *req;
+	struct wds_start_network_interface_resp *resp;
 	struct qmi_header *qmi;
+	struct qrild_msg *msg;
 	void *buf;
 	size_t buf_sz;
 	int rc, i;
@@ -930,23 +933,25 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state)
 	buf = wds_start_network_interface_req_encode(req, &buf_sz);
 	qmi = (struct qmi_header *)buf;
 
-	rc = qrild_msg_send_async(state, QMI_SERVICE_WDS, buf, buf_sz);
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_WDS, buf, buf_sz, TIMEOUT_DEFAULT, &msg);
 	wds_start_network_interface_req_free(req);
 	if (rc < 0) {
 		log_error("Failed to start network interface:");
 		return QRILD_STATE_ERROR;
 	}
 
-	rc = THREAD_WAIT(state, connection_status);
-	if (rc < 0) {
-		log_error("Didn't receive connection status indication!");
+	resp = wds_start_network_interface_resp_parse(msg->buf, msg->buf_len);
+	if (!resp)
 		return QRILD_STATE_ERROR;
-	}
+
+	wds_start_network_interface_resp_getall(resp, data);
+	wds_start_network_interface_resp_free(resp);
+	qrild_msg_free(msg);
 
 	return QRILD_STATE_DONE;
 }
 
-int qrild_qmi_wds_get_current_settings(struct rild_state *state)
+int qrild_qmi_wds_get_current_settings(struct rild_state *state, struct wds_data_settings *settings)
 {
 	struct wds_get_current_settings_req *req;
 	struct wds_get_current_settings_resp *resp;
@@ -1023,8 +1028,14 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state)
 	}
 	log_info("IP Family: %u", val8);
 
-	if (!state->no_configure_inet)
-		return qrild_link_configure(&ip, &sub, &brd);
+	settings->ip = ip;
+	settings->brd = brd;
+	settings->sub = sub;
+	settings->ip_family = val8;
+	settings->mtu = val;
+
+	// if (!state->no_configure_inet)
+	// 	return qrild_link_configure(&ip, &sub, &brd);
 
 	return QRILD_STATE_DONE;
 }

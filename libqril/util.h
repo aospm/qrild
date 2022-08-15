@@ -1,8 +1,11 @@
 #ifndef __UTIL_H__
 #define __UTIL_H__
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "libqrtr.h"
 
 __BEGIN_DECLS
 
@@ -38,6 +41,8 @@ static inline int qmi_tlv_dump_buf(void *buf, size_t len, int qmi_svc) {
 
 	return 0;
 }
+
+void time_now(struct timespec *ts);
 
 __END_DECLS
 #endif

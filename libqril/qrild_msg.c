@@ -11,6 +11,7 @@
 
 #include "libqrtr.h"
 
+#include "timespec.h"
 #include "list.h"
 #include "qrild.h"
 #include "qrild_msg.h"
@@ -118,22 +119,6 @@ uint16_t qrild_next_transaction_id()
 	return txn++;
 }
 
-static void timespec_add(struct timespec *ts, int ms)
-{
-	// 1000000000
-	time_t seconds = ms / 1000;
-	long int nsec = (ms % 1000) * 1000000;
-	long int ns_diff = ts->tv_nsec - nsec;
-
-	if (ns_diff < 0)
-		ts->tv_nsec = 0;
-	if (nsec != 0)
-		ts->tv_nsec += nsec + ns_diff;
-
-	ts->tv_sec += seconds;
-
-}
-
 /**
  * @brief Build a QMI message and add is to the pending_tx list
  * to be sent by the msg thread.
@@ -183,7 +168,7 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 	 * timeout
 	 */
 	clock_gettime(CLOCK_REALTIME, &timeout);
-	timespec_add(&timeout, timeout_ms);
+	timeout = timespec_add(timeout, timespec_from_ms(timeout_ms));
 	// Check in case the msg thread somehow beat us to it and handled the response
 	// before we got here
 	log_debug("Waiting for response to msg {id: 0x%x, txn: %u}", msg->msg_id, msg->txn);

@@ -269,6 +269,12 @@ void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc)
 	free(buf);
 }
 
+void time_now(struct timespec *ts)
+{
+	clock_gettime(CLOCK_REALTIME, ts);
+}
+
+// FIXME: stick this lock debugging code somewhere else...
 static unsigned long strhash(unsigned char *str)
 {
 	unsigned long hash = 5381;
@@ -307,7 +313,8 @@ static struct qlock *lock_find_by_hash(unsigned long hash)
 	return NULL;
 }
 
-static struct qlock *lock_init(const char *mtex, const char *file, int line, pid_t tid, unsigned long hash)
+static struct qlock *lock_init(const char *mtex, const char *file, int line, pid_t tid,
+			       unsigned long hash)
 {
 	struct qlock *l = zalloc(sizeof(struct qlock));
 	list_append(&locks, &l->li);
@@ -322,8 +329,8 @@ static struct qlock *lock_init(const char *mtex, const char *file, int line, pid
 	return l;
 }
 
-static void track_lock(const char *mtex, uintptr_t addr, const char *file, const char *func, int line, bool lock,
-		       bool trace)
+static void track_lock(const char *mtex, uintptr_t addr, const char *file, const char *func,
+		       int line, bool lock, bool trace)
 {
 	char buf[64];
 	pid_t tid = gettid();
@@ -340,8 +347,8 @@ static void track_lock(const char *mtex, uintptr_t addr, const char *file, const
 	if (!l_global) {
 		l_global = lock_init(mtex, file, line, tid, addr);
 		l_global->global = true;
-		log_error("TRACKLOCK: %s:%d %s() new global lock: %s (%lu)", l_global->file, l_global->line, func, mtex,
-			  l_global->hash);
+		log_error("TRACKLOCK: %s:%d %s() new global lock: %s (%lu)", l_global->file,
+			  l_global->line, func, mtex, l_global->hash);
 	}
 	if (!lock) {
 		if (!l) {
@@ -350,8 +357,8 @@ static void track_lock(const char *mtex, uintptr_t addr, const char *file, const
 			goto out;
 		}
 		if (trace)
-			log_trace("TRACKLOCK: %s:%d %s() UNLOCK %s (%d) (global count: %d) (%lu)", file, line, func, mtex,
-				  l->count, l_global->count, l->hash);
+			log_trace("TRACKLOCK: %s:%d %s() UNLOCK %s (%d) (global count: %d) (%lu)",
+				  file, line, func, mtex, l->count, l_global->count, l->hash);
 		l_global->count--;
 		l->count--;
 		goto out;
@@ -363,8 +370,8 @@ static void track_lock(const char *mtex, uintptr_t addr, const char *file, const
 		goto out;
 	}
 	if (trace)
-		log_trace("TRACKLOCK: %s:%d %s() LOCK %s (%d) (global count: %d) (%lu)", file, line, func,
-				mtex, l->count, l_global->count, l->hash);
+		log_trace("TRACKLOCK: %s:%d %s() LOCK %s (%d) (global count: %d) (%lu)", file, line,
+			  func, mtex, l->count, l_global->count, l->hash);
 	l_global->count++;
 	l->count++;
 
@@ -407,13 +414,16 @@ int _q_thread_cond_timedwait(pthread_cond_t *c, pthread_mutex_t *m, struct times
 	clock_gettime(CLOCK_REALTIME, &now);
 	rc = pthread_mutex_trylock(m);
 	if (rc != EBUSY) {
-		log_error("TRACKLOCK: %s:%d %s() TIMEDWAIT CALLED WITH UNLOCKED MUTEX %s", file, line, func, mtex);
+		log_error("TRACKLOCK: %s:%d %s() TIMEDWAIT CALLED WITH UNLOCKED MUTEX %s", file,
+			  line, func, mtex);
 		while (true) {
 			rc++;
 		}
 	}
-	log_error("TRACKLOCK: %s:%d %s() TIMEDWAIT UNLOCK %s (trylock rc: %d (%s))", file, line, func, mtex, rc, strerror(rc));
-	log_debug("TRACKLOCK: timespec now {tv_sec: %ld, tv_nsec: %ld}, timeout {tv_sec: %ld, tv_nsec: %ld}",
+	log_error("TRACKLOCK: %s:%d %s() TIMEDWAIT UNLOCK %s (trylock rc: %d (%s))", file, line,
+		  func, mtex, rc, strerror(rc));
+	log_debug(
+		"TRACKLOCK: timespec now {tv_sec: %ld, tv_nsec: %ld}, timeout {tv_sec: %ld, tv_nsec: %ld}",
 		now.tv_sec, now.tv_nsec, ts->tv_sec, ts->tv_nsec);
 	track_lock(mtex, (uintptr_t)m, file, func, line, false, false);
 	rc = pthread_cond_timedwait(c, m, ts);
@@ -423,18 +433,20 @@ int _q_thread_cond_timedwait(pthread_cond_t *c, pthread_mutex_t *m, struct times
 	return rc;
 }
 
-int _q_thread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m,
-			     const char *mtex, const char *file, const char *func, int line)
+int _q_thread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m, const char *mtex, const char *file,
+			const char *func, int line)
 {
 	int rc;
 	rc = pthread_mutex_trylock(m);
 	if (rc != EBUSY) {
-		log_error("TRACKLOCK: %s:%d %s() WAIT CALLED WITH UNLOCKED MUTEX %s", file, line, func, mtex);
+		log_error("TRACKLOCK: %s:%d %s() WAIT CALLED WITH UNLOCKED MUTEX %s", file, line,
+			  func, mtex);
 		while (true) {
 			rc++;
 		}
 	}
-	log_error("TRACKLOCK: %s:%d %s() WAIT UNLOCK %s (trylock rc: %d (%s))", file, line, func, mtex, rc, strerror(rc));
+	log_error("TRACKLOCK: %s:%d %s() WAIT UNLOCK %s (trylock rc: %d (%s))", file, line, func,
+		  mtex, rc, strerror(rc));
 	track_lock(mtex, (uintptr_t)m, file, func, line, false, false);
 	rc = pthread_cond_wait(c, m);
 	track_lock(mtex, (uintptr_t)m, file, func, line, true, false);
@@ -443,18 +455,19 @@ int _q_thread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m,
 	return rc;
 }
 
-void _q_thread_dump_locks() {
+void _q_thread_dump_locks()
+{
 	static struct qlock *l;
 	pthread_mutex_lock(&locktrack_mtex);
 	log_info("TRACKLOCK: LOCK DUMP");
 	list_for_each_entry(l, &locks, li)
 	{
 		if (l->global)
-			log_info("\t%s: GLOBAL count: %d, tid: %d (%lu)",
-				l->mtex, l->count, l->tid, l->hash);
+			log_info("\t%s: GLOBAL count: %d, tid: %d (%lu)", l->mtex, l->count, l->tid,
+				 l->hash);
 		else
-			log_info("\t%s: %s:%d count: %d, tid: %d (%lu)",
-				l->mtex, l->file, l->line, l->count, l->tid, l->hash);
+			log_info("\t%s: %s:%d count: %d, tid: %d (%lu)", l->mtex, l->file, l->line,
+				 l->count, l->tid, l->hash);
 	}
 	pthread_mutex_unlock(&locktrack_mtex);
 }
