@@ -2,11 +2,13 @@ cc_library {
     name: "libqril",
     vendor: true,
     srcs: [
-        "subprojects/libqril/qrild_qmi.c",
-        "subprojects/libqril/qrild_msg.c",
-        "subprojects/libqril/qrild_link.cc",
-        "subprojects/libqril/util.c",
-        "subprojects/libqril/q_log.c",
+        "libqril/qrild_qmi.c",
+        "libqril/qrild_msg.c",
+        "libqril/qrild_link.cc",
+        "libqril/util.c",
+        "libqril/q_log.c",
+        "libqril/workqueue.c",
+        "libqril/timespec.c",
         // Generated with qmic
         "_android/qmi_dms.c",
         "_android/qmi_dpm.c",
@@ -23,7 +25,7 @@ cc_library {
     ],
     cflags: ["-fPIC", "-Wno-error"],
     export_include_dirs: [
-        "subprojects/libqril",
+        "libqril",
         "_android",
     ],
 }
