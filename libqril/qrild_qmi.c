@@ -921,7 +921,7 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state,
 	size_t buf_sz;
 	int rc, i;
 	uint16_t txn = qrild_next_transaction_id();
-	char *apn_name = "three.co.uk";
+	char *apn_name = "Three.co.uk";
 
 	log_info("Starting net ifaces!");
 

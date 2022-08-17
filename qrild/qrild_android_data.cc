@@ -39,6 +39,7 @@ RadioData::RadioData(struct rild_state *state) : mState(state) {
     log_debug("xRadioData::%s\n", __func__);
 
     setup_data_work.func = _work_setup_data;
+    dataConnected = false;
 }
 
 ndk::ScopedAStatus RadioData::allocatePduSessionId(int32_t in_serial) {
@@ -90,8 +91,6 @@ ndk::ScopedAStatus RadioData::setDataProfile(
     for (auto profile : in_profiles) {
         LOG(INFO) << "\tprofile: " << profile.toString();
     }
-
-    q_work_schedule_delayed(&setup_data_work, 50);
 
     mRep->setDataProfileResponse(RESP_OK(in_serial));
 
@@ -234,8 +233,12 @@ RadioError RadioData::setup_data_connection() {
     result.gateways.push_back(std::string(inet_ntoa(wds_ds.brd)));
     result.mtuV4 = wds_ds.mtu;
     result.pduSessionId = 0; // Can't find anything about this in public QMI docs
+    result.dnses.push_back("1.1.1.1");
 
-    LOG(DEBUG) << __func__ << ": Configured data call: " << result.toString();
+    LOG(INFO) << __func__ << ": Configured data call: " << result.toString();
+    log_info("Configured data call!!! %s", result.toString().c_str());
+
+    dataConnected = true;
 
     res_arr.push_back(result);
     mInd->dataCallListChanged(RadioIndicationType::UNSOLICITED, res_arr);

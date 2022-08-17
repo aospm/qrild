@@ -8,7 +8,7 @@
 #include "list.h"
 #include "q_log.h"
 #include "util.h"
-#include "q_threads.h"
+#include "workqueue.h"
 
 static struct list_head delayed_tasks = LIST_INIT(delayed_tasks);
 static struct list_head workqueue = LIST_INIT(workqueue);
@@ -79,6 +79,7 @@ static void *q_worker_thread(void* data)
 	pthread_mutex_lock(&wq_mtex);
 	while (!q_exit) {
 		pthread_cond_wait(&new_task, &wq_mtex);
+		log_trace("WORK: new task recv!");
 		while (!list_empty(&workqueue)) {
 			li = list_pop(&workqueue);
 			pthread_mutex_unlock(&wq_mtex);

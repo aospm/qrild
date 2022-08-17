@@ -228,7 +228,7 @@ void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc)
 	fprintf(fp, "<<<    msg_len : 0x%1$04x (%1$u)\n", pkt->msg_len);
 	fprintf(fp, "<<<    msg_id  : 0x%1$04x (%1$u)\n", pkt->msg_id);
 	fprintf(fp, "<<<    txn_id  : 0x%1$04x (%1$u)\n", pkt->txn_id);
-	fprintf(fp, "<<< TLVs:");
+	fprintf(fp, "<<< TLVs:\n");
 	// I do not understand why this -1 is needed
 	while (offset < tlv->size - 1) {
 		item = pkt_data + offset;

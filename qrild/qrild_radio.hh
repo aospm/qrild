@@ -140,6 +140,7 @@ class RadioData : public data::BnRadioData, public IHandlesQmiIndications {
 public:
     RadioData(struct rild_state *state);
     void _handleQmiIndications() override;
+    bool dataConnected;
 
     /* Set up a data connection provided we're already connected to a network */
     struct q_work setup_data_work;
@@ -307,6 +308,9 @@ class RadioNetwork : public network::BnRadioNetwork, public IHandlesQmiIndicatio
     // Data for cellinfo/identity/signal strength stuff
     RadioError updateOperatorInfo();
     network::OperatorInfo mOperator;
+    int mMcc, mMnc;
+
+    RadioError getCellIdentityLte(network::CellIdentityLte &i_lte);
 
 public:
     RadioNetwork(struct rild_state *state);

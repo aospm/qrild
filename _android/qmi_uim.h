@@ -106,6 +106,48 @@ struct uim_physical_slot_info {
 	} *slots;
 };
 
+struct uim_session_t {
+	uint8_t type;
+	uint8_t aid_n;
+	uint8_t *aid;
+};
+
+struct uim_file_t {
+	uint16_t file_id;
+	uint8_t path_n;
+	uint8_t path;
+};
+
+struct uim_read_info_t {
+	uint16_t offset;
+	uint16_t len;
+};
+
+struct uim_card_res_t {
+	uint8_t sw1;
+	uint8_t sw2;
+};
+
+struct uim_file_attrs_t {
+	uint16_t file_size;
+	uint16_t file_id;
+	uint8_t file_type;
+	uint16_t record_size;
+	uint16_t record_count;
+	uint8_t read_sec_attr_logic;
+	uint16_t read_sec_attrs;
+	uint8_t write_sec_attr_logic;
+	uint16_t write_sec_attrs;
+	uint8_t inc_sec_attr_logic;
+	uint16_t inc_sec_attrs;
+	uint8_t deactivate_sec_attr_logic;
+	uint16_t deactivate_sec_attrs;
+	uint8_t activate_sec_attr_logic;
+	uint16_t activate_sec_attrs;
+	uint16_t raw_data_n;
+	uint8_t *raw_data;
+};
+
 struct uim_get_card_status_resp;
 struct uim_change_provisioning_session_req;
 struct uim_change_provisioning_session_resp;
@@ -114,10 +156,16 @@ struct uim_icc_open_logical_channel_resp;
 struct uim_get_slot_status_req;
 struct uim_get_slot_status_resp;
 struct uim_get_slot_status_ind;
+struct uim_read_transparent_req;
+struct uim_read_transparent_resp;
+struct uim_read_record_req;
+struct uim_read_record_resp;
+struct uim_get_file_attrs_req;
+struct uim_get_file_attrs_resp;
 
 
-#define QMI_NUM_MESSAGES_UIM 8
-extern const struct qmi_tlv_msg_name uim_msg_name_map[8];
+#define QMI_NUM_MESSAGES_UIM 14
+extern const struct qmi_tlv_msg_name uim_msg_name_map[14];
 
 /*
  * uim_get_card_status_resp message
@@ -280,6 +328,170 @@ void uim_physical_slot_info_free(struct uim_physical_slot_info *val);
 
 int uim_get_slot_status_ind_set_eid_info(struct uim_get_slot_status_ind *get_slot_status_ind, uint8_t *val, size_t count);
 uint8_t *uim_get_slot_status_ind_get_eid_info(struct uim_get_slot_status_ind *get_slot_status_ind, size_t *count);
+
+/*
+ * uim_read_transparent_req message
+ */
+
+struct uim_read_transparent_req_data {
+	struct uim_session_t *session;
+	struct file_t *file;
+	bool read_info_valid;
+	struct uim_read_info_t *read_info;
+	bool resp_in_ind_valid;
+	uint32_t resp_in_ind;
+	bool encrypt_data_valid;
+	uint8_t encrypt_data;
+};
+
+struct uim_read_transparent_req *uim_read_transparent_req_alloc(unsigned txn);
+void *uim_read_transparent_req_encode(struct uim_read_transparent_req *read_transparent_req, size_t *len);
+void uim_read_transparent_req_free(struct uim_read_transparent_req *read_transparent_req);
+
+int uim_read_transparent_req_set_session(struct uim_read_transparent_req *read_transparent_req, struct uim_session_t *val);
+
+int uim_read_transparent_req_set_file(struct uim_read_transparent_req *read_transparent_req, struct uim_file_t *val);
+
+int uim_read_transparent_req_set_read_info(struct uim_read_transparent_req *read_transparent_req, struct uim_read_info_t *val);
+
+int uim_read_transparent_req_set_resp_in_ind(struct uim_read_transparent_req *read_transparent_req, uint32_t val);
+int uim_read_transparent_req_set_encrypt_data(struct uim_read_transparent_req *read_transparent_req, uint8_t val);
+/*
+ * uim_read_transparent_resp message
+ */
+
+struct uim_read_transparent_resp_data {
+	struct qmi_response_type_v01 *res;
+	bool card_res_valid;
+	struct uim_card_res_t *card_res;
+	bool read_result_valid;
+	size_t read_result_n;
+	uint8_t *read_result;
+	bool resp_in_ind_valid;
+	uint32_t resp_in_ind;
+	bool encrypted_valid;
+	uint8_t encrypted;
+};
+
+struct uim_read_transparent_resp *uim_read_transparent_resp_parse(void *buf, size_t len);
+void uim_read_transparent_resp_getall(struct uim_read_transparent_resp *read_transparent_resp, struct uim_read_transparent_resp_data *data);
+void uim_read_transparent_resp_data_free(struct uim_read_transparent_resp_data *data);
+void uim_read_transparent_resp_free(struct uim_read_transparent_resp *read_transparent_resp);
+
+struct uim_card_res_t *uim_read_transparent_resp_get_card_res(struct uim_read_transparent_resp *read_transparent_resp);
+void uim_card_res_t_free(struct uim_card_res_t *val);
+
+uint8_t *uim_read_transparent_resp_get_read_result(struct uim_read_transparent_resp *read_transparent_resp, size_t *count);
+
+int uim_read_transparent_resp_get_resp_in_ind(struct uim_read_transparent_resp *read_transparent_resp, uint32_t *val);
+
+int uim_read_transparent_resp_get_encrypted(struct uim_read_transparent_resp *read_transparent_resp, uint8_t *val);
+
+/*
+ * uim_read_record_req message
+ */
+
+struct uim_read_record_req_data {
+	struct uim_session_t *session;
+	struct file_t *file;
+	bool read_info_valid;
+	struct uim_read_info_t *read_info;
+	bool last_record_valid;
+	uint16_t last_record;
+	bool resp_in_ind_valid;
+	uint32_t resp_in_ind;
+};
+
+struct uim_read_record_req *uim_read_record_req_alloc(unsigned txn);
+void *uim_read_record_req_encode(struct uim_read_record_req *read_record_req, size_t *len);
+void uim_read_record_req_free(struct uim_read_record_req *read_record_req);
+
+int uim_read_record_req_set_session(struct uim_read_record_req *read_record_req, struct uim_session_t *val);
+
+int uim_read_record_req_set_file(struct uim_read_record_req *read_record_req, struct uim_file_t *val);
+
+int uim_read_record_req_set_read_info(struct uim_read_record_req *read_record_req, struct uim_read_info_t *val);
+
+int uim_read_record_req_set_last_record(struct uim_read_record_req *read_record_req, uint16_t val);
+int uim_read_record_req_set_resp_in_ind(struct uim_read_record_req *read_record_req, uint32_t val);
+/*
+ * uim_read_record_resp message
+ */
+
+struct uim_read_record_resp_data {
+	struct qmi_response_type_v01 *res;
+	bool card_res_valid;
+	struct uim_card_res_t *card_res;
+	bool read_result_valid;
+	size_t read_result_n;
+	uint8_t *read_result;
+	bool additional_read_result_valid;
+	size_t additional_read_result_n;
+	uint8_t *additional_read_result;
+	bool resp_in_ind_valid;
+	uint32_t resp_in_ind;
+};
+
+struct uim_read_record_resp *uim_read_record_resp_parse(void *buf, size_t len);
+void uim_read_record_resp_getall(struct uim_read_record_resp *read_record_resp, struct uim_read_record_resp_data *data);
+void uim_read_record_resp_data_free(struct uim_read_record_resp_data *data);
+void uim_read_record_resp_free(struct uim_read_record_resp *read_record_resp);
+
+struct uim_card_res_t *uim_read_record_resp_get_card_res(struct uim_read_record_resp *read_record_resp);
+void uim_card_res_t_free(struct uim_card_res_t *val);
+
+uint8_t *uim_read_record_resp_get_read_result(struct uim_read_record_resp *read_record_resp, size_t *count);
+
+uint8_t *uim_read_record_resp_get_additional_read_result(struct uim_read_record_resp *read_record_resp, size_t *count);
+
+int uim_read_record_resp_get_resp_in_ind(struct uim_read_record_resp *read_record_resp, uint32_t *val);
+
+/*
+ * uim_get_file_attrs_req message
+ */
+
+struct uim_get_file_attrs_req_data {
+	struct uim_session_t *session;
+	struct file_t *file;
+	bool resp_in_ind_valid;
+	uint32_t resp_in_ind;
+};
+
+struct uim_get_file_attrs_req *uim_get_file_attrs_req_alloc(unsigned txn);
+void *uim_get_file_attrs_req_encode(struct uim_get_file_attrs_req *get_file_attrs_req, size_t *len);
+void uim_get_file_attrs_req_free(struct uim_get_file_attrs_req *get_file_attrs_req);
+
+int uim_get_file_attrs_req_set_session(struct uim_get_file_attrs_req *get_file_attrs_req, struct uim_session_t *val);
+
+int uim_get_file_attrs_req_set_file(struct uim_get_file_attrs_req *get_file_attrs_req, struct uim_file_t *val);
+
+int uim_get_file_attrs_req_set_resp_in_ind(struct uim_get_file_attrs_req *get_file_attrs_req, uint32_t val);
+/*
+ * uim_get_file_attrs_resp message
+ */
+
+struct uim_get_file_attrs_resp_data {
+	struct qmi_response_type_v01 *res;
+	bool card_res_valid;
+	struct uim_card_res_t *card_res;
+	bool file_attrs_valid;
+	struct uim_file_attrs_t *file_attrs;
+	bool resp_in_ind_valid;
+	uint32_t resp_in_ind;
+};
+
+struct uim_get_file_attrs_resp *uim_get_file_attrs_resp_parse(void *buf, size_t len);
+void uim_get_file_attrs_resp_getall(struct uim_get_file_attrs_resp *get_file_attrs_resp, struct uim_get_file_attrs_resp_data *data);
+void uim_get_file_attrs_resp_data_free(struct uim_get_file_attrs_resp_data *data);
+void uim_get_file_attrs_resp_free(struct uim_get_file_attrs_resp *get_file_attrs_resp);
+
+struct uim_card_res_t *uim_get_file_attrs_resp_get_card_res(struct uim_get_file_attrs_resp *get_file_attrs_resp);
+void uim_card_res_t_free(struct uim_card_res_t *val);
+
+struct uim_file_attrs_t *uim_get_file_attrs_resp_get_file_attrs(struct uim_get_file_attrs_resp *get_file_attrs_resp);
+void uim_file_attrs_t_free(struct uim_file_attrs_t *val);
+
+int uim_get_file_attrs_resp_get_resp_in_ind(struct uim_get_file_attrs_resp *get_file_attrs_resp, uint32_t *val);
 
 #ifdef __cplusplus
 }

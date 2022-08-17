@@ -135,3 +135,108 @@ indication get_slot_status_ind {
 	optional physical_slot_info slot_info = 0x11;
 	optional u8 eid_info[32] = 0x12;
 } = 0x0048;
+
+struct session_t {
+	u8 type; # 0 = primary GW provisioning
+	u8 aid_n; # 16
+	u8 *aid;
+}; # TLV 1
+
+struct file_t {
+	u16 file_id;
+	u8 path_n;
+	u8 path;
+};
+
+struct read_info_t {
+	u16 offset; # or "record number"
+	u16 len;
+};
+
+request read_transparent_req {
+	required session_t session = 0x01;
+	required file_t file = 0x02;
+	optional read_info_t read_info = 0x03;
+	optional u32 resp_in_ind = 0x10;
+	optional u8 encrypt_data = 0x11;
+} = 0x0020;
+
+struct card_res_t {
+	u8 sw1;
+	u8 sw2;
+};
+
+response read_transparent_resp {
+	required qmi_response_type_v01 res = 0x02;
+	optional card_res_t card_res = 0x10;
+	optional u8 read_result(2) = 0x11;
+	optional u32 resp_in_ind = 0x12;
+	optional u8 encrypted = 0x13;
+} = 0x0020;
+
+request read_record_req {
+	required session_t session = 0x01;
+	required file_t file = 0x02;
+	optional read_info_t read_info = 0x03;
+	optional u16 last_record = 0x10;
+	optional u32 resp_in_ind = 0x11;
+} = 0x0021;
+
+response read_record_resp {
+	required qmi_response_type_v01 res = 0x02;
+	optional card_res_t card_res = 0x10;
+	optional u8 read_result(2) = 0x11;
+	optional u8 additional_read_result(2) = 0x12;
+	optional u32 resp_in_ind = 0x13;
+} = 0x0021;
+
+request get_file_attrs_req {
+	required session_t session = 0x01;
+	required file_t file = 0x02;
+	optional u32 resp_in_ind = 0x11;
+} = 0x0024;
+
+struct file_attrs_t {
+	u16 file_size;
+	u16 file_id;
+	u8 file_type;
+	u16 record_size;
+	u16 record_count;
+	u8 read_sec_attr_logic;
+	u16 read_sec_attrs;
+	u8 write_sec_attr_logic;
+	u16 write_sec_attrs;
+	u8 inc_sec_attr_logic;
+	u16 inc_sec_attrs;
+	u8 deactivate_sec_attr_logic;
+	u16 deactivate_sec_attrs;
+	u8 activate_sec_attr_logic;
+	u16 activate_sec_attrs;
+	u16 raw_data_n;
+	u8 *raw_data;
+};
+
+response get_file_attrs_resp {
+	required qmi_response_type_v01 res = 0x02;
+	optional card_res_t card_res = 0x10;
+	optional file_attrs_t file_attrs = 0x11;
+	optional u32 resp_in_ind = 0x12;
+} = 0x0024;
+
+struct refresh_ev_t {
+	u8 stage;
+	u8 mode;
+	u8 session_type;
+	u8 aid_n;
+	u8 *aid;
+	u16 files_n;
+	struct {
+		u16 id;
+		u8 path_n;
+		u8 *path;
+	} *files;
+};
+
+indication refresh {
+	required refresh_ev_t event = 0x10;
+} = 0x33;

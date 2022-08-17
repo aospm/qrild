@@ -31,7 +31,8 @@
 RadioModem::RadioModem(struct rild_state *state) : mState(state) {
     log_debug("xRadioModem::%s\n", __func__);
 
-    LOG(INFO) << "Powering on modem...";
+    LOG(INFO) << "Rebooting modem...";
+    qrild_qmi_dms_set_operating_mode(mState, QMI_DMS_OPERATING_MODE_RESET);
     qrild_qmi_powerup(mState);
 
     int rc = qrild_qmi_nas_register_indications(mState);
@@ -41,7 +42,7 @@ RadioModem::RadioModem(struct rild_state *state) : mState(state) {
 
     mCaps.logicalModemUuid = "org.linaro.qrild.lm1";
     mCaps.phase = modem::RadioCapability::PHASE_CONFIGURED;
-    mCaps.raf = (int32_t)RadioAccessFamily::LTE;
+    mCaps.raf = (int32_t)RadioAccessFamily::LTE|(int32_t)RadioAccessFamily::UMTS;
     mCaps.status = modem::RadioCapability::STATUS_NONE;
 
     mEnabled = true;
@@ -307,7 +308,7 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
               << ", preferredForEmergencyCall: " << in_preferredForEmergencyCall << ")";
 
     if (!in_powerOn) {
-        LOG(DEBUG) << "Not powering modem off!";
+        LOG(INFO) << "Not powering modem off!";
         //mEnabled = false;
         mRep->setRadioPowerResponse(r_info);
         return ndk::ScopedAStatus::ok();

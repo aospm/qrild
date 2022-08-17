@@ -65,10 +65,9 @@ ndk::ScopedAStatus RadioSim::getCdmaSubscription(int32_t in_serial) {
     return ndk::ScopedAStatus::ok();
 }
 
+// This should always be RUIM_SIM
 ndk::ScopedAStatus RadioSim::getCdmaSubscriptionSource(int32_t in_serial) {
     log_debug("xRadioSim::%s\n", __func__);
-
-    LOG(INFO) << __func__ << ": FIXME: hardcoded to RUIM_SIM";
 
     mRep->getCdmaSubscriptionSourceResponse(
           RESP_OK(in_serial), sim::CdmaSubscriptionSource::RUIM_SIM);
@@ -79,7 +78,13 @@ ndk::ScopedAStatus RadioSim::getCdmaSubscriptionSource(int32_t in_serial) {
 ndk::ScopedAStatus RadioSim::getFacilityLockForApp(int32_t in_serial,
       const std::string &in_facility, const std::string &in_password, int32_t in_serviceClass,
       const std::string &in_appId) {
-    log_debug("FIXME! TODO: RadioSim::%s\n", __func__);
+    log_debug("STUB: RadioSim::%s\n", __func__);
+
+    LOG(INFO) << __func__ << "facility: " << in_facility << ", password: " << in_password << ", serviceClass: " << in_serviceClass << ", appId: " << in_appId;
+
+    // Indicates data + SMS TS 27.007 Section 7.4 -- +CLCK
+    mRep->getFacilityLockForAppResponse(RESP_OK(in_serial), 0);
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -117,8 +122,12 @@ int RadioSim::_provisionDefaultSim() {
         return -1;
     }
 
-    if (!rc)
-        mProvisioned = true;
+    if (rc)
+        return rc;
+
+    mProvisioned = true;
+
+    mInd->subscriptionStatusChanged(RadioIndicationType::UNSOLICITED, true);
 
     return rc;
 }
@@ -193,7 +202,8 @@ ndk::ScopedAStatus RadioSim::getIccCardStatus(int32_t in_serial) {
     mCardStatus.cdmaSubscriptionAppIndex = 0;
     mCardStatus.imsSubscriptionAppIndex = 0;
     mCardStatus.applications = std::vector<sim::AppStatus>();
-    // FIXME: Should be USIM, hopefully can get away with this
+    // FIXME: Seems like this needs to be RUIM, probably because of other hacks / missing features
+    //hopefully can get away with this
     appn.appType = card_status.status->cards[0].applications[0].type;
     switch (card_status.status->cards[0].applications[0].state) {
     case QMI_UIM_CARD_APPLICATION_STATE_DETECTED:
@@ -322,13 +332,51 @@ ndk::ScopedAStatus RadioSim::iccCloseLogicalChannel(int32_t in_serial, int32_t i
     return ndk::ScopedAStatus::ok();
 }
 
+// FIXME: re-implement this in libqril and call into that with some abstraction
+#define COMMAND_READ_BINARY 0xb0
+#define COMMAND_UPDATE_BINARY 0xd6
+#define COMMAND_READ_RECORD 0xb2
+#define COMMAND_UPDATE_RECORD 0xdc
+#define COMMAND_SEEK 0xa2
+#define COMMAND_GET_RESPONSE 0xc0
 ndk::ScopedAStatus RadioSim::iccIoForApp(int32_t in_serial, const sim::IccIo &in_iccIo) {
     log_debug("STUB: RadioSim::%s\n", __func__);
     auto r_info = RESP_OK(in_serial);
+    uint8_t* aid_buf;
+    size_t aid_len;
+    struct qmi_tlv *tlv;
+    uint16_t msg_id = 0;
 
-    LOG(DEBUG) << "Got ICCIO: " << in_iccIo.toString();
-    r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+    aid_buf = bytes_from_hex_str(in_iccIo.aid.c_str(), &aid_len);
 
+    LOG(INFO) << "Got ICCIO: " << in_iccIo.toString();
+
+    if (in_iccIo.data.length() > 0) {
+        LOG(ERROR) << __func__ << ": Android tried to write to SIM and I'm not risking that...";
+        r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+        goto out;
+    }
+
+    switch(in_iccIo.command) {
+    case COMMAND_READ_BINARY:
+        break;
+    case COMMAND_UPDATE_BINARY:
+        break;
+    case COMMAND_READ_RECORD:
+        break;
+    case COMMAND_UPDATE_RECORD:
+        break;
+    case COMMAND_SEEK:
+        break;
+    case COMMAND_GET_RESPONSE: // TS 51.011 section 6.1
+        break;
+    default:
+        LOG(ERROR) << __func__ << ": Invalid/unsupported ICCIO command!";
+        r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+        goto out;
+    }
+
+out:
     mRep->iccIoForAppResponse(r_info, sim::IccIoResult());
 
     return ndk::ScopedAStatus::ok();
@@ -477,6 +525,9 @@ ndk::ScopedAStatus RadioSim::setResponseFunctions(
 
     mRep = in_radioSimResponse;
     mInd = in_radioSimIndication;
+
+    LOG(WARNING) << __func__ << ": HACK: always indicate UICC applications disabled";
+    mInd->uiccApplicationsEnablementChanged(RadioIndicationType::UNSOLICITED, false);
 
     if (services.initialised && services.modem->mEnabled)
         _provisionDefaultSim();

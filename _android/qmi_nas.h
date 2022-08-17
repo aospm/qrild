@@ -27,12 +27,14 @@ extern "C" {
 #define QMI_NAS_SET_SYSTEM_PREFS 51
 #define QMI_NAS_GET_SYSTEM_PREFS 52
 #define QMI_NAS_GET_OPERATOR_NAME 57
+#define QMI_NAS_GET_CELL_LOCATION_INFO 67
 #define QMI_NAS_GET_PLMN_NAME 68
 #define QMI_NAS_SUBSCRIPTION_INFO_REPORT 72
 #define QMI_NAS_GET_SIGNAL_INFO 79
 #define QMI_NAS_SIGNAL_INFO_REPORT 81
 #define QMI_NAS_ERROR_RATE_REPORT 83
 #define QMI_NAS_RF_BAND_INFO_REPORT 102
+#define QMI_NAS_FORCE_NETWORK_SEARCH 103
 #define QMI_NAS_GET_LTE_CPY_CA_INFO 172
 #define QMI_NAS_DL_BANDWIDTH_1_4 0
 #define QMI_NAS_DL_BANDWIDTH_3 1
@@ -172,7 +174,76 @@ struct nas_network_selection_pref {
 };
 
 struct nas_geran_info {
-	uint8_t x;
+	uint32_t cell_id;
+	uint8_t plmn[3];
+	uint16_t lac;
+	uint16_t abs_channel_num;
+	uint8_t bsic;
+	uint32_t timing_advance;
+	uint16_t rx_level;
+	uint8_t cells_n;
+	struct geran_info_cells {
+		uint32_t cell_id;
+		uint8_t plmn[3];
+		uint16_t lac;
+		uint16_t abs_channel_num;
+		uint8_t bsic;
+		uint16_t rx_level;
+	} *cells;
+};
+
+struct nas_umts_info {
+	uint16_t cell_id;
+	uint8_t plmn[3];
+	uint16_t lac;
+	uint16_t abs_channel_num;
+	uint16_t psc;
+	int16_t rscp;
+	int16_t ecio;
+	uint8_t cells_n;
+	struct umts_info_cells {
+		uint16_t abs_channel_num;
+		uint16_t psc;
+		int16_t rscp;
+		int16_t ecio;
+	} *cells;
+	uint8_t gerans_n;
+	struct umts_info_cells_gerans {
+		uint16_t abs_channel_num;
+		uint8_t network_color_code;
+		uint8_t base_station_color_code;
+		int8_t rssi;
+	} *gerans;
+};
+
+struct nas_cdma_info {
+	uint16_t system_id;
+	uint16_t network_id;
+	uint16_t bsid;
+	uint16_t reference_pn;
+	uint32_t latitude;
+	uint32_t longitude;
+};
+
+struct nas_intrafreq_lte_info {
+	uint8_t ue_idle;
+	uint8_t plmn[3];
+	uint16_t tac;
+	uint32_t global_cell_id;
+	uint16_t abs_channel_num;
+	uint16_t serving_cell_id;
+	uint8_t crp;
+	uint8_t s_non_intra_search_threshold;
+	uint8_t serving_cell_low_threshold;
+	uint8_t s_intra_search_threshold;
+	uint8_t cells_n;
+	struct intrafreq_lte_info_cells {
+		uint16_t pci;
+		int16_t rsrq;
+		int16_t rsrp;
+		int16_t rssi;
+		int16_t rx_level;
+	} *cells;
 };
 
 struct nas_plmn_id {
@@ -231,6 +302,7 @@ struct nas_register_indications_req;
 struct nas_get_signal_strength_req;
 struct nas_get_signal_strength_resp;
 struct nas_initiate_network_register;
+struct nas_serving_system_resp;
 struct nas_serving_system_ind;
 struct nas_set_operating_mode_req;
 struct nas_set_operating_mode_resp;
@@ -246,8 +318,8 @@ struct nas_signal_info_ind;
 struct nas_get_lte_cphy_ca_info_resp;
 
 
-#define QMI_NUM_MESSAGES_NAS 17
-extern const struct qmi_tlv_msg_name nas_msg_name_map[17];
+#define QMI_NUM_MESSAGES_NAS 18
+extern const struct qmi_tlv_msg_name nas_msg_name_map[18];
 
 /*
  * nas_register_indications_req message
@@ -383,6 +455,47 @@ void nas_initiate_network_register_free(struct nas_initiate_network_register *in
 
 int nas_initiate_network_register_set_action(struct nas_initiate_network_register *initiate_network_register, uint8_t val);
 /*
+ * nas_serving_system_resp message
+ */
+
+struct nas_serving_system_resp_data {
+	struct qmi_response_type_v01 *res;
+	bool system_valid;
+	struct nas_serving_system *system;
+	bool data_service_cap_valid;
+	size_t data_service_cap_n;
+	uint8_t *data_service_cap;
+	bool plmn_valid;
+	struct nas_current_plmn *plmn;
+	bool lac_valid;
+	uint16_t lac;
+	bool cid_valid;
+	uint16_t cid;
+	bool status_valid;
+	struct nas_service_status *status;
+};
+
+struct nas_serving_system_resp *nas_serving_system_resp_parse(void *buf, size_t len);
+void nas_serving_system_resp_getall(struct nas_serving_system_resp *serving_system_resp, struct nas_serving_system_resp_data *data);
+void nas_serving_system_resp_data_free(struct nas_serving_system_resp_data *data);
+void nas_serving_system_resp_free(struct nas_serving_system_resp *serving_system_resp);
+
+struct nas_serving_system *nas_serving_system_resp_get_system(struct nas_serving_system_resp *serving_system_resp);
+void nas_serving_system_free(struct nas_serving_system *val);
+
+uint8_t *nas_serving_system_resp_get_data_service_cap(struct nas_serving_system_resp *serving_system_resp, size_t *count);
+
+struct nas_current_plmn *nas_serving_system_resp_get_plmn(struct nas_serving_system_resp *serving_system_resp);
+void nas_current_plmn_free(struct nas_current_plmn *val);
+
+int nas_serving_system_resp_get_lac(struct nas_serving_system_resp *serving_system_resp, uint16_t *val);
+
+int nas_serving_system_resp_get_cid(struct nas_serving_system_resp *serving_system_resp, uint16_t *val);
+
+struct nas_service_status *nas_serving_system_resp_get_status(struct nas_serving_system_resp *serving_system_resp);
+void nas_service_status_free(struct nas_service_status *val);
+
+/*
  * nas_serving_system_ind message
  */
 
@@ -394,6 +507,10 @@ struct nas_serving_system_ind_data {
 	uint8_t *data_service_cap;
 	bool plmn_valid;
 	struct nas_current_plmn *plmn;
+	bool lac_valid;
+	uint16_t lac;
+	bool cid_valid;
+	uint16_t cid;
 	bool status_valid;
 	struct nas_service_status *status;
 };
@@ -415,6 +532,12 @@ uint8_t *nas_serving_system_ind_get_data_service_cap(struct nas_serving_system_i
 int nas_serving_system_ind_set_plmn(struct nas_serving_system_ind *serving_system_ind, struct nas_current_plmn *val);
 struct nas_current_plmn *nas_serving_system_ind_get_plmn(struct nas_serving_system_ind *serving_system_ind);
 void nas_current_plmn_free(struct nas_current_plmn *val);
+
+int nas_serving_system_ind_set_lac(struct nas_serving_system_ind *serving_system_ind, uint16_t val);
+int nas_serving_system_ind_get_lac(struct nas_serving_system_ind *serving_system_ind, uint16_t *val);
+
+int nas_serving_system_ind_set_cid(struct nas_serving_system_ind *serving_system_ind, uint16_t val);
+int nas_serving_system_ind_get_cid(struct nas_serving_system_ind *serving_system_ind, uint16_t *val);
 
 int nas_serving_system_ind_set_status(struct nas_serving_system_ind *serving_system_ind, struct nas_service_status *val);
 struct nas_service_status *nas_serving_system_ind_get_status(struct nas_serving_system_ind *serving_system_ind);
@@ -560,8 +683,35 @@ void nas_operator_plmn_name_free(struct nas_operator_plmn_name *val);
 /*
  * nas_get_cell_loc_info message
  */
+
+struct nas_get_cell_loc_info_data {
+	struct qmi_response_type_v01 *res;
+	bool geran_valid;
+	struct nas_geran_info *geran;
+	bool umts_valid;
+	struct nas_umts_info *umts;
+	bool cdma_valid;
+	struct nas_cdma_info *cdma;
+	bool intra_lte_valid;
+	struct nas_intrafreq_lte_info *intra_lte;
+};
+
 struct nas_get_cell_loc_info *nas_get_cell_loc_info_parse(void *buf, size_t len);
+void nas_get_cell_loc_info_getall(struct nas_get_cell_loc_info *get_cell_loc_info, struct nas_get_cell_loc_info_data *data);
+void nas_get_cell_loc_info_data_free(struct nas_get_cell_loc_info_data *data);
 void nas_get_cell_loc_info_free(struct nas_get_cell_loc_info *get_cell_loc_info);
+
+struct nas_geran_info *nas_get_cell_loc_info_get_geran(struct nas_get_cell_loc_info *get_cell_loc_info);
+void nas_geran_info_free(struct nas_geran_info *val);
+
+struct nas_umts_info *nas_get_cell_loc_info_get_umts(struct nas_get_cell_loc_info *get_cell_loc_info);
+void nas_umts_info_free(struct nas_umts_info *val);
+
+struct nas_cdma_info *nas_get_cell_loc_info_get_cdma(struct nas_get_cell_loc_info *get_cell_loc_info);
+void nas_cdma_info_free(struct nas_cdma_info *val);
+
+struct nas_intrafreq_lte_info *nas_get_cell_loc_info_get_intra_lte(struct nas_get_cell_loc_info *get_cell_loc_info);
+void nas_intrafreq_lte_info_free(struct nas_intrafreq_lte_info *val);
 
 /*
  * nas_get_plmn_name_req message

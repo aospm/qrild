@@ -2,11 +2,12 @@
 #include <string.h>
 #include "qmi_nas.h"
 
-const struct qmi_tlv_msg_name nas_msg_name_map[17] = {
+const struct qmi_tlv_msg_name nas_msg_name_map[18] = {
 	{ .msg_id = 3, .msg_name = "nas_register_indications_req" },
 	{ .msg_id = 32, .msg_name = "nas_get_signal_strength_req" },
 	{ .msg_id = 32, .msg_name = "nas_get_signal_strength_resp" },
 	{ .msg_id = 34, .msg_name = "nas_initiate_network_register" },
+	{ .msg_id = 36, .msg_name = "nas_serving_system_resp" },
 	{ .msg_id = 36, .msg_name = "nas_serving_system_ind" },
 	{ .msg_id = 46, .msg_name = "nas_set_operating_mode_req" },
 	{ .msg_id = 46, .msg_name = "nas_set_operating_mode_resp" },
@@ -237,7 +238,7 @@ struct nas_signal_strength *nas_get_signal_strength_resp_get_strength_list(struc
 {
 	size_t size;
 	size_t len;
-	void *ptr;
+	void *ptr, *out;
 
 	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 16, 2, &len, &size);
 	if (!ptr)
@@ -247,14 +248,16 @@ struct nas_signal_strength *nas_get_signal_strength_resp_get_strength_list(struc
 		return NULL;
 
 	*count = len;
-	return ptr;
+	out = malloc(len);
+	memcpy(out, ptr, len);
+	return out;
 }
 
 struct nas_ss_value *nas_get_signal_strength_resp_get_rssi_list(struct nas_get_signal_strength_resp *get_signal_strength_resp, size_t *count)
 {
 	size_t size;
 	size_t len;
-	void *ptr;
+	void *ptr, *out;
 
 	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 17, 2, &len, &size);
 	if (!ptr)
@@ -264,14 +267,16 @@ struct nas_ss_value *nas_get_signal_strength_resp_get_rssi_list(struct nas_get_s
 		return NULL;
 
 	*count = len;
-	return ptr;
+	out = malloc(len);
+	memcpy(out, ptr, len);
+	return out;
 }
 
 struct nas_ss_value *nas_get_signal_strength_resp_get_ecio_list(struct nas_get_signal_strength_resp *get_signal_strength_resp, size_t *count)
 {
 	size_t size;
 	size_t len;
-	void *ptr;
+	void *ptr, *out;
 
 	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 18, 2, &len, &size);
 	if (!ptr)
@@ -281,7 +286,9 @@ struct nas_ss_value *nas_get_signal_strength_resp_get_ecio_list(struct nas_get_s
 		return NULL;
 
 	*count = len;
-	return ptr;
+	out = malloc(len);
+	memcpy(out, ptr, len);
+	return out;
 }
 
 int nas_get_signal_strength_resp_get_io(struct nas_get_signal_strength_resp *get_signal_strength_resp, uint32_t *val)
@@ -320,7 +327,7 @@ struct nas_ss_value *nas_get_signal_strength_resp_get_err_rate_list(struct nas_g
 {
 	size_t size;
 	size_t len;
-	void *ptr;
+	void *ptr, *out;
 
 	ptr = qmi_tlv_get_array((struct qmi_tlv*)get_signal_strength_resp, 21, 2, &len, &size);
 	if (!ptr)
@@ -330,7 +337,9 @@ struct nas_ss_value *nas_get_signal_strength_resp_get_err_rate_list(struct nas_g
 		return NULL;
 
 	*count = len;
-	return ptr;
+	out = malloc(len);
+	memcpy(out, ptr, len);
+	return out;
 }
 
 struct nas_ss_value *nas_get_signal_strength_resp_get_rsrq(struct nas_get_signal_strength_resp *get_signal_strength_resp)
@@ -407,6 +416,188 @@ int nas_initiate_network_register_set_action(struct nas_initiate_network_registe
 	return qmi_tlv_set((struct qmi_tlv*)initiate_network_register, 1, &val, sizeof(uint8_t));
 }
 
+struct nas_serving_system_resp *nas_serving_system_resp_parse(void *buf, size_t len)
+{
+	return (struct nas_serving_system_resp*)qmi_tlv_decode(buf, len);
+}
+
+void nas_serving_system_resp_getall(struct nas_serving_system_resp *serving_system_resp, struct nas_serving_system_resp_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)serving_system_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
+	data->system = nas_serving_system_resp_get_system(serving_system_resp);
+	data->system_valid = !!data->system;
+	data->data_service_cap = nas_serving_system_resp_get_data_service_cap(serving_system_resp, &data->data_service_cap_n);
+	data->data_service_cap_valid = !!data->data_service_cap_n;
+	data->plmn = nas_serving_system_resp_get_plmn(serving_system_resp);
+	data->plmn_valid = !!data->plmn;
+	rc = nas_serving_system_resp_get_lac(serving_system_resp, &data->lac);
+	data->lac_valid = rc >= 0;
+	rc = nas_serving_system_resp_get_cid(serving_system_resp, &data->cid);
+	data->cid_valid = rc >= 0;
+	data->status = nas_serving_system_resp_get_status(serving_system_resp);
+	data->status_valid = !!data->status;
+}
+
+void nas_serving_system_resp_data_free(struct nas_serving_system_resp_data *data)
+{
+
+		free(data->res);
+	if(data->system_valid) {
+		nas_serving_system_free(data->system);
+		free(data->system);
+	}
+	if(data->data_service_cap_valid) {
+		free(data->data_service_cap);
+	}
+	if(data->plmn_valid) {
+		nas_current_plmn_free(data->plmn);
+		free(data->plmn);
+	}
+	if(data->status_valid) {
+		free(data->status);
+	}
+}
+
+void nas_serving_system_resp_free(struct nas_serving_system_resp *serving_system_resp)
+{
+	qmi_tlv_free((struct qmi_tlv*)serving_system_resp);
+}
+
+struct nas_serving_system *nas_serving_system_resp_get_system(struct nas_serving_system_resp *serving_system_resp)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_serving_system *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_resp, 1, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_serving_system));
+	out->registration_state = get_next(uint8_t, 1);
+	out->cs_attach_state = get_next(uint8_t, 1);
+	out->ps_attach_state = get_next(uint8_t, 1);
+	out->selected_network = get_next(uint8_t, 1);
+	out->radio_interfaces_n = get_next(uint8_t, 1);
+	size_t radio_interfaces_sz = 1;
+	out->radio_interfaces = malloc(1 + radio_interfaces_sz * out->radio_interfaces_n);
+	for(size_t i = 0; i < out->radio_interfaces_n; i++) {
+		out->radio_interfaces[i] = get_next(uint8_t, 1);
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+uint8_t *nas_serving_system_resp_get_data_service_cap(struct nas_serving_system_resp *serving_system_resp, size_t *count)
+{
+	uint8_t *ptr, *out;
+	size_t size;
+	size_t len;
+
+	ptr = qmi_tlv_get_array((struct qmi_tlv*)serving_system_resp, 17, 1, &len, &size);
+	if (!ptr)
+		return NULL;
+
+	if (size != sizeof(uint8_t))
+		return NULL;
+
+	out = malloc(len);
+	memcpy(out, ptr, len);
+
+	*count = len;
+	return out;
+}
+
+struct nas_current_plmn *nas_serving_system_resp_get_plmn(struct nas_serving_system_resp *serving_system_resp)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_current_plmn *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_resp, 18, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_current_plmn));
+	out->mcc = get_next(uint16_t, 2);
+	out->mnc = get_next(uint16_t, 2);
+	out->description = malloc(strlen(ptr + len) + 1);
+	strcpy(out->description, ptr + len); len += strlen(ptr + len);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+int nas_serving_system_resp_get_lac(struct nas_serving_system_resp *serving_system_resp, uint16_t *val)
+{
+	uint16_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_resp, 29, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(uint16_t))
+		return -EINVAL;
+
+	*val = *(uint16_t*)ptr;
+	return 0;
+}
+
+int nas_serving_system_resp_get_cid(struct nas_serving_system_resp *serving_system_resp, uint16_t *val)
+{
+	uint16_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_resp, 30, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(uint16_t))
+		return -EINVAL;
+
+	*val = *(uint16_t*)ptr;
+	return 0;
+}
+
+struct nas_service_status *nas_serving_system_resp_get_status(struct nas_serving_system_resp *serving_system_resp)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_service_status *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_resp, 34, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_service_status));
+	out->status = get_next(uint8_t, 1);
+	out->capability = get_next(uint8_t, 1);
+	out->hdr_status = get_next(uint8_t, 1);
+	out->hdr_hybrid = get_next(uint8_t, 1);
+	out->forbidden = get_next(uint8_t, 1);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
 struct nas_serving_system_ind *nas_serving_system_ind_alloc(unsigned txn)
 {
 	return (struct nas_serving_system_ind*)qmi_tlv_init(txn, 36, 4);
@@ -433,6 +624,10 @@ void nas_serving_system_ind_getall(struct nas_serving_system_ind *serving_system
 	data->data_service_cap_valid = !!data->data_service_cap_n;
 	data->plmn = nas_serving_system_ind_get_plmn(serving_system_ind);
 	data->plmn_valid = !!data->plmn;
+	rc = nas_serving_system_ind_get_lac(serving_system_ind, &data->lac);
+	data->lac_valid = rc >= 0;
+	rc = nas_serving_system_ind_get_cid(serving_system_ind, &data->cid);
+	data->cid_valid = rc >= 0;
 	data->status = nas_serving_system_ind_get_status(serving_system_ind);
 	data->status_valid = !!data->status;
 }
@@ -582,6 +777,48 @@ err_wrong_len:
 	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
 	free(out);
 	return NULL;
+}
+
+int nas_serving_system_ind_set_lac(struct nas_serving_system_ind *serving_system_ind, uint16_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)serving_system_ind, 29, &val, sizeof(uint16_t));
+}
+
+int nas_serving_system_ind_get_lac(struct nas_serving_system_ind *serving_system_ind, uint16_t *val)
+{
+	uint16_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_ind, 29, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(uint16_t))
+		return -EINVAL;
+
+	*val = *(uint16_t*)ptr;
+	return 0;
+}
+
+int nas_serving_system_ind_set_cid(struct nas_serving_system_ind *serving_system_ind, uint16_t val)
+{
+	return qmi_tlv_set((struct qmi_tlv*)serving_system_ind, 30, &val, sizeof(uint16_t));
+}
+
+int nas_serving_system_ind_get_cid(struct nas_serving_system_ind *serving_system_ind, uint16_t *val)
+{
+	uint16_t *ptr;
+	size_t len;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)serving_system_ind, 30, &len);
+	if (!ptr)
+		return -ENOENT;
+
+	if (len != sizeof(uint16_t))
+		return -EINVAL;
+
+	*val = *(uint16_t*)ptr;
+	return 0;
 }
 
 int nas_serving_system_ind_set_status(struct nas_serving_system_ind *serving_system_ind, struct nas_service_status *val)
@@ -1283,9 +1520,200 @@ struct nas_get_cell_loc_info *nas_get_cell_loc_info_parse(void *buf, size_t len)
 	return (struct nas_get_cell_loc_info*)qmi_tlv_decode(buf, len);
 }
 
+void nas_get_cell_loc_info_getall(struct nas_get_cell_loc_info *get_cell_loc_info, struct nas_get_cell_loc_info_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->res = malloc(sizeof(struct qmi_response_type_v01));
+	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_cell_loc_info, 2, NULL), sizeof(struct qmi_response_type_v01));
+	data->geran = nas_get_cell_loc_info_get_geran(get_cell_loc_info);
+	data->geran_valid = !!data->geran;
+	data->umts = nas_get_cell_loc_info_get_umts(get_cell_loc_info);
+	data->umts_valid = !!data->umts;
+	data->cdma = nas_get_cell_loc_info_get_cdma(get_cell_loc_info);
+	data->cdma_valid = !!data->cdma;
+	data->intra_lte = nas_get_cell_loc_info_get_intra_lte(get_cell_loc_info);
+	data->intra_lte_valid = !!data->intra_lte;
+}
+
+void nas_get_cell_loc_info_data_free(struct nas_get_cell_loc_info_data *data)
+{
+
+		free(data->res);
+	if(data->geran_valid) {
+		nas_geran_info_free(data->geran);
+		free(data->geran);
+	}
+	if(data->umts_valid) {
+		nas_umts_info_free(data->umts);
+		free(data->umts);
+	}
+	if(data->cdma_valid) {
+		free(data->cdma);
+	}
+	if(data->intra_lte_valid) {
+		nas_intrafreq_lte_info_free(data->intra_lte);
+		free(data->intra_lte);
+	}
+}
+
 void nas_get_cell_loc_info_free(struct nas_get_cell_loc_info *get_cell_loc_info)
 {
 	qmi_tlv_free((struct qmi_tlv*)get_cell_loc_info);
+}
+
+struct nas_geran_info *nas_get_cell_loc_info_get_geran(struct nas_get_cell_loc_info *get_cell_loc_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_geran_info *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_cell_loc_info, 16, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_geran_info));
+	out->cell_id = get_next(uint32_t, 4);
+	memcpy(&out->plmn, ptr + len, 3 * 1);
+	len += 3 * 1;
+	out->lac = get_next(uint16_t, 2);
+	out->abs_channel_num = get_next(uint16_t, 2);
+	out->bsic = get_next(uint8_t, 1);
+	out->timing_advance = get_next(uint32_t, 4);
+	out->rx_level = get_next(uint16_t, 2);
+	out->cells_n = get_next(uint8_t, 1);
+	size_t cells_sz = sizeof(struct geran_info_cells);
+	out->cells = malloc(1 + cells_sz * out->cells_n);
+	for(size_t i = 0; i < out->cells_n; i++) {
+		out->cells[i].cell_id = get_next(uint32_t, 4);
+		memcpy(&out->cells[i].plmn, ptr + len, 3 * 1);
+		len += 3 * 1;
+		out->cells[i].lac = get_next(uint16_t, 2);
+		out->cells[i].abs_channel_num = get_next(uint16_t, 2);
+		out->cells[i].bsic = get_next(uint8_t, 1);
+		out->cells[i].rx_level = get_next(uint16_t, 2);
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+struct nas_umts_info *nas_get_cell_loc_info_get_umts(struct nas_get_cell_loc_info *get_cell_loc_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_umts_info *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_cell_loc_info, 17, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_umts_info));
+	out->cell_id = get_next(uint16_t, 2);
+	memcpy(&out->plmn, ptr + len, 3 * 1);
+	len += 3 * 1;
+	out->lac = get_next(uint16_t, 2);
+	out->abs_channel_num = get_next(uint16_t, 2);
+	out->psc = get_next(uint16_t, 2);
+	out->rscp = get_next(int16_t, 2);
+	out->ecio = get_next(int16_t, 2);
+	out->cells_n = get_next(uint8_t, 1);
+	size_t cells_sz = sizeof(struct umts_info_cells);
+	out->cells = malloc(1 + cells_sz * out->cells_n);
+	for(size_t i = 0; i < out->cells_n; i++) {
+		out->cells[i].abs_channel_num = get_next(uint16_t, 2);
+		out->cells[i].psc = get_next(uint16_t, 2);
+		out->cells[i].rscp = get_next(int16_t, 2);
+		out->cells[i].ecio = get_next(int16_t, 2);
+	}
+	out->gerans_n = get_next(uint8_t, 1);
+	size_t gerans_sz = sizeof(struct umts_info_cells_gerans);
+	out->gerans = malloc(1 + gerans_sz * out->gerans_n);
+	for(size_t i = 0; i < out->gerans_n; i++) {
+		out->gerans[i].abs_channel_num = get_next(uint16_t, 2);
+		out->gerans[i].network_color_code = get_next(uint8_t, 1);
+		out->gerans[i].base_station_color_code = get_next(uint8_t, 1);
+		out->gerans[i].rssi = get_next(int8_t, 1);
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+struct nas_cdma_info *nas_get_cell_loc_info_get_cdma(struct nas_get_cell_loc_info *get_cell_loc_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_cdma_info *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_cell_loc_info, 18, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_cdma_info));
+	out->system_id = get_next(uint16_t, 2);
+	out->network_id = get_next(uint16_t, 2);
+	out->bsid = get_next(uint16_t, 2);
+	out->reference_pn = get_next(uint16_t, 2);
+	out->latitude = get_next(uint32_t, 4);
+	out->longitude = get_next(uint32_t, 4);
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
+struct nas_intrafreq_lte_info *nas_get_cell_loc_info_get_intra_lte(struct nas_get_cell_loc_info *get_cell_loc_info)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct nas_intrafreq_lte_info *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)get_cell_loc_info, 19, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct nas_intrafreq_lte_info));
+	out->ue_idle = get_next(uint8_t, 1);
+	memcpy(&out->plmn, ptr + len, 3 * 1);
+	len += 3 * 1;
+	out->tac = get_next(uint16_t, 2);
+	out->global_cell_id = get_next(uint32_t, 4);
+	out->abs_channel_num = get_next(uint16_t, 2);
+	out->serving_cell_id = get_next(uint16_t, 2);
+	out->crp = get_next(uint8_t, 1);
+	out->s_non_intra_search_threshold = get_next(uint8_t, 1);
+	out->serving_cell_low_threshold = get_next(uint8_t, 1);
+	out->s_intra_search_threshold = get_next(uint8_t, 1);
+	out->cells_n = get_next(uint8_t, 1);
+	size_t cells_sz = sizeof(struct intrafreq_lte_info_cells);
+	out->cells = malloc(1 + cells_sz * out->cells_n);
+	for(size_t i = 0; i < out->cells_n; i++) {
+		out->cells[i].pci = get_next(uint16_t, 2);
+		out->cells[i].rsrq = get_next(int16_t, 2);
+		out->cells[i].rsrp = get_next(int16_t, 2);
+		out->cells[i].rssi = get_next(int16_t, 2);
+		out->cells[i].rx_level = get_next(int16_t, 2);
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
 }
 
 struct nas_get_plmn_name_req *nas_get_plmn_name_req_alloc(unsigned txn)
@@ -1986,6 +2414,35 @@ void nas_operator_plmn_name_arr_free(struct nas_operator_plmn_name_arr *val)
 	}
 	if(val->operators)
 		free(val->operators);
+
+}
+
+void nas_geran_info_free(struct nas_geran_info *val)
+{
+	for(size_t i = 0; i < val->cells_n; i++) {
+	}
+	if(val->cells)
+		free(val->cells);
+
+}
+
+void nas_umts_info_free(struct nas_umts_info *val)
+{
+	for(size_t i = 0; i < val->cells_n; i++) {
+	}
+	if(val->cells)
+		free(val->cells);
+	if(val->gerans)
+		free(val->gerans);
+
+}
+
+void nas_intrafreq_lte_info_free(struct nas_intrafreq_lte_info *val)
+{
+	for(size_t i = 0; i < val->cells_n; i++) {
+	}
+	if(val->cells)
+		free(val->cells);
 
 }
 

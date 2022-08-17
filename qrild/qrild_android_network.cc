@@ -56,47 +56,43 @@ ndk::ScopedAStatus RadioNetwork::getAvailableNetworks(int32_t in_serial) {
     return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
-    log_debug("xRadioNetwork::%s\n", __func__);
-    network::CellIdentityLte i_lte;
-    network::CellIdentity ident(i_lte);
+RadioError RadioNetwork::getCellIdentityLte(network::CellIdentityLte &i_lte)
+{
     auto band = network::EutranBands::BAND_1;
-    std::vector<network::BarringInfo> v_bi;
-    network::BarringInfo bi;
-    auto r_info = RESP_OK(in_serial);
     struct nas_get_lte_cphy_ca_info_resp_data data;
     int rc;
+    RadioError err = RadioError::NONE;
 
     rc = qrild_qmi_nas_get_lte_cphy_ca_info(mState, &data);
     if (rc < 0) {
         LOG(ERROR) << __func__ << ": Couldn't get lte CPhy CA info";
-        r_info.error = RadioError::INTERNAL_ERR;
-        goto no_info;
+        err = RadioError::INTERNAL_ERR;
+        return err;
     }
     if (data.res->result) {
         LOG(ERROR) << __func__ << ": modem returned error: " << (int)data.res->error;
         switch (data.res->error) {
         case QMI_ERR_INFORMATION_UNAVAILABLE:
-            r_info.error = RadioError::RADIO_NOT_AVAILABLE;
+            err = RadioError::RADIO_NOT_AVAILABLE;
             break;
         default:
-            r_info.error = RadioError::INTERNAL_ERR;
+            err = RadioError::INTERNAL_ERR;
             break;
         }
-        goto no_info;
+        goto out_free_cphy;
     }
 
     LOG(INFO) << __func__ << ": Got physical cell ID " << data.phy_scell_info->pci;
 
     // FIXME: can be unknown but should probably set (and get from modem!!!)
-    //i_lte.mcc = 234;
-    //i_lte.mnc = 20;
+    i_lte.mcc = "234";
+    i_lte.mnc = "20";
     i_lte.ci = INT_MAX;
     i_lte.pci = data.phy_scell_info->pci;
     i_lte.tac = INT_MAX;
     // FIXME: aidl says this is 18-bit but QMI is only 16-bit, is this correct??
     i_lte.earfcn = data.phy_scell_info->rx_chan;
-    i_lte.operatorNames = network::OperatorInfo{ "Three.co.uk", "3", "23420",
+    i_lte.operatorNames = network::OperatorInfo{ "3", "3", "23420",
         network::OperatorInfo::STATUS_CURRENT };
 
     // FIXME: is data.phy_scell_info->dl_bandwidth the right thing to use??
@@ -121,12 +117,12 @@ ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
         break;
     case QMI_NAS_DL_BANDWIDTH_INVALID:
     default:
-        LOG(WARNING) << __func__ << "Got invalid LTE DL bandwidth!";
+        LOG(WARNING) << __func__ << "Got invalid LTE DL bandwidth: " << (int)data.phy_scell_info->dl_bandwidth;
         i_lte.bandwidth = 11111;
         break;
     }
 
-    i_lte.additionalPlmns = std::vector<std::string>();
+    //i_lte.additionalPlmns = std::vector<std::string>();
 
     LOG(DEBUG) << __func__ << ": Have LTE band: " << data.phy_scell_info->lte_band;
 
@@ -137,6 +133,24 @@ ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
 
     i_lte.bands = std::vector<network::EutranBands>();
     i_lte.bands.push_back(band);
+
+out_free_cphy:
+    nas_get_lte_cphy_ca_info_resp_data_free(&data);
+
+    return err;
+}
+
+ndk::ScopedAStatus RadioNetwork::getBarringInfo(int32_t in_serial) {
+    log_debug("xRadioNetwork::%s\n", __func__);
+    network::CellIdentityLte i_lte;
+    network::CellIdentity ident(i_lte);
+    std::vector<network::BarringInfo> v_bi;
+    network::BarringInfo bi;
+    auto r_info = RESP_OK(in_serial);
+
+    r_info.error = getCellIdentityLte(i_lte);
+    if (r_info.error != RadioError::NONE)
+        goto no_info;
 
     // FIXME: this is a cursed union class which intellisense hates
     // the aidl generator needs to do better
@@ -172,7 +186,7 @@ static bool getSignalStrengthGsm(
 }
 
 static bool getSignalStrengthLte(
-      struct nas_get_signal_strength_resp_data *data, network::LteSignalStrength &lte) {
+      struct nas_get_signal_strength_resp_data *data, struct nas_get_cell_loc_info_data *loc, network::LteSignalStrength &lte) {
     lte.signalStrength = INT_MAX;
     lte.rsrp = INT_MAX;
     lte.rsrq = INT_MAX;
@@ -181,8 +195,15 @@ static bool getSignalStrengthLte(
     lte.timingAdvance = INT_MAX;
     lte.cqiTableIndex = INT_MAX;
 
-    if (data->strength->interface != QMI_NAS_RADIO_INTERFACE_LTE)
+    if (data->strength->interface != QMI_NAS_RADIO_INTERFACE_LTE) {
+        LOG(ERROR) << __func__ << ": Signal strength is for wrong interface!";
         return false;
+    }
+
+    lte.signalStrength = data->strength->strength;
+
+    lte.rsrp = loc->intra_lte->cells[0].rsrp;
+    lte.rsrq = loc->intra_lte->cells[0].rsrq;
 
     return true;
 }
@@ -287,6 +308,7 @@ network::CellInfoWcdma RadioNetwork::createCellInfoWcdma(struct nas_get_cell_loc
 
     if (strength.strength->interface != QMI_NAS_RADIO_INTERFACE_UMTS) {
         LOG(ERROR) << __func__ << ": Signal strength is for wrong interface!";
+        nas_get_signal_strength_resp_data_free(&strength);
         return info;
     }
 
@@ -301,13 +323,34 @@ network::CellInfoWcdma RadioNetwork::createCellInfoWcdma(struct nas_get_cell_loc
     // FIXME: unreported, maybe undocumented QMI cmd?
     //wcdma.ecno = loc->umts->ecio
 
+    nas_get_signal_strength_resp_data_free(&strength);
+
     return info;
 }
 
 network::CellInfoLte RadioNetwork::createCellInfoLte(struct nas_get_cell_loc_info_data *loc) {
     auto info = network::CellInfoLte();
+    struct nas_get_signal_strength_resp_data strength;
+    int rc;
 
-    LOG(ERROR) << "FIXME: LTE cell info not implemented!";
+    auto err = getCellIdentityLte(info.cellIdentityLte);
+    if (err != RadioError::NONE) {
+        LOG(ERROR) << __func__ << ": Couldn't get LTE CellIdentity!";
+    }
+
+    // FIXME: don't do this here, do it somewhere generic
+    rc = qrild_qmi_nas_get_signal_strength(mState, &strength);
+    if (rc < 0 || strength.res->result) {
+        LOG(ERROR) << __func__ << ": Failed to get signal strength. rc: " << rc
+                   << ", QMI err (if applicable): " << strength.res->error << ": "
+                   << qmi_error_string(strength.res->error);
+        return info;
+    }
+
+    getSignalStrengthLte(&strength, loc, info.signalStrengthLte);
+
+out_free_strength:
+    nas_get_signal_strength_resp_data_free(&strength);
 
     return info;
 }
@@ -493,6 +536,8 @@ RadioError RadioNetwork::updateOperatorInfo() {
     // FIXME: Exceptions disabled, add a check here
     plmn_id.mcc = std::stoi(mcc);
     plmn_id.mnc = std::stoi(mnc);
+    mMcc = plmn_id.mcc;
+    mMnc = plmn_id.mnc;
 
     plmn_req.plmn = &plmn_id;
     plmn_req.send_all_info = true;
@@ -562,6 +607,7 @@ RadioError RadioNetwork::getSignalStrength_(network::SignalStrength &strength) {
     auto tdscdma = network::TdscdmaSignalStrength();
     auto nr = network::NrSignalStrength();
     auto wcdmaCellInfo = network::CellInfoWcdma();
+    auto lteCellInfo = network::CellInfoLte();
 
     int16_t lte_snr;
     struct nas_get_signal_strength_resp_data qmi_strength;
@@ -606,10 +652,20 @@ RadioError RadioNetwork::getSignalStrength_(network::SignalStrength &strength) {
     //     }
     // }
     updateCellInfo();
-    wcdmaCellInfo = mCellInfo.ratSpecificInfo.get<network::CellInfoRatSpecificInfo::wcdma>();
-        //wcdmaCellInfo = createCellInfoWcdma(&loc);
-
-    strength.wcdma = wcdmaCellInfo.signalStrengthWcdma;
+    LOG(DEBUG) << __func__ << ": Got cellInfo: " << mCellInfo.toString();
+    switch(mCellInfo.ratSpecificInfo.getTag()) {
+    case network::CellInfoRatSpecificInfo::wcdma:
+        wcdmaCellInfo = mCellInfo.ratSpecificInfo.get<network::CellInfoRatSpecificInfo::wcdma>();
+        strength.wcdma = wcdmaCellInfo.signalStrengthWcdma;
+        break;
+    case network::CellInfoRatSpecificInfo::lte:
+        lteCellInfo = mCellInfo.ratSpecificInfo.get<network::CellInfoRatSpecificInfo::lte>();
+        strength.lte = lteCellInfo.signalStrengthLte;
+        break;
+    default:
+        LOG(ERROR) << __func__ << ": Unsupported network type: " << (int32_t)mCellInfo.ratSpecificInfo.getTag();
+        break;
+    }
 
     nr.csiCqiReport = std::vector<uint8_t>();
     nr.csiCqiReport.push_back(0xFF);
@@ -640,21 +696,6 @@ RadioError RadioNetwork::getSignalStrength_(network::SignalStrength &strength) {
     qrild_qmi_nas_show_signal_strength(&qmi_strength);
 
 no_strength:
-    lte.signalStrength = INT_MAX;
-    lte.rsrp = INT_MAX;
-    lte.rsrq = INT_MAX;
-    lte.rssnr = INT_MAX;
-    lte.cqi = INT_MAX;
-    lte.timingAdvance = INT_MAX;
-    lte.cqiTableIndex = INT_MAX;
-
-    // lte.signalStrength = qmi_strength.strength->strength;
-    // lte.rsrp = 65;
-    // lte.rsrq = 18;
-    // lte.rssnr = 16;
-    // lte.cqi = 13;
-    // lte.timingAdvance = 647;
-    // lte.cqiTableIndex = 5;
 
     strength.lte = lte;
 
@@ -710,7 +751,7 @@ ndk::ScopedAStatus RadioNetwork::responseAcknowledgement() {
 
 ndk::ScopedAStatus RadioNetwork::setAllowedNetworkTypesBitmap(
       int32_t in_serial, int32_t in_networkTypeBitmap) {
-    log_debug("FIXME! TODO: RadioNetwork::%s\n", __func__);
+    log_debug("STUB: RadioNetwork::%s\n", __func__);
     int32_t filter = in_networkTypeBitmap;
     int32_t filter_bit = 0b1;
 
@@ -809,13 +850,13 @@ ndk::ScopedAStatus RadioNetwork::setLocationUpdates(int32_t in_serial, bool in_e
 int RadioNetwork::_registerAndProvision() {
     int rc;
 
-    rc = qrild_qmi_nas_network_register(mState, 1);
-    if (rc < 0) {
-        auto err = -rc;
-        LOG(ERROR) << __func__ << ": Couldn't register to network: " << err << ": "
-                   << qmi_error_string(err);
-        return -1;
-    }
+    // rc = qrild_qmi_nas_network_register(mState, 1);
+    // if (rc < 0) {
+    //     auto err = -rc;
+    //     LOG(ERROR) << __func__ << ": Couldn't register to network: " << err << ": "
+    //                << qmi_error_string(err);
+    //     return -1;
+    // }
 
     if (services.initialised) {
         LOG(DEBUG) << __func__ << ": provisioning default sim";
@@ -837,7 +878,7 @@ ndk::ScopedAStatus RadioNetwork::setNetworkSelectionModeAutomatic(int32_t in_ser
     auto r_info = RESP_OK(in_serial);
     LOG(INFO) << __func__ << "WIP! Connect to network here";
 
-    rc = _registerAndProvision();
+    //rc = _registerAndProvision();
     if (rc < 0)
         r_info.error = RadioError::MODEM_ERR;
 
@@ -874,7 +915,7 @@ ndk::ScopedAStatus RadioNetwork::setResponseFunctions(
     mInd = in_radioNetworkIndication;
 
     qrild_qmi_send_basic_request_sync(mState, QMI_SERVICE_NAS, QMI_NAS_FORCE_NETWORK_SEARCH, NULL);
-    _registerAndProvision();
+    //_registerAndProvision();
 
     mInd->networkStateChanged(RadioIndicationType::UNSOLICITED);
 
@@ -1044,12 +1085,13 @@ void RadioNetwork::reportSystemStatus(struct qrild_msg *msg) {
 
     if (mRegStateRes.regState == network::RegState::NOT_REG_MT_NOT_SEARCHING_OP && services.initialised && services.modem->mEnabled) {
         log_info("Before forcing network search");
-        LOG(WARNING) << __func__ << ": Forcing network search";
-        qrild_qmi_send_basic_request_sync(mState, QMI_SERVICE_NAS, QMI_NAS_FORCE_NETWORK_SEARCH, NULL);
-        _registerAndProvision();
+        LOG(WARNING) << __func__ << ": DISABLED FOR DATA TESTING!!! Forcing network search";
+        //qrild_qmi_send_basic_request_sync(mState, QMI_SERVICE_NAS, QMI_NAS_FORCE_NETWORK_SEARCH, NULL);
+        //_registerAndProvision();
     }
 
-    if (mRegStateRes.regState == network::RegState::REG_HOME) {
+    if (mRegStateRes.regState == network::RegState::REG_HOME && !services.data->dataConnected) {
+        services.sim->_provisionDefaultSim();
         log_info("Scheduling delayed work to configure data");
         q_work_schedule_delayed(&services.data->setup_data_work, 50);
     }

@@ -562,11 +562,12 @@ void qrild_msg_free_locked(struct qrild_msg *msg)
 		log_error("%s called for NULL msg", __func__);
 		return;
 	}
-	log_info("Freeing msg {id: %x, txn: %d}", msg->msg_id, msg->txn);
+	log_info("Freeing msg {id: 0x%x, txn: %d}", msg->msg_id, msg->txn);
 	list_remove(&msg->li);
 	if (msg->buf)
 		free(msg->buf);
 	free(msg);
+	msg = NULL;
 }
 
 void qrild_msg_free(struct qrild_msg *msg)
