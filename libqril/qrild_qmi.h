@@ -68,6 +68,14 @@ int qrild_qmi_wds_start_network_interface(struct rild_state *state,
 int qrild_qmi_wds_get_current_settings(struct rild_state *state,
 				       struct wds_data_settings *settings);
 
+int qrild_qmi_uim_read_transparent(struct rild_state *state,
+				   struct uim_read_transparent_req_data *data,
+				   struct uim_read_transparent_resp_data *resp_data);
+int qrild_qmi_uim_read_record(struct rild_state *state, struct uim_read_record_req_data *data,
+			      struct uim_read_record_resp_data *resp_data);
+int qrild_qmi_uim_get_file_attrs(struct rild_state *state, struct uim_get_file_attrs_req_data *data,
+				 struct uim_get_file_attrs_resp_data *resp_data);
+
 const char *qmi_service_to_string(enum qmi_service service, bool short_name);
 const char *qmi_error_string(uint16_t err);
 

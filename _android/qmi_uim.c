@@ -2,7 +2,7 @@
 #include <string.h>
 #include "qmi_uim.h"
 
-const struct qmi_tlv_msg_name uim_msg_name_map[14] = {
+const struct qmi_tlv_msg_name uim_msg_name_map[15] = {
 	{ .msg_id = 47, .msg_name = "uim_get_card_status_resp" },
 	{ .msg_id = 56, .msg_name = "uim_change_provisioning_session_req" },
 	{ .msg_id = 56, .msg_name = "uim_change_provisioning_session_resp" },
@@ -17,6 +17,7 @@ const struct qmi_tlv_msg_name uim_msg_name_map[14] = {
 	{ .msg_id = 33, .msg_name = "uim_read_record_resp" },
 	{ .msg_id = 36, .msg_name = "uim_get_file_attrs_req" },
 	{ .msg_id = 36, .msg_name = "uim_get_file_attrs_resp" },
+	{ .msg_id = 51, .msg_name = "uim_refresh" },
 };
 
 struct uim_get_card_status_resp *uim_get_card_status_resp_parse(void *buf, size_t len)
@@ -686,8 +687,10 @@ int uim_read_transparent_req_set_file(struct uim_read_transparent_req *read_tran
 	len += 2;
 	*((uint8_t*)(ptr + len)) = val->path_n;
 	len += 1;
-	*((uint8_t*)(ptr + len)) = val->path;
-	len += 1;
+	for(size_t i = 0; i < val->path_n; i++) {
+		*((uint8_t*)(ptr + len)) = val->path[i];
+		len += 1;
+	}
 	rc = qmi_tlv_set((struct qmi_tlv*)read_transparent_req, 2, ptr, len);
 	free(ptr);
 	return rc;
@@ -878,8 +881,10 @@ int uim_read_record_req_set_file(struct uim_read_record_req *read_record_req, st
 	len += 2;
 	*((uint8_t*)(ptr + len)) = val->path_n;
 	len += 1;
-	*((uint8_t*)(ptr + len)) = val->path;
-	len += 1;
+	for(size_t i = 0; i < val->path_n; i++) {
+		*((uint8_t*)(ptr + len)) = val->path[i];
+		len += 1;
+	}
 	rc = qmi_tlv_set((struct qmi_tlv*)read_record_req, 2, ptr, len);
 	free(ptr);
 	return rc;
@@ -1077,8 +1082,10 @@ int uim_get_file_attrs_req_set_file(struct uim_get_file_attrs_req *get_file_attr
 	len += 2;
 	*((uint8_t*)(ptr + len)) = val->path_n;
 	len += 1;
-	*((uint8_t*)(ptr + len)) = val->path;
-	len += 1;
+	for(size_t i = 0; i < val->path_n; i++) {
+		*((uint8_t*)(ptr + len)) = val->path[i];
+		len += 1;
+	}
 	rc = qmi_tlv_set((struct qmi_tlv*)get_file_attrs_req, 2, ptr, len);
 	free(ptr);
 	return rc;
@@ -1206,6 +1213,118 @@ int uim_get_file_attrs_resp_get_resp_in_ind(struct uim_get_file_attrs_resp *get_
 	return 0;
 }
 
+struct uim_refresh *uim_refresh_alloc(unsigned txn)
+{
+	return (struct uim_refresh*)qmi_tlv_init(txn, 51, 4);
+}
+
+void *uim_refresh_encode(struct uim_refresh *refresh, size_t *len)
+{
+	return qmi_tlv_encode((struct qmi_tlv*)refresh, len);
+}
+
+struct uim_refresh *uim_refresh_parse(void *buf, size_t len)
+{
+	return (struct uim_refresh*)qmi_tlv_decode(buf, len);
+}
+
+void uim_refresh_getall(struct uim_refresh *refresh, struct uim_refresh_data *data)
+{
+	int rc;
+	(void)rc;
+
+	data->event = uim_refresh_get_event(refresh);
+}
+
+void uim_refresh_data_free(struct uim_refresh_data *data)
+{
+
+		uim_refresh_ev_t_free(data->event);
+		free(data->event);
+}
+
+void uim_refresh_free(struct uim_refresh *refresh)
+{
+	qmi_tlv_free((struct qmi_tlv*)refresh);
+}
+
+int uim_refresh_set_event(struct uim_refresh *refresh, struct uim_refresh_ev_t *val)
+{
+	size_t len = 0;
+	int rc;
+	// FIXME: use realloc dynamically instead
+	void *ptr = malloc(1024);
+	memset(ptr, 0, 1024);
+	*((uint8_t*)(ptr + len)) = val->stage;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->mode;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->session_type;
+	len += 1;
+	*((uint8_t*)(ptr + len)) = val->aid_n;
+	len += 1;
+	for(size_t i = 0; i < val->aid_n; i++) {
+		*((uint8_t*)(ptr + len)) = val->aid[i];
+		len += 1;
+	}
+	*((uint16_t*)(ptr + len)) = val->files_n;
+	len += 2;
+	for(size_t i = 0; i < val->files_n; i++) {
+		*((uint16_t*)(ptr + len)) = val->files[i].id;
+		len += 2;
+		*((uint8_t*)(ptr + len)) = val->files[i].path_n;
+		len += 1;
+		for(size_t ii = 0; ii < val->files[i].path_n; ii++) {
+			*((uint8_t*)(ptr + len)) = val->files[i].path[ii];
+			len += 1;
+		}
+	}
+	rc = qmi_tlv_set((struct qmi_tlv*)refresh, 16, ptr, len);
+	free(ptr);
+	return rc;
+}
+
+struct uim_refresh_ev_t *uim_refresh_get_event(struct uim_refresh *refresh)
+{
+	size_t len = 0, buf_sz;
+	uint8_t *ptr;
+	struct uim_refresh_ev_t *out;
+
+	ptr = qmi_tlv_get((struct qmi_tlv*)refresh, 16, &buf_sz);
+	if (!ptr)
+		return NULL;
+
+	out = malloc(sizeof(struct uim_refresh_ev_t));
+	out->stage = get_next(uint8_t, 1);
+	out->mode = get_next(uint8_t, 1);
+	out->session_type = get_next(uint8_t, 1);
+	out->aid_n = get_next(uint8_t, 1);
+	size_t aid_sz = 1;
+	out->aid = malloc(1 + aid_sz * out->aid_n);
+	for(size_t i = 0; i < out->aid_n; i++) {
+		out->aid[i] = get_next(uint8_t, 1);
+	}
+	out->files_n = get_next(uint16_t, 2);
+	size_t files_sz = sizeof(struct refresh_ev_t_files);
+	out->files = malloc(1 + files_sz * out->files_n);
+	for(size_t i = 0; i < out->files_n; i++) {
+		out->files[i].id = get_next(uint16_t, 2);
+		out->files[i].path_n = get_next(uint8_t, 1);
+		size_t path_sz = 1;
+		out->files[i].path = malloc(1 + path_sz * out->files[i].path_n);
+		for(size_t ii = 0; ii < out->files[i].path_n; ii++) {
+			out->files[i].path[ii] = get_next(uint8_t, 1);
+		}
+	}
+
+	return out;
+
+err_wrong_len:
+	printf("%s: expected at least %zu bytes but got %zu\n", __func__, len, buf_sz);
+	free(out);
+	return NULL;
+}
+
 void uim_card_status_free(struct uim_card_status *val)
 {
 	for(size_t i = 0; i < val->cards_n; i++) {
@@ -1257,10 +1376,30 @@ void uim_session_t_free(struct uim_session_t *val)
 
 }
 
+void uim_file_t_free(struct uim_file_t *val)
+{
+	if(val->path)
+		free(val->path);
+
+}
+
 void uim_file_attrs_t_free(struct uim_file_attrs_t *val)
 {
 	if(val->raw_data)
 		free(val->raw_data);
+
+}
+
+void uim_refresh_ev_t_free(struct uim_refresh_ev_t *val)
+{
+	if(val->aid)
+		free(val->aid);
+	for(size_t i = 0; i < val->files_n; i++) {
+		if(val->files[i].path)
+			free(val->files[i].path);
+	}
+	if(val->files)
+		free(val->files);
 
 }
 

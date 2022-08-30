@@ -982,8 +982,7 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state, struct wds_data
 
 	resp = wds_get_current_settings_resp_parse(msg->buf, msg->buf_len);
 
-	free(msg->buf);
-	free(msg);
+	qrild_msg_free(msg);
 
 	res = qmi_tlv_get_result((void *)resp);
 	if (res->result)
@@ -1036,6 +1035,119 @@ int qrild_qmi_wds_get_current_settings(struct rild_state *state, struct wds_data
 
 	// if (!state->no_configure_inet)
 	// 	return qrild_link_configure(&ip, &sub, &brd);
+
+	return QRILD_STATE_DONE;
+}
+
+#define QMI_SET_TLV(msg, tlv, req, data)                                                           \
+	({                                                                                         \
+		int rc = msg##_set_##tlv(req, data->tlv);                                         \
+		if (rc < 0) {                                                                      \
+			log_error("%s: couldn't set %s", __func__, #tlv);                          \
+			return rc;                                                                 \
+		}                                                                                  \
+	})
+
+int qrild_qmi_uim_read_transparent(struct rild_state *state,
+				   struct uim_read_transparent_req_data *data,
+				   struct uim_read_transparent_resp_data *resp_data)
+{
+	struct uim_read_transparent_req *req;
+	struct uim_read_transparent_resp *resp;
+	void *buf;
+	size_t buf_len;
+	struct qrild_msg *msg;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_UIM, QRILD_STATE_PENDING);
+
+	req = uim_read_transparent_req_alloc(qrild_next_transaction_id());
+
+	// FIXME: add >setall generator
+	QMI_SET_TLV(uim_read_transparent_req, session, req, data);
+	QMI_SET_TLV(uim_read_transparent_req, file, req, data);
+	QMI_SET_TLV(uim_read_transparent_req, read_info, req, data);
+	if (data->resp_in_ind_valid)
+		QMI_SET_TLV(uim_read_transparent_req, resp_in_ind, req, data);
+	if (data->encrypt_data_valid)
+		QMI_SET_TLV(uim_read_transparent_req, encrypt_data, req, data);
+
+	buf = uim_read_transparent_req_encode(req, &buf_len);
+
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_UIM, buf, buf_len, TIMEOUT_DEFAULT, &msg);
+	uim_read_transparent_req_free(req);
+	if (rc < 0)
+		return rc;
+
+	resp = uim_read_transparent_resp_parse(msg->buf, msg->buf_len);
+	uim_read_transparent_resp_getall(resp, resp_data);
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_uim_read_record(struct rild_state *state, struct uim_read_record_req_data *data,
+			      struct uim_read_record_resp_data *resp_data)
+{
+	struct uim_read_record_req *req;
+	struct uim_read_record_resp *resp;
+	void *buf;
+	size_t buf_len;
+	struct qrild_msg *msg;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_UIM, QRILD_STATE_PENDING);
+
+	req = uim_read_record_req_alloc(qrild_next_transaction_id());
+
+	// FIXME: add >setall generator
+	QMI_SET_TLV(uim_read_record_req, session, req, data);
+	QMI_SET_TLV(uim_read_record_req, file, req, data);
+	QMI_SET_TLV(uim_read_record_req, read_info, req, data);
+	if (data->resp_in_ind_valid)
+		QMI_SET_TLV(uim_read_record_req, resp_in_ind, req, data);
+
+	buf = uim_read_record_req_encode(req, &buf_len);
+
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_UIM, buf, buf_len, TIMEOUT_DEFAULT, &msg);
+	uim_read_record_req_free(req);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = uim_read_record_resp_parse(msg->buf, msg->buf_len);
+	uim_read_record_resp_getall(resp, resp_data);
+
+	return QRILD_STATE_DONE;
+}
+
+int qrild_qmi_uim_get_file_attrs(struct rild_state *state, struct uim_get_file_attrs_req_data *data,
+				 struct uim_get_file_attrs_resp_data *resp_data)
+{
+	struct uim_get_file_attrs_req *req;
+	struct uim_get_file_attrs_resp *resp;
+	void *buf;
+	size_t buf_len;
+	struct qrild_msg *msg;
+	int rc;
+
+	QMI_SERVICE_OR_RETURN(&state->services, QMI_SERVICE_UIM, QRILD_STATE_PENDING);
+
+	req = uim_get_file_attrs_req_alloc(qrild_next_transaction_id());
+
+	// FIXME: add >setall generator
+	QMI_SET_TLV(uim_get_file_attrs_req, session, req, data);
+	QMI_SET_TLV(uim_get_file_attrs_req, file, req, data);
+	if (data->resp_in_ind_valid)
+		QMI_SET_TLV(uim_get_file_attrs_req, resp_in_ind, req, data);
+
+	buf = uim_get_file_attrs_req_encode(req, &buf_len);
+
+	rc = qrild_msg_send_sync(state, QMI_SERVICE_UIM, buf, buf_len, TIMEOUT_DEFAULT, &msg);
+	uim_get_file_attrs_req_free(req);
+	if (rc < 0)
+		return QRILD_STATE_ERROR;
+
+	resp = uim_get_file_attrs_resp_parse(msg->buf, msg->buf_len);
+	uim_get_file_attrs_resp_getall(resp, resp_data);
 
 	return QRILD_STATE_DONE;
 }

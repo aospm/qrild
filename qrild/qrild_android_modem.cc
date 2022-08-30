@@ -285,18 +285,21 @@ ndk::ScopedAStatus RadioModem::setRadioCapability(
 
     if (in_rc.logicalModemUuid != mCaps.logicalModemUuid) {
         r_info.error = RadioError::INVALID_ARGUMENTS;
-        mRep->setRadioCapabilityResponse(r_info, mCaps);
+        goto out;
     }
 
     mCaps = in_rc;
     mCaps.phase = modem::RadioCapability::PHASE_CONFIGURED;
     mCaps.status = modem::RadioCapability::STATUS_NONE;
+
+out:
     mRep->setRadioCapabilityResponse(r_info, mCaps);
 
     // Must call mInd->radioCapabilityIndication() here
     return ndk::ScopedAStatus::ok();
 }
 
+// Oh I'm dumb, it's the /radio/ part of the modem, not the modem itself!!!
 ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
       bool in_forEmergencyCall, bool in_preferredForEmergencyCall) {
     log_debug("xRadioModem::%s\n", __func__);
@@ -307,74 +310,80 @@ ndk::ScopedAStatus RadioModem::setRadioPower(int32_t in_serial, bool in_powerOn,
               << ", forEmergencyCall: " << in_forEmergencyCall
               << ", preferredForEmergencyCall: " << in_preferredForEmergencyCall << ")";
 
-    if (!in_powerOn) {
-        LOG(INFO) << "Not powering modem off!";
-        //mEnabled = false;
-        mRep->setRadioPowerResponse(r_info);
-        return ndk::ScopedAStatus::ok();
-    }
-
-    // FIXME: modem doesn't come back after setting to LOW_POWER ?
-    uint8_t desired_mode =
-          in_powerOn ? QMI_DMS_OPERATING_MODE_ONLINE : QMI_DMS_OPERATING_MODE_LOW_POWER;
-
-    if (!mEnabled)
-        mEnabled = desired_mode == QMI_DMS_OPERATING_MODE_ONLINE;
-
-    if (in_forEmergencyCall || in_preferredForEmergencyCall)
-        desired_mode = QMI_DMS_OPERATING_MODE_ONLINE;
-
-    int current_mode = qrild_qmi_dms_get_operating_mode(mState);
-    if (current_mode < 0) {
-        LOG(ERROR) << "Couldn't get modem operating mode";
-        r_info.error = RadioError::MODEM_ERR;
-    } else if (current_mode != desired_mode) {
-        res = qrild_qmi_dms_set_operating_mode(mState, desired_mode);
-        if (res.result) {
-            LOG(ERROR) << "Couldn't set modem operating mode";
-            if (res.error == QMI_ERR_QRILD) {
-                r_info.error = RadioError::INTERNAL_ERR;
-            } else {
-                LOG(ERROR) << "QMI response Error: " << res.error;
-                r_info.error = RadioError::MODEM_ERR;
-            }
-        } else {
-            LOG(INFO) << "Set modem operating mode to: " << (int)desired_mode << "!";
-            log_debug("Set operating mode to %u\n", desired_mode);
-            switch (desired_mode) {
-            case QMI_DMS_OPERATING_MODE_ONLINE:
-                if (services.initialised)
-                    services.sim->_provisionDefaultSim();
-                mInd->radioStateChanged(RadioIndicationType::UNSOLICITED, modem::RadioState::ON);
-                break;
-            case QMI_DMS_OPERATING_MODE_LOW_POWER:
-                mInd->radioStateChanged(RadioIndicationType::UNSOLICITED, modem::RadioState::OFF);
-                break;
-            default:
-                mInd->radioStateChanged(
-                      RadioIndicationType::UNSOLICITED, modem::RadioState::UNAVAILABLE);
-                break;
-            }
-        }
-    } else {
-        LOG(WARNING) << "Modem already in mode: " << (int)desired_mode << " ignoring for now";
-        r_info.error = RadioError::INVALID_ARGUMENTS;
-    }
-
-    // FIXME: HACK!!!
-    if (mEnabled)
-        qrild_qmi_nas_register_indications(mState);
+    mRadioPower = (in_powerOn || in_forEmergencyCall || in_preferredForEmergencyCall) ?
+        modem::RadioState::ON : modem::RadioState::OFF;
 
     mRep->setRadioPowerResponse(r_info);
 
     return ndk::ScopedAStatus::ok();
+
+
+    // if (!in_powerOn) {
+    //     LOG(INFO) << "Not powering modem off!";
+    //     //mEnabled = false;
+    //     mRep->setRadioPowerResponse(r_info);
+    //     return ndk::ScopedAStatus::ok();
+    // }
+
+    // // FIXME: modem doesn't come back after setting to LOW_POWER ?
+    // uint8_t desired_mode =
+    //       in_powerOn ? QMI_DMS_OPERATING_MODE_ONLINE : QMI_DMS_OPERATING_MODE_LOW_POWER;
+
+    // if (!mEnabled)
+    //     mEnabled = desired_mode == QMI_DMS_OPERATING_MODE_ONLINE;
+
+    // if (in_forEmergencyCall || in_preferredForEmergencyCall)
+    //     desired_mode = QMI_DMS_OPERATING_MODE_ONLINE;
+
+    // int current_mode = qrild_qmi_dms_get_operating_mode(mState);
+    // if (current_mode < 0) {
+    //     LOG(ERROR) << "Couldn't get modem operating mode";
+    //     r_info.error = RadioError::MODEM_ERR;
+    // } else if (current_mode != desired_mode) {
+    //     res = qrild_qmi_dms_set_operating_mode(mState, desired_mode);
+    //     if (res.result) {
+    //         LOG(ERROR) << "Couldn't set modem operating mode";
+    //         if (res.error == QMI_ERR_QRILD) {
+    //             r_info.error = RadioError::INTERNAL_ERR;
+    //         } else {
+    //             LOG(ERROR) << "QMI response Error: " << res.error;
+    //             r_info.error = RadioError::MODEM_ERR;
+    //         }
+    //     } else {
+    //         LOG(INFO) << "Set modem operating mode to: " << (int)desired_mode << "!";
+    //         log_debug("Set operating mode to %u\n", desired_mode);
+    //         switch (desired_mode) {
+    //         case QMI_DMS_OPERATING_MODE_ONLINE:
+    //             if (services.initialised)
+    //                 services.sim->_provisionDefaultSim();
+    //             mInd->radioStateChanged(RadioIndicationType::UNSOLICITED, modem::RadioState::ON);
+    //             break;
+    //         case QMI_DMS_OPERATING_MODE_LOW_POWER:
+    //             mInd->radioStateChanged(RadioIndicationType::UNSOLICITED, modem::RadioState::OFF);
+    //             break;
+    //         default:
+    //             mInd->radioStateChanged(
+    //                   RadioIndicationType::UNSOLICITED, modem::RadioState::UNAVAILABLE);
+    //             break;
+    //         }
+    //     }
+    // } else {
+    //     LOG(WARNING) << "Modem already in mode: " << (int)desired_mode << " ignoring for now";
+    //     r_info.error = RadioError::INVALID_ARGUMENTS;
+    // }
+
+    // // FIXME: HACK!!!
+    // if (mEnabled) {
+    //     qrild_qmi_nas_register_indications(mState);
+    //     q_work_schedule_now(&services.network->restricted_state_changed_work);
+    // }
 }
 
 ndk::ScopedAStatus RadioModem::setResponseFunctions(
       const std::shared_ptr<modem::IRadioModemResponse> &in_radioModemResponse,
       const std::shared_ptr<modem::IRadioModemIndication> &in_radioModemIndication) {
     log_debug("xRadioModem::%s\n", __func__);
-    auto state = modem::RadioState::UNAVAILABLE;
+    mRadioPower = modem::RadioState::UNAVAILABLE;
 
     mRep = in_radioModemResponse;
     mInd = in_radioModemIndication;
@@ -382,17 +391,15 @@ ndk::ScopedAStatus RadioModem::setResponseFunctions(
     // Must be called for RIL to continue initialisation
     mInd->rilConnected(RadioIndicationType::UNSOLICITED);
 
-    mInd->radioStateChanged(RadioIndicationType::UNSOLICITED, state);
-
     int current_mode = qrild_qmi_dms_get_operating_mode(mState);
     switch (current_mode) {
     case QMI_DMS_OPERATING_MODE_ONLINE:
-        state = modem::RadioState::ON;
+        mRadioPower = modem::RadioState::ON;
         break;
     case QMI_DMS_OPERATING_MODE_OFFLINE:
     case QMI_DMS_OPERATING_MODE_LOW_POWER:
     case QMI_DMS_OPERATING_MODE_SHUTTING_DOWN:
-        state = modem::RadioState::OFF;
+        mRadioPower = modem::RadioState::OFF;
         break;
     default:
         LOG(ERROR) << "Current operating mode: " << current_mode
@@ -400,9 +407,9 @@ ndk::ScopedAStatus RadioModem::setResponseFunctions(
         break;
     }
 
-    LOG(ERROR) << "Reporting radio state " << modem::toString(state);
+    LOG(ERROR) << "Reporting radio state " << modem::toString(mRadioPower);
 
-    mInd->radioStateChanged(RadioIndicationType::UNSOLICITED, state);
+    mInd->radioStateChanged(RadioIndicationType::UNSOLICITED, mRadioPower);
 
     return ndk::ScopedAStatus::ok();
 }

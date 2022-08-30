@@ -22,11 +22,23 @@
 #include <util.h>
 #include <qrild_qmi.h>
 #include <qmi_uim.h>
+#include <workqueue.h>
 
 #include "qrild_radio.hh"
 
+static void _work_provision_sim(struct q_work_task *) {
+    if (services.modem->mEnabled) {
+        services.sim->_provisionDefaultSim();
+    } else {
+        LOG(INFO) << __func__ << ": Waiting for modem to switch on...";
+        q_work_schedule_delayed(&services.sim->provision_sim_work, 1500);
+    }
+}
+
 RadioSim::RadioSim(struct rild_state *state) : mState(state) {
-    log_debug("-RadioSim::%s\n", __func__);
+    log_debug("xRadioSim::%s\n", __func__);
+
+    provision_sim_work.func = _work_provision_sim;
 }
 
 ndk::ScopedAStatus RadioSim::areUiccApplicationsEnabled(int32_t in_serial) {
@@ -51,7 +63,12 @@ ndk::ScopedAStatus RadioSim::changeIccPinForApp(int32_t in_serial, const std::st
 }
 
 ndk::ScopedAStatus RadioSim::enableUiccApplications(int32_t in_serial, bool in_enable) {
-    log_debug("FIXME! TODO: RadioSim::%s\n", __func__);
+    log_debug("STUB: RadioSim::%s\n", __func__);
+
+    LOG(INFO) << __func__ << ": " << in_enable;
+
+    mRep->enableUiccApplicationsResponse(RESP_OK(in_serial));
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -91,6 +108,15 @@ ndk::ScopedAStatus RadioSim::getFacilityLockForApp(int32_t in_serial,
 int RadioSim::_provisionDefaultSim() {
     int rc;
     struct uim_get_card_status_resp_data data;
+    
+    // FIXME: blehhh
+    static bool provisioned = false;
+
+    if (provisioned) {
+        LOG(WARNING) << __func__ << ": Sim already provisioned!";
+        return 0;
+    }
+
     rc = qrild_qmi_uim_get_card_status(mState, &data);
     if (rc) {
         LOG(ERROR) << __func__ << ": couldn't get card status: " << rc;
@@ -115,8 +141,11 @@ int RadioSim::_provisionDefaultSim() {
     data.status->cards[0].applications[0].application_identifier_value_n);
     if (!rc) {
         LOG(INFO) << __func__ << ": Successfully provisioned default sim";
+        provisioned = true;
         if (mInd) // This function might be called before setResponsefunctions() has been called.
             mInd->simStatusChanged(RadioIndicationType::UNSOLICITED);
+        else
+            mSendSimStatusChanged = true;
     } else {
         LOG(ERROR) << __func__ << ": Failed to provision default sim";
         return -1;
@@ -332,7 +361,169 @@ ndk::ScopedAStatus RadioSim::iccCloseLogicalChannel(int32_t in_serial, int32_t i
     return ndk::ScopedAStatus::ok();
 }
 
-// FIXME: re-implement this in libqril and call into that with some abstraction
+RadioError iccIo_read_binary(struct rild_state *state, struct uim_session_t &session, struct uim_file_t &file, struct uim_read_info_t &read_info, sim::IccIoResult &iccIo_res)
+{
+    int rc;
+    struct uim_read_transparent_req_data req;
+    struct uim_read_transparent_resp_data resp;
+    char *sim_resp;
+
+    req.session = &session;
+    req.file = &file;
+    req.read_info = &read_info;
+
+    rc = qrild_qmi_uim_read_transparent(state, &req, &resp);
+    if (rc) {
+        LOG(ERROR) << __func__ << ": Couldn't read binary: " << rc;
+        if (rc < 0)
+            return RadioError::INTERNAL_ERR;
+        // If PENDING
+        return RadioError::RADIO_NOT_AVAILABLE;
+    }
+
+    if (resp.res && resp.res->result) {
+        LOG(ERROR) << __func__ << ": Modem returned error: " << resp.res->error << ": "
+            << qmi_error_string(resp.res->error);
+        return RadioError::MODEM_ERR;
+    }
+
+    iccIo_res.sw1 = resp.card_res->sw1;
+    iccIo_res.sw2 = resp.card_res->sw2;
+    sim_resp = bytes_to_hex_string(resp.read_result, resp.read_result_n);
+    iccIo_res.simResponse = std::string(sim_resp);
+
+    free(sim_resp);
+    uim_read_transparent_resp_data_free(&resp);
+
+    return RadioError::NONE;
+}
+
+RadioError iccIo_read_record(struct rild_state *state, struct uim_session_t &session, struct uim_file_t &file, struct uim_read_info_t &read_info, sim::IccIoResult &iccIo_res)
+{
+    int rc;
+    struct uim_read_record_req_data req;
+    struct uim_read_record_resp_data resp;
+    char *sim_resp;
+
+    req.session = &session;
+    req.file = &file;
+    req.read_info = &read_info;
+
+    rc = qrild_qmi_uim_read_record(state, &req, &resp);
+    if (rc) {
+        LOG(ERROR) << __func__ << ": Couldn't read binary: " << rc;
+        if (rc < 0)
+            return RadioError::INTERNAL_ERR;
+        // If PENDING
+        return RadioError::RADIO_NOT_AVAILABLE;
+    }
+
+    if (resp.res && resp.res->result) {
+        LOG(ERROR) << __func__ << ": Modem returned error: " << resp.res->error << ": "
+            << qmi_error_string(resp.res->error);
+        return RadioError::MODEM_ERR;
+    }
+
+    iccIo_res.sw1 = resp.card_res->sw1;
+    iccIo_res.sw2 = resp.card_res->sw2;
+    sim_resp = bytes_to_hex_string(resp.read_result, resp.read_result_n);
+    iccIo_res.simResponse = std::string(sim_resp);
+
+    free(sim_resp);
+    uim_read_record_resp_data_free(&resp);
+
+    return RadioError::NONE;
+}
+
+
+#define RESPONSE_DATA_RFU_1 0
+#define RESPONSE_DATA_RFU_2 1
+
+#define RESPONSE_DATA_FILE_SIZE_1 2
+#define RESPONSE_DATA_FILE_SIZE_2 3
+
+#define RESPONSE_DATA_FILE_ID_1 4
+#define RESPONSE_DATA_FILE_ID_2 5
+#define RESPONSE_DATA_FILE_TYPE 6
+#define RESPONSE_DATA_RFU_3 7
+#define RESPONSE_DATA_ACCESS_CONDITION_1 8
+#define RESPONSE_DATA_ACCESS_CONDITION_2 9
+#define RESPONSE_DATA_ACCESS_CONDITION_3 10
+#define RESPONSE_DATA_FILE_STATUS 11
+#define RESPONSE_DATA_LENGTH 12
+#define RESPONSE_DATA_STRUCTURE 13
+#define RESPONSE_DATA_RECORD_LENGTH 14
+
+RadioError iccIo_get_file_attrs(struct rild_state *state, struct uim_session_t &session, struct uim_file_t &file, sim::IccIoResult &iccIo_res)
+{
+    int rc;
+    struct uim_get_file_attrs_req_data req;
+    struct uim_get_file_attrs_resp_data resp;
+    uint8_t resp_bytes[15];
+    char *sim_resp;
+
+    req.session = &session;
+    req.file = &file;
+
+    rc = qrild_qmi_uim_get_file_attrs(state, &req, &resp);
+    if (rc) {
+        LOG(ERROR) << __func__ << ": Couldn't read binary: " << rc;
+        if (rc < 0)
+            return RadioError::INTERNAL_ERR;
+        // If PENDING
+        return RadioError::RADIO_NOT_AVAILABLE;
+    }
+
+    if (resp.res && resp.res->result) {
+        LOG(ERROR) << __func__ << ": Modem returned error: " << resp.res->error << ": "
+            << qmi_error_string(resp.res->error);
+        uim_get_file_attrs_resp_data_free(&resp);
+        return RadioError::MODEM_ERR;
+    }
+
+    iccIo_res.sw1 = resp.card_res->sw1;
+    iccIo_res.sw2 = resp.card_res->sw2;
+
+    resp_bytes[RESPONSE_DATA_RFU_1] = resp_bytes[RESPONSE_DATA_RFU_2] = 0; // Reserved
+    resp_bytes[RESPONSE_DATA_FILE_SIZE_1] = resp.file_attrs->file_size >> 8;
+    resp_bytes[RESPONSE_DATA_FILE_SIZE_2] = resp.file_attrs->file_size & 0xFF;
+    resp_bytes[RESPONSE_DATA_FILE_ID_1] = resp.file_attrs->file_id >> 8;
+    resp_bytes[RESPONSE_DATA_FILE_ID_2] = resp.file_attrs->file_id & 0xFF;
+    // TS 51.011 Section 9.3
+    resp_bytes[RESPONSE_DATA_FILE_TYPE] = 4; // only care about EFs, they contain the actual data
+    switch(resp.file_attrs->file_type) {
+    case QMI_UIM_FILE_TYPE_CYCLIC:
+        resp_bytes[RESPONSE_DATA_STRUCTURE] = 3;
+        break;
+    case QMI_UIM_FILE_TYPE_LINEAR_FIXED:
+        resp_bytes[RESPONSE_DATA_STRUCTURE] = 1;
+        break;
+    case QMI_UIM_FILE_TYPE_TRANSPARENT:
+        resp_bytes[RESPONSE_DATA_STRUCTURE] = 0;
+        break;
+    default:
+        break; // uhh?
+    }
+    resp_bytes[RESPONSE_DATA_RFU_3] = 0;
+    resp_bytes[RESPONSE_DATA_ACCESS_CONDITION_1] = 0;
+    resp_bytes[RESPONSE_DATA_ACCESS_CONDITION_2] = 0;
+    resp_bytes[RESPONSE_DATA_ACCESS_CONDITION_3] = 0;
+    resp_bytes[RESPONSE_DATA_FILE_STATUS] = 0;
+    // length of data from byte 13 (14 in the 1-based docs),
+    // Android only has structure and record_length
+    resp_bytes[RESPONSE_DATA_LENGTH] = 2; 
+    // Can we cast this??
+    resp_bytes[RESPONSE_DATA_RECORD_LENGTH] = (uint8_t)resp.file_attrs->record_size;
+
+    sim_resp = bytes_to_hex_string((uint8_t*)resp_bytes, sizeof(resp_bytes));
+    iccIo_res.simResponse = std::string(sim_resp);
+
+    free(sim_resp);
+    uim_get_file_attrs_resp_data_free(&resp);
+
+    return RadioError::NONE;
+}
+
 #define COMMAND_READ_BINARY 0xb0
 #define COMMAND_UPDATE_BINARY 0xd6
 #define COMMAND_READ_RECORD 0xb2
@@ -342,12 +533,27 @@ ndk::ScopedAStatus RadioSim::iccCloseLogicalChannel(int32_t in_serial, int32_t i
 ndk::ScopedAStatus RadioSim::iccIoForApp(int32_t in_serial, const sim::IccIo &in_iccIo) {
     log_debug("STUB: RadioSim::%s\n", __func__);
     auto r_info = RESP_OK(in_serial);
-    uint8_t* aid_buf;
-    size_t aid_len;
+    size_t temp_len;
     struct qmi_tlv *tlv;
     uint16_t msg_id = 0;
+    struct uim_session_t session;
+    struct uim_file_t file;
+    struct uim_read_info_t read_info;
+    sim::IccIoResult iccIo_res;
 
-    aid_buf = bytes_from_hex_str(in_iccIo.aid.c_str(), &aid_len);
+    //session.aid = bytes_from_hex_str(in_iccIo.aid.c_str(), &temp_len);
+    session.type = 0; // Primary GW provisioning ie first active card
+    session.aid_n = 0;// = (uint8_t)temp_len;
+
+    file.path = bytes_from_hex_str(in_iccIo.path.c_str(), &temp_len);
+    file.path_n = (uint8_t)temp_len;
+    // urgh byte ordering
+    for(int i = 0; i < file.path_n; i+=2) {
+        uint8_t temp = file.path[i];
+        file.path[i] = file.path[i+1];
+        file.path[i+1] = temp;
+    }
+    file.file_id = (uint16_t)in_iccIo.fileId;
 
     LOG(INFO) << "Got ICCIO: " << in_iccIo.toString();
 
@@ -357,27 +563,48 @@ ndk::ScopedAStatus RadioSim::iccIoForApp(int32_t in_serial, const sim::IccIo &in
         goto out;
     }
 
+    read_info.len = in_iccIo.p3;
+
     switch(in_iccIo.command) {
     case COMMAND_READ_BINARY:
+        read_info.offset = ((uint8_t)in_iccIo.p1) << 8 | ((uint8_t)in_iccIo.p2);
+        r_info.error = iccIo_read_binary(mState, session, file, read_info, iccIo_res);
         break;
-    case COMMAND_UPDATE_BINARY:
+    case COMMAND_READ_RECORD: // TS 102.221 section 11.1.5.2
+        read_info.offset = in_iccIo.p1;
+        if (in_iccIo.p2 != 0b100 || !read_info.offset) {
+            LOG(ERROR) << __func__ << ": Only absolute record numbers are supported and P1 must be >= 1";
+            r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
+            goto out;
+        }
+        r_info.error = iccIo_read_record(mState, session, file, read_info, iccIo_res);
         break;
-    case COMMAND_READ_RECORD:
-        break;
-    case COMMAND_UPDATE_RECORD:
+    /* See:
+     * frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccFileHandler.java
+     * Constants RESPONSE_DATA_*
+     * 
+     * TS 51.011 section 6.1 and Section 9.2.1
+     */
+    case COMMAND_GET_RESPONSE:
+        r_info.error = iccIo_get_file_attrs(mState, session, file, iccIo_res);
         break;
     case COMMAND_SEEK:
-        break;
-    case COMMAND_GET_RESPONSE: // TS 51.011 section 6.1
-        break;
+        LOG(ERROR) << __func__ << ": SEEK COMMAND?!!!!!";
+        FALLTHROUGH_INTENDED;
+    case COMMAND_UPDATE_BINARY: // No writing plz
+        FALLTHROUGH_INTENDED;
+    case COMMAND_UPDATE_RECORD:
     default:
-        LOG(ERROR) << __func__ << ": Invalid/unsupported ICCIO command!";
+        LOG(ERROR) << __func__ << ": Invalid/unsupported ICCIO command: " << in_iccIo.command;
         r_info.error = RadioError::REQUEST_NOT_SUPPORTED;
         goto out;
     }
 
 out:
-    mRep->iccIoForAppResponse(r_info, sim::IccIoResult());
+    LOG(INFO) << __func__ << ": " << iccIo_res.toString();
+    mRep->iccIoForAppResponse(r_info, iccIo_res);
+    free(session.aid);
+    free(file.path);
 
     return ndk::ScopedAStatus::ok();
 }
@@ -526,11 +753,16 @@ ndk::ScopedAStatus RadioSim::setResponseFunctions(
     mRep = in_radioSimResponse;
     mInd = in_radioSimIndication;
 
-    LOG(WARNING) << __func__ << ": HACK: always indicate UICC applications disabled";
-    mInd->uiccApplicationsEnablementChanged(RadioIndicationType::UNSOLICITED, false);
+    // LOG(WARNING) << __func__ << ": HACK: always indicate UICC applications disabled";
+    // mInd->uiccApplicationsEnablementChanged(RadioIndicationType::UNSOLICITED, false);
 
-    if (services.initialised && services.modem->mEnabled)
+    if (services.initialised && services.modem->mEnabled) {
         _provisionDefaultSim();
+    } else {
+        LOG(INFO) << __func__ << ": Queuing work to provision SIM";
+        
+    }
+
 
     return ndk::ScopedAStatus::ok();
 }

@@ -179,8 +179,8 @@
 08-02 00:04:30.636   695  1876 D TelephonyRegistry: notifySubscriptionInfoChanged: first invocation mRecords.size=30
 08-02 00:04:30.641  2202  2202 D SST     : [0] updateSpnDisplayLegacy-
 08-02 00:04:30.644  2202  2202 D NRM-C-0 : Trying to bind com.android.phone for transport WWAN
-08-02 00:04:30.645  2202  2400 D RILJ    : responseIccCardStatus: from AIDL: IccCardState {CARDSTATE_PRESENT,PINSTATE_UNKNOWN,num_apps=1,gsm_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},cdma_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},ims_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},atr=39981c83e7f216d01c10c0,iccid=8420099350,eid=,SlotPortMapping={physicalSlotIndex=1, portIndex=0}} [PHONE0]
-08-02 00:04:30.646  2202  2400 D RILJ    : [0006]< GET_SIM_STATUS IccCardState {CARDSTATE_PRESENT,PINSTATE_UNKNOWN,num_apps=1,gsm_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},cdma_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},ims_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},atr=39981c83e7f216d01c10c0,iccid=8420099350,eid=,SlotPortMapping={physicalSlotIndex=1, portIndex=0}} [PHONE0]
+08-02 00:04:30.645  2202  2400 D RILJ    : responseIccCardStatus: from AIDL: IccCardState {CARDSTATE_PRESENT,PINSTATE_UNKNOWN,num_apps=1,gsm_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},cdma_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},ims_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},atr=39981c83e7f216d01c10c0,iccid=<filtered>,eid=,SlotPortMapping={physicalSlotIndex=1, portIndex=0}} [PHONE0]
+08-02 00:04:30.646  2202  2400 D RILJ    : [0006]< GET_SIM_STATUS IccCardState {CARDSTATE_PRESENT,PINSTATE_UNKNOWN,num_apps=1,gsm_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},cdma_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},ims_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},atr=39981c83e7f216d01c10c0,iccid=<filtered>,eid=,SlotPortMapping={physicalSlotIndex=1, portIndex=0}} [PHONE0]
 08-02 00:04:30.649  2202  2202 E NRM-I-0 : Can't find the binding package
 08-02 00:04:30.650  2202  2202 D SST     : [0] setPowerStateToDesired: mDeviceShuttingDown=false, mDesiredPowerState=true, getRadioState=0, mRadioDisabledByCarrier=false, IMS reg state=false, pending radio off=false
 08-02 00:04:30.651  2202  2202 D RILJ    : [0015]> RADIO_POWER on = true forEmergencyCall= false preferredForEmergencyCall=false [PHONE0]
@@ -243,7 +243,7 @@
 08-02 00:04:30.695  2202  2202 D RILJ    : [0037]> SET_LINK_CAPACITY_REPORTING_CRITERIA [PHONE0]
 08-02 00:04:30.696  2202  2202 D RILJ    : [0038]> SET_LINK_CAPACITY_REPORTING_CRITERIA [PHONE0]
 08-02 00:04:30.697  2202  2202 D NetworkTypeController: [0] DefaultState: process EVENT_INITIALIZE
-08-02 00:04:30.699  2202  2400 D RadioConfigResponseAidl: [0007]< GET_SLOT_STATUS [IccSlotStatus {CARDSTATE_PRESENT,atr=39981c83e7f216d01c10c0,eid=,num_ports=1, IccSimPortInfo-0{iccid=8420099350,logicalSlotIndex=0,portActive=true}}]
+08-02 00:04:30.699  2202  2400 D RadioConfigResponseAidl: [0007]< GET_SLOT_STATUS [IccSlotStatus {CARDSTATE_PRESENT,atr=39981c83e7f216d01c10c0,eid=,num_ports=1, IccSimPortInfo-0{iccid=<filtered>,logicalSlotIndex=0,portActive=true}}]
 08-02 00:04:30.699  2202  2220 D RILJ    : [0008]< GET_CURRENT_CALLS {} [PHONE0]
 08-02 00:04:30.702  2202  2202 D NetworkTypeController: [0] mOverrideTimerRules: {connected={mState=connected, mOverrideType=NR_NSA, mPrimaryTimers={}, mSecondaryTimers={}}, not_restricted_rrc_con={mState=not_restricted_rrc_con, mOverrideType=NR_NSA, mPrimaryTimers={}, mSecondaryTimers={}}, legacy={mState=legacy, mOverrideType=NONE, mPrimaryTimers={}, mSecondaryTimers={}}, not_restricted_rrc_idle={mState=not_restricted_rrc_idle, mOverrideType=NR_NSA, mPrimaryTimers={}, mSecondaryTimers={}}, restricted={mState=restricted, mOverrideType=NONE, mPrimaryTimers={}, mSecondaryTimers={}}, connected_mmwave={mState=connected_mmwave, mOverrideType=NR_NSA, mPrimaryTimers={}, mSecondaryTimers={}}}
 08-02 00:04:30.703  2202  2202 D NetworkTypeController: [0] DefaultState: process EVENT_UPDATE
@@ -315,9 +315,9 @@
 08-02 00:04:31.060  2202  2202 E PhoneSubInfoController: getLine1Number phone is null for Subscription:-1
 08-02 00:04:31.096  2202  2202 D UiccController: handleMessage: Received GET_ICC_STATUS_DONE for phoneId 0
 08-02 00:04:31.096  2202  2202 D UiccController: Received EVENT_GET_ICC_STATUS_DONE
-08-02 00:04:31.097  2202  2202 D UiccController: onGetIccCardStatusDone: phoneId 0 IccCardStatus: IccCardState {CARDSTATE_PRESENT,PINSTATE_UNKNOWN,num_apps=1,gsm_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},cdma_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},ims_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},atr=39981c83e7f216d01c10c0,iccid=8420099350,eid=,SlotPortMapping={physicalSlotIndex=1, portIndex=0}}
+08-02 00:04:31.097  2202  2202 D UiccController: onGetIccCardStatusDone: phoneId 0 IccCardStatus: IccCardState {CARDSTATE_PRESENT,PINSTATE_UNKNOWN,num_apps=1,gsm_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},cdma_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},ims_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},atr=39981c83e7f216d01c10c0,iccid=<filtered>,eid=,SlotPortMapping={physicalSlotIndex=1, portIndex=0}}
 08-02 00:04:31.098  2202  2202 D UiccSlot: Creating
-08-02 00:04:31.098  2202  2202 D UiccSlot: cardStatus update: IccCardState {CARDSTATE_PRESENT,PINSTATE_UNKNOWN,num_apps=1,gsm_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},cdma_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},ims_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},atr=39981c83e7f216d01c10c0,iccid=8420099350,eid=,SlotPortMapping={physicalSlotIndex=1, portIndex=0}}
+08-02 00:04:31.098  2202  2202 D UiccSlot: cardStatus update: IccCardState {CARDSTATE_PRESENT,PINSTATE_UNKNOWN,num_apps=1,gsm_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},cdma_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},ims_id=0{APPTYPE_USIM,APPSTATE_DETECTED,pin1=PINSTATE_UNKNOWN,pin2=PINSTATE_UNKNOWN},atr=39981c83e7f216d01c10c0,iccid=<filtered>,eid=,SlotPortMapping={physicalSlotIndex=1, portIndex=0}}
 08-02 00:04:31.098  2202  2202 E AnswerToReset: Unrecognized convention byte 39
 08-02 00:04:31.099  2202  2202 D UiccSlot: update: radioState=1 mLastRadioState={}
 08-02 00:04:31.099  2202  2202 D UiccCard: Creating
@@ -360,9 +360,9 @@
 08-02 00:04:31.136  2202  2202 D NetworkTypeController: [0] Reset timers since 2G and 3G don't need NR timers.
 08-02 00:04:31.137  2202  2202 D UiccController: handleMessage: Received GET_SLOT_STATUS_DONE for phoneId 0
 08-02 00:04:31.137  2202  2202 D UiccController: Received EVENT_SLOT_STATUS_CHANGED or EVENT_GET_SLOT_STATUS_DONE
-08-02 00:04:31.138  2202  2202 D UiccController: onGetSlotStatusDone: [IccSlotStatus {CARDSTATE_PRESENT,atr=39981c83e7f216d01c10c0,eid=,num_ports=1, IccSimPortInfo-0{iccid=8420099350,logicalSlotIndex=0,portActive=true}}]
+08-02 00:04:31.138  2202  2202 D UiccController: onGetSlotStatusDone: [IccSlotStatus {CARDSTATE_PRESENT,atr=39981c83e7f216d01c10c0,eid=,num_ports=1, IccSimPortInfo-0{iccid=<filtered>,logicalSlotIndex=0,portActive=true}}]
 08-02 00:04:31.138  2202  2202 D UiccSlot: Creating
-08-02 00:04:31.138  2202  2202 D UiccSlot: slotStatus update: IccSlotStatus {CARDSTATE_PRESENT,atr=39981c83e7f216d01c10c0,eid=,num_ports=1, IccSimPortInfo-0{iccid=8420099350,logicalSlotIndex=0,portActive=true}}
+08-02 00:04:31.138  2202  2202 D UiccSlot: slotStatus update: IccSlotStatus {CARDSTATE_PRESENT,atr=39981c83e7f216d01c10c0,eid=,num_ports=1, IccSimPortInfo-0{iccid=<filtered>,logicalSlotIndex=0,portActive=true}}
 08-02 00:04:31.139  2202  2202 E AnswerToReset: Unrecognized convention byte 39
 08-02 00:04:31.139  2202  2202 D UiccController: onGetSlotStatusDone: mDefaultEuiccCardId=UNINITIALIZED
 08-02 00:04:31.141  2202  2202 D GsmCdmaCallTracker: Event EVENT_POLL_CALLS_RESULT Received

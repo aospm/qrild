@@ -32,6 +32,13 @@
 #include <aidl/android/hardware/radio/network/CellInfoRatSpecificInfo.h>
 #include <list.h>
 
+static void _restrictedStateChanged(struct q_work_task *) {
+    if (!services.initialised) {
+        log_warn("%s: network service not available");
+    }
+    services.network->restrictedStatechanged();
+}
+
 RadioNetwork::RadioNetwork(struct rild_state *state) : mState(state) {
     log_debug("xRadioNetwork::%s\n", __func__);
     int rc;
@@ -39,6 +46,13 @@ RadioNetwork::RadioNetwork(struct rild_state *state) : mState(state) {
     mRegStateRes.regState = network::RegState::UNKNOWN;
 
     mLastCellInfoListUpdateMs = 0;
+
+    restricted_state_changed_work.func = _restrictedStateChanged;
+}
+
+void RadioNetwork::restrictedStatechanged() {
+    LOG(INFO) << __func__ << "!";
+    mInd->restrictedStateChanged(RadioIndicationType::UNSOLICITED, network::PhoneRestrictedState::NONE);
 }
 
 ndk::ScopedAStatus RadioNetwork::getAllowedNetworkTypesBitmap(int32_t in_serial) {
@@ -70,7 +84,7 @@ RadioError RadioNetwork::getCellIdentityLte(network::CellIdentityLte &i_lte)
         return err;
     }
     if (data.res->result) {
-        LOG(ERROR) << __func__ << ": modem returned error: " << (int)data.res->error;
+        LOG(ERROR) << __func__ << ": modem returned error: " << (int)data.res->error << ": " << qmi_error_string(data.res->error);
         switch (data.res->error) {
         case QMI_ERR_INFORMATION_UNAVAILABLE:
             err = RadioError::RADIO_NOT_AVAILABLE;
@@ -397,7 +411,11 @@ int RadioNetwork::updateCellInfo(struct nas_serving_system_ind_data *ss) {
     }
 
     rc = qrild_qmi_nas_get_cell_loc_info(mState, &loc);
-    if (rc < 0 || loc.res->result) {
+    if (rc < 0) {
+        LOG(ERROR) << __func__ << ": Failed to get cell location info: " << rc;
+        return rc;
+    }
+    if (loc.res->result) {
         LOG(ERROR) << __func__ << ": Failed to get cell location info. rc: " << rc
                    << ", QMI err (if applicable): " << loc.res->error << ": "
                    << qmi_error_string(loc.res->error);

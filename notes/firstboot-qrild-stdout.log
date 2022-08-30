@@ -296,7 +296,7 @@ Slot 0
 	portActive: 1
 	FIXME! should start with 3B!!! ATR: 39981c83e7f216d01c10c0
 	EID:
-	ICCID: 8420099350
+	ICCID: <filtered>
 xRadioVoice::getCurrentCalls
 xRadioModem::getBasebandVersion
 Waiting for response to msg {id: 0x23, txn: 15}
@@ -335,7 +335,7 @@ QRTR TX:
 
 [QRTR] data packet from QMI_SERVICE_DMS, msg_id: 0x25, txn: 16, type: 2
 QRTR RX:
-02:10:00:25:00:39:00:02:04:00:00:00:00:00:10:08:00:38:30:31:38:45:36:34:37:11:0f:00:38:36:39:32:39:35:30:33:38:33:30:39:33:35:33:12:0e:00:39:39:30:30:31:32:30:32:38:39:36:34:36:37:13:01:00:32
+<filtered>
 
 Found msg (id: 0x25 (16 == 16)) with matching txn
 Got response for msg {id: 0x25, txn: 16}: {id: 0x25, txn: 16} (rc: 0)

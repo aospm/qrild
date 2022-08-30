@@ -39,6 +39,11 @@ extern "C" {
 #define QMI_UIM_CARD_APPLICATION_STATE_PIN1_BLOCKED 5
 #define QMI_UIM_CARD_APPLICATION_STATE_ILLEGAL 6
 #define QMI_UIM_CARD_APPLICATION_STATE_READY 7
+#define QMI_UIM_FILE_TYPE_TRANSPARENT 0
+#define QMI_UIM_FILE_TYPE_CYCLIC 1
+#define QMI_UIM_FILE_TYPE_LINEAR_FIXED 2
+#define QMI_UIM_FILE_TYPE_DEDICATED_FILE 3
+#define QMI_UIM_FILE_TYPE_MASTER_FILE 4
 
 struct uim_card_status {
 	uint16_t index_gw_primary;
@@ -115,7 +120,7 @@ struct uim_session_t {
 struct uim_file_t {
 	uint16_t file_id;
 	uint8_t path_n;
-	uint8_t path;
+	uint8_t *path;
 };
 
 struct uim_read_info_t {
@@ -148,6 +153,20 @@ struct uim_file_attrs_t {
 	uint8_t *raw_data;
 };
 
+struct uim_refresh_ev_t {
+	uint8_t stage;
+	uint8_t mode;
+	uint8_t session_type;
+	uint8_t aid_n;
+	uint8_t *aid;
+	uint16_t files_n;
+	struct refresh_ev_t_files {
+		uint16_t id;
+		uint8_t path_n;
+		uint8_t *path;
+	} *files;
+};
+
 struct uim_get_card_status_resp;
 struct uim_change_provisioning_session_req;
 struct uim_change_provisioning_session_resp;
@@ -162,10 +181,11 @@ struct uim_read_record_req;
 struct uim_read_record_resp;
 struct uim_get_file_attrs_req;
 struct uim_get_file_attrs_resp;
+struct uim_refresh;
 
 
-#define QMI_NUM_MESSAGES_UIM 14
-extern const struct qmi_tlv_msg_name uim_msg_name_map[14];
+#define QMI_NUM_MESSAGES_UIM 15
+extern const struct qmi_tlv_msg_name uim_msg_name_map[15];
 
 /*
  * uim_get_card_status_resp message
@@ -335,8 +355,7 @@ uint8_t *uim_get_slot_status_ind_get_eid_info(struct uim_get_slot_status_ind *ge
 
 struct uim_read_transparent_req_data {
 	struct uim_session_t *session;
-	struct file_t *file;
-	bool read_info_valid;
+	struct uim_file_t *file;
 	struct uim_read_info_t *read_info;
 	bool resp_in_ind_valid;
 	uint32_t resp_in_ind;
@@ -393,8 +412,7 @@ int uim_read_transparent_resp_get_encrypted(struct uim_read_transparent_resp *re
 
 struct uim_read_record_req_data {
 	struct uim_session_t *session;
-	struct file_t *file;
-	bool read_info_valid;
+	struct uim_file_t *file;
 	struct uim_read_info_t *read_info;
 	bool last_record_valid;
 	uint16_t last_record;
@@ -452,7 +470,7 @@ int uim_read_record_resp_get_resp_in_ind(struct uim_read_record_resp *read_recor
 
 struct uim_get_file_attrs_req_data {
 	struct uim_session_t *session;
-	struct file_t *file;
+	struct uim_file_t *file;
 	bool resp_in_ind_valid;
 	uint32_t resp_in_ind;
 };
@@ -492,6 +510,25 @@ struct uim_file_attrs_t *uim_get_file_attrs_resp_get_file_attrs(struct uim_get_f
 void uim_file_attrs_t_free(struct uim_file_attrs_t *val);
 
 int uim_get_file_attrs_resp_get_resp_in_ind(struct uim_get_file_attrs_resp *get_file_attrs_resp, uint32_t *val);
+
+/*
+ * uim_refresh message
+ */
+
+struct uim_refresh_data {
+	struct uim_refresh_ev_t *event;
+};
+
+struct uim_refresh *uim_refresh_parse(void *buf, size_t len);
+void uim_refresh_getall(struct uim_refresh *refresh, struct uim_refresh_data *data);
+void uim_refresh_data_free(struct uim_refresh_data *data);
+struct uim_refresh *uim_refresh_alloc(unsigned txn);
+void *uim_refresh_encode(struct uim_refresh *refresh, size_t *len);
+void uim_refresh_free(struct uim_refresh *refresh);
+
+int uim_refresh_set_event(struct uim_refresh *refresh, struct uim_refresh_ev_t *val);
+struct uim_refresh_ev_t *uim_refresh_get_event(struct uim_refresh *refresh);
+void uim_refresh_ev_t_free(struct uim_refresh_ev_t *val);
 
 #ifdef __cplusplus
 }

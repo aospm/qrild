@@ -25,6 +25,12 @@ const QMI_UIM_CARD_APPLICATION_STATE_PIN1_BLOCKED                = 5;
 const QMI_UIM_CARD_APPLICATION_STATE_ILLEGAL                     = 6;
 const QMI_UIM_CARD_APPLICATION_STATE_READY                       = 7;
 
+const QMI_UIM_FILE_TYPE_TRANSPARENT    = 0;
+const QMI_UIM_FILE_TYPE_CYCLIC         = 1;
+const QMI_UIM_FILE_TYPE_LINEAR_FIXED   = 2;
+const QMI_UIM_FILE_TYPE_DEDICATED_FILE = 3;
+const QMI_UIM_FILE_TYPE_MASTER_FILE    = 4;
+
 struct card_status {
 	u16 index_gw_primary;
 	u16 index_1x_primary;
@@ -145,7 +151,7 @@ struct session_t {
 struct file_t {
 	u16 file_id;
 	u8 path_n;
-	u8 path;
+	u8 *path;
 };
 
 struct read_info_t {
@@ -156,7 +162,7 @@ struct read_info_t {
 request read_transparent_req {
 	required session_t session = 0x01;
 	required file_t file = 0x02;
-	optional read_info_t read_info = 0x03;
+	required read_info_t read_info = 0x03;
 	optional u32 resp_in_ind = 0x10;
 	optional u8 encrypt_data = 0x11;
 } = 0x0020;
@@ -177,7 +183,7 @@ response read_transparent_resp {
 request read_record_req {
 	required session_t session = 0x01;
 	required file_t file = 0x02;
-	optional read_info_t read_info = 0x03;
+	required read_info_t read_info = 0x03;
 	optional u16 last_record = 0x10;
 	optional u32 resp_in_ind = 0x11;
 } = 0x0021;

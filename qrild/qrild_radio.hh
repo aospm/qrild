@@ -226,6 +226,8 @@ class RadioModem : public modem::BnRadioModem, public IHandlesQmiIndications {
     modem::RadioCapability mCaps;
     struct rild_state *mState;
 
+    modem::RadioState mRadioPower;
+
 public:
     RadioModem(struct rild_state *state);
     bool mEnabled;
@@ -315,6 +317,9 @@ class RadioNetwork : public network::BnRadioNetwork, public IHandlesQmiIndicatio
 public:
     RadioNetwork(struct rild_state *state);
     void _handleQmiIndications() override;
+
+    struct q_work restricted_state_changed_work;
+    void restrictedStatechanged();
 };
 
 class RadioSim : public sim::BnRadioSim, public IHandlesQmiIndications {
@@ -386,11 +391,14 @@ class RadioSim : public sim::BnRadioSim, public IHandlesQmiIndications {
 
     sim::CardStatus mCardStatus;
 
+    bool mSendSimStatusChanged = false;
+
 public:
     RadioSim(struct rild_state *state);
     void _handleQmiIndications() override;
     int _provisionDefaultSim();
     bool mProvisioned;
+    struct q_work provision_sim_work;
 };
 
 class RadioVoice : public voice::BnRadioVoice, public IHandlesQmiIndications {

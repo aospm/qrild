@@ -18,9 +18,9 @@
 08-02 00:04:30.128   686   689 I qrild.INetwork: reportSystemStatus: FIXME! implement this
 08-02 00:04:30.184   686   686 I qrild.INetwork: getSignalStrengthLteSignalStrength{signalStrength: -128, rsrp: 65, rsrq: 18, rssnr: 16, cqi: 13, timingAdvance: 647, cqiTableIndex: 5}
 08-02 00:04:30.641   686   686 I qrild.ISim: getIccCardStatus: err: NONE
-08-02 00:04:30.641   686   686 I qrild.ISim: 	CardStatus{cardState: 1, universalPinState: UNKNOWN, gsmUmtsSubscriptionAppIndex: 0, cdmaSubscriptionAppIndex: 0, imsSubscriptionAppIndex: 0, applications: [AppStatus{appType: 2, appState: 1, persoSubstate: UNKNOWN, aidPtr: a000810ffff800000, appLabelPtr: , pin1Replaced: false, pin1: UNKNOWN, pin2: UNKNOWN}], atr: 39981c83e7f216d01c10c0, iccid: 8420099350, eid: , slotMap: SlotPortMapping{physicalSlotId: 1, portId: 0}}
+08-02 00:04:30.641   686   686 I qrild.ISim: 	CardStatus{cardState: 1, universalPinState: UNKNOWN, gsmUmtsSubscriptionAppIndex: 0, cdmaSubscriptionAppIndex: 0, imsSubscriptionAppIndex: 0, applications: [AppStatus{appType: 2, appState: 1, persoSubstate: UNKNOWN, aidPtr: a000810ffff800000, appLabelPtr: , pin1Replaced: false, pin1: UNKNOWN, pin2: UNKNOWN}], atr: 39981c83e7f216d01c10c0, iccid: <filtered>, eid: , slotMap: SlotPortMapping{physicalSlotId: 1, portId: 0}}
 08-02 00:04:30.751   686   686 E qrild.ISim: areUiccApplicationsEnabled: Hardcode enable UICC application
-08-02 00:04:30.807   686   686 I qrild.IModem: getDeviceIdentity: IMEI: 869295038309353, ESN: 8018E647, MEID: 99001202896467
+08-02 00:04:30.807   686   686 I qrild.IModem: getDeviceIdentity: IMEI: <filtered>, ESN: <filtered>, MEID: <filtered>
 08-02 00:04:30.807   686   686 I qrild.INetwork: getOperator FIXME: hardcoded values
 08-02 00:04:30.808   686   686 I qrild.IModem: setRadioPower(powerOn: 1, forEmergencyCall: 0, preferredForEmergencyCall: 0)
 08-02 00:04:30.918   686   686 I qrild.IModem: Set modem operating mode to:
