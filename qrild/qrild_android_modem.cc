@@ -122,9 +122,9 @@ ndk::ScopedAStatus RadioModem::getHardwareConfig(int32_t in_serial) {
     case QMI_DMS_OPERATING_MODE_ONLINE:
         modem.state = modem::HardwareConfig::STATE_ENABLED;
         break;
-    case QMI_DMS_OPERATING_MODE_LOW_POWER:
-        modem.state = modem::HardwareConfig::STATE_STANDBY;
-        break;
+    // case QMI_DMS_OPERATING_MODE_LOW_POWER:
+    //     modem.state = modem::HardwareConfig::STATE_STANDBY;
+    //     break;
     case QMI_DMS_OPERATING_MODE_OFFLINE:
     default:
         modem.state = modem::HardwareConfig::STATE_DISABLED;

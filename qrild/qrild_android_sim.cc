@@ -555,7 +555,7 @@ ndk::ScopedAStatus RadioSim::iccIoForApp(int32_t in_serial, const sim::IccIo &in
     }
     file.file_id = (uint16_t)in_iccIo.fileId;
 
-    LOG(INFO) << "Got ICCIO: " << in_iccIo.toString();
+    // LOG(INFO) << "Got ICCIO: " << in_iccIo.toString();
 
     if (in_iccIo.data.length() > 0) {
         LOG(ERROR) << __func__ << ": Android tried to write to SIM and I'm not risking that...";
@@ -589,7 +589,7 @@ ndk::ScopedAStatus RadioSim::iccIoForApp(int32_t in_serial, const sim::IccIo &in
         r_info.error = iccIo_get_file_attrs(mState, session, file, iccIo_res);
         break;
     case COMMAND_SEEK:
-        LOG(ERROR) << __func__ << ": SEEK COMMAND?!!!!!";
+        // LOG(ERROR) << __func__ << ": SEEK COMMAND?!!!!!";
         FALLTHROUGH_INTENDED;
     case COMMAND_UPDATE_BINARY: // No writing plz
         FALLTHROUGH_INTENDED;
@@ -601,7 +601,7 @@ ndk::ScopedAStatus RadioSim::iccIoForApp(int32_t in_serial, const sim::IccIo &in
     }
 
 out:
-    LOG(INFO) << __func__ << ": " << iccIo_res.toString();
+    // LOG(INFO) << __func__ << ": " << iccIo_res.toString();
     mRep->iccIoForAppResponse(r_info, iccIo_res);
     free(session.aid);
     free(file.path);

@@ -93,7 +93,7 @@ struct serving_system {
 	u8 registration_state;
 	u8 cs_attach_state;
 	u8 ps_attach_state;
-	u8 selected_network;
+	u8 selected_network; # 1 - 3GPP2, 2 - 3GPP
 	u8 radio_interfaces_n;
 	u8 *radio_interfaces;
 };
