@@ -1,5 +1,4 @@
 package wda;
-package_type client;
 
 const QMI_WDA_SERVICE = 26;
 

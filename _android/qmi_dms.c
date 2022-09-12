@@ -2,488 +2,234 @@
 #include <string.h>
 #include "qmi_dms.h"
 
-const struct qmi_tlv_msg_name dms_msg_name_map[10] = {
-	{ .msg_id = 35, .msg_name = "dms_get_revision_req" },
-	{ .msg_id = 35, .msg_name = "dms_get_revision_resp" },
-	{ .msg_id = 37, .msg_name = "dms_get_ids_req" },
-	{ .msg_id = 37, .msg_name = "dms_get_ids_resp" },
-	{ .msg_id = 45, .msg_name = "dms_get_operating_mode_req" },
-	{ .msg_id = 45, .msg_name = "dms_get_operating_mode_resp" },
-	{ .msg_id = 46, .msg_name = "dms_set_operating_mode_req" },
-	{ .msg_id = 46, .msg_name = "dms_set_operating_mode_resp" },
-	{ .msg_id = 36, .msg_name = "dms_get_msisdn" },
-	{ .msg_id = 67, .msg_name = "dms_uim_get_imsi" },
+struct qmi_elem_info dms_ids_ei[] = {
+	{
+		.data_type = QMI_UNSIGNED_2_BYTE,
+		.elem_len = 1,
+		.elem_size = sizeof(uint16_t),
+		.offset = offsetof(struct dms_ids, esn_len),
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.offset = offsetof(struct dms_ids, esn)
+	},
+	{
+		.data_type = QMI_UNSIGNED_2_BYTE,
+		.elem_len = 1,
+		.elem_size = sizeof(uint16_t),
+		.offset = offsetof(struct dms_ids, imei_len),
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.offset = offsetof(struct dms_ids, imei)
+	},
+	{
+		.data_type = QMI_UNSIGNED_2_BYTE,
+		.elem_len = 1,
+		.elem_size = sizeof(uint16_t),
+		.offset = offsetof(struct dms_ids, meid_len),
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.offset = offsetof(struct dms_ids, meid)
+	},
+	{
+		.data_type = QMI_UNSIGNED_2_BYTE,
+		.elem_len = 1,
+		.elem_size = sizeof(uint16_t),
+		.offset = offsetof(struct dms_ids, imei_ver_len),
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.offset = offsetof(struct dms_ids, imei_ver)
+	},
+	{}
 };
 
-struct dms_get_revision_req *dms_get_revision_req_alloc(unsigned txn)
-{
-	return (struct dms_get_revision_req*)qmi_tlv_init(txn, 35, 0);
-}
-
-void *dms_get_revision_req_encode(struct dms_get_revision_req *get_revision_req, size_t *len)
-{
-	return qmi_tlv_encode((struct qmi_tlv*)get_revision_req, len);
-}
-
-void dms_get_revision_req_free(struct dms_get_revision_req *get_revision_req)
-{
-	qmi_tlv_free((struct qmi_tlv*)get_revision_req);
-}
-
-struct dms_get_revision_resp *dms_get_revision_resp_parse(void *buf, size_t len)
-{
-	return (struct dms_get_revision_resp*)qmi_tlv_decode(buf, len);
-}
-
-void dms_get_revision_resp_getall(struct dms_get_revision_resp *get_revision_resp, struct dms_get_revision_resp_data *data)
-{
-	int rc;
-	(void)rc;
-
-	data->revision = dms_get_revision_resp_get_revision(get_revision_resp);
-}
-
-void dms_get_revision_resp_data_free(struct dms_get_revision_resp_data *data)
-{
-
-		free(data->revision);
-}
-
-void dms_get_revision_resp_free(struct dms_get_revision_resp *get_revision_resp)
-{
-	qmi_tlv_free((struct qmi_tlv*)get_revision_resp);
-}
-
-char *dms_get_revision_resp_get_revision(struct dms_get_revision_resp *get_revision_resp)
-{
-	char *ptr = NULL, *out;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_revision_resp, 1, &len);
-	if (!ptr)
-		return NULL;
-
-	if (!ptr[len-1]) {
-		out = malloc(len);
-		memcpy(out, ptr, len);
-	} else {
-		out = malloc(len + 1);
-		memcpy(out, ptr, len);
-		out[len] = '\0';
-	}
-
-	return out;
-}
-
-struct dms_get_ids_req *dms_get_ids_req_alloc(unsigned txn)
-{
-	return (struct dms_get_ids_req*)qmi_tlv_init(txn, 37, 0);
-}
-
-void *dms_get_ids_req_encode(struct dms_get_ids_req *get_ids_req, size_t *len)
-{
-	return qmi_tlv_encode((struct qmi_tlv*)get_ids_req, len);
-}
-
-void dms_get_ids_req_free(struct dms_get_ids_req *get_ids_req)
-{
-	qmi_tlv_free((struct qmi_tlv*)get_ids_req);
-}
-
-struct dms_get_ids_resp *dms_get_ids_resp_parse(void *buf, size_t len)
-{
-	return (struct dms_get_ids_resp*)qmi_tlv_decode(buf, len);
-}
-
-void dms_get_ids_resp_getall(struct dms_get_ids_resp *get_ids_resp, struct dms_get_ids_resp_data *data)
-{
-	int rc;
-	(void)rc;
-
-	data->res = malloc(sizeof(struct qmi_response_type_v01));
-	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_ids_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
-	data->esn = dms_get_ids_resp_get_esn(get_ids_resp);
-	data->esn_valid = !!data->esn;
-	data->imei = dms_get_ids_resp_get_imei(get_ids_resp);
-	data->imei_valid = !!data->imei;
-	data->meid = dms_get_ids_resp_get_meid(get_ids_resp);
-	data->meid_valid = !!data->meid;
-	data->imei_ver = dms_get_ids_resp_get_imei_ver(get_ids_resp);
-	data->imei_ver_valid = !!data->imei_ver;
-}
-
-void dms_get_ids_resp_data_free(struct dms_get_ids_resp_data *data)
-{
-
-		free(data->res);
-	if(data->esn_valid) {
-		free(data->esn);
-	}
-	if(data->imei_valid) {
-		free(data->imei);
-	}
-	if(data->meid_valid) {
-		free(data->meid);
-	}
-	if(data->imei_ver_valid) {
-		free(data->imei_ver);
-	}
-}
-
-void dms_get_ids_resp_free(struct dms_get_ids_resp *get_ids_resp)
-{
-	qmi_tlv_free((struct qmi_tlv*)get_ids_resp);
-}
-
-char *dms_get_ids_resp_get_esn(struct dms_get_ids_resp *get_ids_resp)
-{
-	char *ptr = NULL, *out;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_ids_resp, 16, &len);
-	if (!ptr)
-		return NULL;
-
-	if (!ptr[len-1]) {
-		out = malloc(len);
-		memcpy(out, ptr, len);
-	} else {
-		out = malloc(len + 1);
-		memcpy(out, ptr, len);
-		out[len] = '\0';
-	}
-
-	return out;
-}
-
-char *dms_get_ids_resp_get_imei(struct dms_get_ids_resp *get_ids_resp)
-{
-	char *ptr = NULL, *out;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_ids_resp, 17, &len);
-	if (!ptr)
-		return NULL;
-
-	if (!ptr[len-1]) {
-		out = malloc(len);
-		memcpy(out, ptr, len);
-	} else {
-		out = malloc(len + 1);
-		memcpy(out, ptr, len);
-		out[len] = '\0';
-	}
-
-	return out;
-}
-
-char *dms_get_ids_resp_get_meid(struct dms_get_ids_resp *get_ids_resp)
-{
-	char *ptr = NULL, *out;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_ids_resp, 18, &len);
-	if (!ptr)
-		return NULL;
-
-	if (!ptr[len-1]) {
-		out = malloc(len);
-		memcpy(out, ptr, len);
-	} else {
-		out = malloc(len + 1);
-		memcpy(out, ptr, len);
-		out[len] = '\0';
-	}
-
-	return out;
-}
-
-char *dms_get_ids_resp_get_imei_ver(struct dms_get_ids_resp *get_ids_resp)
-{
-	char *ptr = NULL, *out;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_ids_resp, 19, &len);
-	if (!ptr)
-		return NULL;
-
-	if (!ptr[len-1]) {
-		out = malloc(len);
-		memcpy(out, ptr, len);
-	} else {
-		out = malloc(len + 1);
-		memcpy(out, ptr, len);
-		out[len] = '\0';
-	}
-
-	return out;
-}
-
-struct dms_get_operating_mode_req *dms_get_operating_mode_req_alloc(unsigned txn)
-{
-	return (struct dms_get_operating_mode_req*)qmi_tlv_init(txn, 45, 0);
-}
-
-void *dms_get_operating_mode_req_encode(struct dms_get_operating_mode_req *get_operating_mode_req, size_t *len)
-{
-	return qmi_tlv_encode((struct qmi_tlv*)get_operating_mode_req, len);
-}
-
-void dms_get_operating_mode_req_free(struct dms_get_operating_mode_req *get_operating_mode_req)
-{
-	qmi_tlv_free((struct qmi_tlv*)get_operating_mode_req);
-}
-
-struct dms_get_operating_mode_resp *dms_get_operating_mode_resp_parse(void *buf, size_t len)
-{
-	return (struct dms_get_operating_mode_resp*)qmi_tlv_decode(buf, len);
-}
-
-void dms_get_operating_mode_resp_getall(struct dms_get_operating_mode_resp *get_operating_mode_resp, struct dms_get_operating_mode_resp_data *data)
-{
-	int rc;
-	(void)rc;
-
-	data->res = malloc(sizeof(struct qmi_response_type_v01));
-	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_operating_mode_resp, 2, NULL), sizeof(struct qmi_response_type_v01));
-	rc = dms_get_operating_mode_resp_get_mode(get_operating_mode_resp, &data->mode);
-	rc = dms_get_operating_mode_resp_get_offline_reason(get_operating_mode_resp, &data->offline_reason);
-	data->offline_reason_valid = rc >= 0;
-	rc = dms_get_operating_mode_resp_get_hardware_restricted(get_operating_mode_resp, &data->hardware_restricted);
-}
-
-void dms_get_operating_mode_resp_data_free(struct dms_get_operating_mode_resp_data *data)
-{
-
-		free(data->res);
-}
-
-void dms_get_operating_mode_resp_free(struct dms_get_operating_mode_resp *get_operating_mode_resp)
-{
-	qmi_tlv_free((struct qmi_tlv*)get_operating_mode_resp);
-}
-
-int dms_get_operating_mode_resp_get_mode(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint8_t *val)
-{
-	uint8_t *ptr;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_operating_mode_resp, 1, &len);
-	if (!ptr)
-		return -ENOENT;
-
-	if (len != sizeof(uint8_t))
-		return -EINVAL;
-
-	*val = *(uint8_t*)ptr;
-	return 0;
-}
-
-int dms_get_operating_mode_resp_get_offline_reason(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint16_t *val)
-{
-	uint16_t *ptr;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_operating_mode_resp, 16, &len);
-	if (!ptr)
-		return -ENOENT;
-
-	if (len != sizeof(uint16_t))
-		return -EINVAL;
-
-	*val = *(uint16_t*)ptr;
-	return 0;
-}
-
-int dms_get_operating_mode_resp_get_hardware_restricted(struct dms_get_operating_mode_resp *get_operating_mode_resp, uint8_t *val)
-{
-	uint8_t *ptr;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_operating_mode_resp, 17, &len);
-	if (!ptr)
-		return -ENOENT;
-
-	if (len != sizeof(uint8_t))
-		return -EINVAL;
-
-	*val = *(uint8_t*)ptr;
-	return 0;
-}
-
-struct dms_set_operating_mode_req *dms_set_operating_mode_req_alloc(unsigned txn)
-{
-	return (struct dms_set_operating_mode_req*)qmi_tlv_init(txn, 46, 0);
-}
-
-void *dms_set_operating_mode_req_encode(struct dms_set_operating_mode_req *set_operating_mode_req, size_t *len)
-{
-	return qmi_tlv_encode((struct qmi_tlv*)set_operating_mode_req, len);
-}
-
-void dms_set_operating_mode_req_free(struct dms_set_operating_mode_req *set_operating_mode_req)
-{
-	qmi_tlv_free((struct qmi_tlv*)set_operating_mode_req);
-}
-
-int dms_set_operating_mode_req_set_mode(struct dms_set_operating_mode_req *set_operating_mode_req, uint8_t val)
-{
-	return qmi_tlv_set((struct qmi_tlv*)set_operating_mode_req, 1, &val, sizeof(uint8_t));
-}
-
-struct dms_set_operating_mode_resp *dms_set_operating_mode_resp_alloc(unsigned txn)
-{
-	return (struct dms_set_operating_mode_resp*)qmi_tlv_init(txn, 46, 0);
-}
-
-void *dms_set_operating_mode_resp_encode(struct dms_set_operating_mode_resp *set_operating_mode_resp, size_t *len)
-{
-	return qmi_tlv_encode((struct qmi_tlv*)set_operating_mode_resp, len);
-}
-
-void dms_set_operating_mode_resp_free(struct dms_set_operating_mode_resp *set_operating_mode_resp)
-{
-	qmi_tlv_free((struct qmi_tlv*)set_operating_mode_resp);
-}
-
-struct dms_get_msisdn *dms_get_msisdn_parse(void *buf, size_t len)
-{
-	return (struct dms_get_msisdn*)qmi_tlv_decode(buf, len);
-}
-
-void dms_get_msisdn_getall(struct dms_get_msisdn *get_msisdn, struct dms_get_msisdn_data *data)
-{
-	int rc;
-	(void)rc;
-
-	data->res = malloc(sizeof(struct qmi_response_type_v01));
-	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)get_msisdn, 2, NULL), sizeof(struct qmi_response_type_v01));
-	data->msisdn = dms_get_msisdn_get_msisdn(get_msisdn);
-	data->msisdn_valid = !!data->msisdn;
-	data->imsi = dms_get_msisdn_get_imsi(get_msisdn);
-	data->imsi_valid = !!data->imsi;
-}
-
-void dms_get_msisdn_data_free(struct dms_get_msisdn_data *data)
-{
-
-		free(data->res);
-	if(data->msisdn_valid) {
-		free(data->msisdn);
-	}
-	if(data->imsi_valid) {
-		free(data->imsi);
-	}
-}
-
-void dms_get_msisdn_free(struct dms_get_msisdn *get_msisdn)
-{
-	qmi_tlv_free((struct qmi_tlv*)get_msisdn);
-}
-
-char *dms_get_msisdn_get_msisdn(struct dms_get_msisdn *get_msisdn)
-{
-	char *ptr = NULL, *out;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_msisdn, 1, &len);
-	if (!ptr)
-		return NULL;
-
-	if (!ptr[len-1]) {
-		out = malloc(len);
-		memcpy(out, ptr, len);
-	} else {
-		out = malloc(len + 1);
-		memcpy(out, ptr, len);
-		out[len] = '\0';
-	}
-
-	return out;
-}
-
-char *dms_get_msisdn_get_imsi(struct dms_get_msisdn *get_msisdn)
-{
-	char *ptr = NULL, *out;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)get_msisdn, 17, &len);
-	if (!ptr)
-		return NULL;
-
-	if (!ptr[len-1]) {
-		out = malloc(len);
-		memcpy(out, ptr, len);
-	} else {
-		out = malloc(len + 1);
-		memcpy(out, ptr, len);
-		out[len] = '\0';
-	}
-
-	return out;
-}
-
-struct dms_uim_get_imsi *dms_uim_get_imsi_parse(void *buf, size_t len)
-{
-	return (struct dms_uim_get_imsi*)qmi_tlv_decode(buf, len);
-}
-
-void dms_uim_get_imsi_getall(struct dms_uim_get_imsi *uim_get_imsi, struct dms_uim_get_imsi_data *data)
-{
-	int rc;
-	(void)rc;
-
-	data->res = malloc(sizeof(struct qmi_response_type_v01));
-	memcpy(data->res, qmi_tlv_get((struct qmi_tlv*)uim_get_imsi, 2, NULL), sizeof(struct qmi_response_type_v01));
-	data->imsi = dms_uim_get_imsi_get_imsi(uim_get_imsi);
-	data->imsi_valid = !!data->imsi;
-}
-
-void dms_uim_get_imsi_data_free(struct dms_uim_get_imsi_data *data)
-{
-
-		free(data->res);
-	if(data->imsi_valid) {
-		free(data->imsi);
-	}
-}
-
-void dms_uim_get_imsi_free(struct dms_uim_get_imsi *uim_get_imsi)
-{
-	qmi_tlv_free((struct qmi_tlv*)uim_get_imsi);
-}
-
-char *dms_uim_get_imsi_get_imsi(struct dms_uim_get_imsi *uim_get_imsi)
-{
-	char *ptr = NULL, *out;
-	size_t len;
-
-	ptr = qmi_tlv_get((struct qmi_tlv*)uim_get_imsi, 1, &len);
-	if (!ptr)
-		return NULL;
-
-	if (!ptr[len-1]) {
-		out = malloc(len);
-		memcpy(out, ptr, len);
-	} else {
-		out = malloc(len + 1);
-		memcpy(out, ptr, len);
-		out[len] = '\0';
-	}
-
-	return out;
-}
-
-void dms_ids_free(struct dms_ids *val)
-{
-	if(val->esn)
-		free(val->esn);
-	if(val->imei)
-		free(val->imei);
-	if(val->meid)
-		free(val->meid);
-	if(val->imei_ver)
-		free(val->imei_ver);
-
-}
+struct qmi_elem_info dms_get_revision_req_ei[] = {
+	{}
+};
+
+struct qmi_elem_info dms_get_revision_resp_ei[] = {
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.array_type = VAR_LEN_ARRAY,
+		.tlv_type = 1,
+		.offset = offsetof(struct dms_get_revision_resp, revision)
+	},
+	{}
+};
+
+struct qmi_elem_info dms_get_ids_req_ei[] = {
+	{}
+};
+
+struct qmi_elem_info dms_get_ids_resp_ei[] = {
+	{
+		.data_type = QMI_STRUCT,
+		.elem_len = 1,
+		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.tlv_type = 2,
+		.offset = offsetof(struct dms_get_ids_resp, res),
+		.ei_array = dms_qmi_response_type_v01_ei,
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.array_type = VAR_LEN_ARRAY,
+		.tlv_type = 16,
+		.offset = offsetof(struct dms_get_ids_resp, esn)
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.array_type = VAR_LEN_ARRAY,
+		.tlv_type = 17,
+		.offset = offsetof(struct dms_get_ids_resp, imei)
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.array_type = VAR_LEN_ARRAY,
+		.tlv_type = 18,
+		.offset = offsetof(struct dms_get_ids_resp, meid)
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.array_type = VAR_LEN_ARRAY,
+		.tlv_type = 19,
+		.offset = offsetof(struct dms_get_ids_resp, imei_ver)
+	},
+	{}
+};
+
+struct qmi_elem_info dms_get_operating_mode_req_ei[] = {
+	{}
+};
+
+struct qmi_elem_info dms_get_operating_mode_resp_ei[] = {
+	{
+		.data_type = QMI_STRUCT,
+		.elem_len = 1,
+		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.tlv_type = 2,
+		.offset = offsetof(struct dms_get_operating_mode_resp, res),
+		.ei_array = dms_qmi_response_type_v01_ei,
+	},
+	{
+		.data_type = QMI_UNSIGNED_1_BYTE,
+		.elem_len = 1,
+		.elem_size = sizeof(uint8_t),
+		.tlv_type = 1,
+		.offset = offsetof(struct dms_get_operating_mode_resp, mode),
+	},
+	{
+		.data_type = QMI_OPT_FLAG,
+		.elem_len = 1,
+		.elem_size = sizeof(bool),
+		.tlv_type = 16,
+		.offset = offsetof(struct dms_get_operating_mode_resp, offline_reason_valid),
+	},
+	{
+		.data_type = QMI_UNSIGNED_2_BYTE,
+		.elem_len = 1,
+		.elem_size = sizeof(uint16_t),
+		.tlv_type = 16,
+		.offset = offsetof(struct dms_get_operating_mode_resp, offline_reason),
+	},
+	{
+		.data_type = QMI_UNSIGNED_1_BYTE,
+		.elem_len = 1,
+		.elem_size = sizeof(uint8_t),
+		.tlv_type = 17,
+		.offset = offsetof(struct dms_get_operating_mode_resp, hardware_restricted),
+	},
+	{}
+};
+
+struct qmi_elem_info dms_set_operating_mode_req_ei[] = {
+	{
+		.data_type = QMI_UNSIGNED_1_BYTE,
+		.elem_len = 1,
+		.elem_size = sizeof(uint8_t),
+		.tlv_type = 1,
+		.offset = offsetof(struct dms_set_operating_mode_req, mode),
+	},
+	{}
+};
+
+struct qmi_elem_info dms_set_operating_mode_resp_ei[] = {
+	{
+		.data_type = QMI_STRUCT,
+		.elem_len = 1,
+		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.tlv_type = 2,
+		.offset = offsetof(struct dms_set_operating_mode_resp, res),
+		.ei_array = dms_qmi_response_type_v01_ei,
+	},
+	{}
+};
+
+struct qmi_elem_info dms_get_msisdn_ei[] = {
+	{
+		.data_type = QMI_STRUCT,
+		.elem_len = 1,
+		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.tlv_type = 2,
+		.offset = offsetof(struct dms_get_msisdn, res),
+		.ei_array = dms_qmi_response_type_v01_ei,
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.array_type = VAR_LEN_ARRAY,
+		.tlv_type = 1,
+		.offset = offsetof(struct dms_get_msisdn, msisdn)
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.array_type = VAR_LEN_ARRAY,
+		.tlv_type = 17,
+		.offset = offsetof(struct dms_get_msisdn, imsi)
+	},
+	{}
+};
+
+struct qmi_elem_info dms_uim_get_imsi_ei[] = {
+	{
+		.data_type = QMI_STRUCT,
+		.elem_len = 1,
+		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.tlv_type = 2,
+		.offset = offsetof(struct dms_uim_get_imsi, res),
+		.ei_array = dms_qmi_response_type_v01_ei,
+	},
+	{
+		.data_type = QMI_STRING,
+		.elem_len = 256,
+		.elem_size = sizeof(char),
+		.array_type = VAR_LEN_ARRAY,
+		.tlv_type = 1,
+		.offset = offsetof(struct dms_uim_get_imsi, imsi)
+	},
+	{}
+};
 

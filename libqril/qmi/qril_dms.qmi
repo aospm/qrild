@@ -1,5 +1,4 @@
 package dms;
-package_type client;
 
 const QMI_DMS_GET_REVISION = 0x23;
 const QMI_DMS_GET_MSISDN = 0x24;

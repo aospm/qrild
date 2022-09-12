@@ -1,5 +1,4 @@
 package nas;
-package_type client;
 
 const QMI_NAS_EVENT_REPORT = 0x02;
 const QMI_NAS_REGISTER_INDICATIONS = 0x03;
@@ -94,8 +93,7 @@ struct serving_system {
 	u8 cs_attach_state;
 	u8 ps_attach_state;
 	u8 selected_network; # 1 - 3GPP2, 2 - 3GPP
-	u8 radio_interfaces_n;
-	u8 *radio_interfaces;
+	u8 *radio_interfaces(u8);
 };
 
 struct current_plmn {
@@ -196,14 +194,13 @@ struct operator_plmn {
 };
 
 struct operator_plmn_arr {
-	u16 operators_n;
 	struct {
 		char mcc[3];
 		char mnc[3];
 		u16 lac1;
 		u16 lac2;
 		u8 name_record_indicator;
-	} *operators;
+	} *operators(u16);
 };
 
 struct operator_plmn_name {
@@ -211,24 +208,19 @@ struct operator_plmn_name {
 	u8 short_country_initials;
 	u8 long_name_spare_bits;
 	u8 short_name_spare_bits;
-	u8 long_name_n;
-	u8 *long_name;
-	u8 short_name_n;
-	u8 *short_name;
+	u8 *long_name(u8);
+	u8 *short_name(u8);
 };
 
 struct operator_plmn_name_arr {
-	u8 operators_n;
 	struct {
 		u8 name_encoding;
 		u8 short_country_initials;
 		u8 long_name_spare_bits;
 		u8 short_name_spare_bits;
-		u8 long_name_n;
-		u8 *long_name;
-		u8 short_name_n;
-		u8 *short_name;
-	} *operators;
+		u8 *long_name(u8);
+		u8 *short_name(u8);
+	} *operators(u8);
 };
 
 ######### System selection preference
@@ -275,7 +267,6 @@ struct geran_info {
 	u8 bsic;
 	u32 timing_advance;
 	u16 rx_level;
-	u8 cells_n;
 	struct {
 		u32 cell_id;
 		u8 plmn[3];
@@ -283,7 +274,7 @@ struct geran_info {
 		u16 abs_channel_num;
 		u8 bsic;
 		u16 rx_level;
-	} *cells;
+	} *cells(u8);
 };
 
 struct umts_info {
@@ -294,20 +285,18 @@ struct umts_info {
 	u16 psc;
 	i16 rscp;
 	i16 ecio;
-	u8 cells_n;
 	struct {
 		u16 abs_channel_num;
 		u16 psc;
 		i16 rscp;
 		i16 ecio;
-	} *cells;
-	u8 gerans_n;
+	} *cells(u8);
 	struct {
 		u16 abs_channel_num;
 		u8 network_color_code;
 		u8 base_station_color_code;
 		i8 rssi;
-	} *gerans;
+	} *gerans(u8);
 };
 
 struct cdma_info {
@@ -330,14 +319,13 @@ struct intrafreq_lte_info {
 	u8 s_non_intra_search_threshold;
 	u8 serving_cell_low_threshold;
 	u8 s_intra_search_threshold;
-	u8 cells_n;
 	struct {
 		u16 pci;
 		i16 rsrq;
 		i16 rsrp;
 		i16 rssi;
 		i16 rx_level;
-	} *cells;
+	} *cells(u8);
 };
 
 response get_cell_loc_info {
@@ -356,18 +344,15 @@ struct plmn_id {
 
 struct eons_plmn_name {
 	u8 sp_name_encoding; # Service Provider name encoding
-	u8 sp_name_n;
-	u8 *sp_name;
+	u8 *sp_name(u8);
 	u8 short_name_encoding;
 	u8 short_name_country_initials;
 	u8 short_name_spare_bits;
-	u8 short_name_n;
-	u8 *short_name;
+	u8 *short_name(u8);
 	u8 long_name_encoding;
 	u8 long_name_country_initials;
 	u8 long_name_spare_bits;
-	u8 long_name_n;
-	u8 *long_name;
+	u8 *long_name(u8);
 };
 
 request get_plmn_name_req {

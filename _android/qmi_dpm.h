@@ -3,22 +3,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
 
-#include <libqrtr.h>
+#include "libqrtr.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define get_next(_type, _sz) ({ \
-	void* buf = ptr + len; \
-	len += _sz; \
-	if (len > buf_sz) goto err_wrong_len; \
-	*(_type*)buf; \
-})
+extern struct qmi_elem_info dpm_open_port_req_ei[];
+extern struct qmi_elem_info dpm_open_port_resp_ei[];
 
 #define QMI_DPM_SERVICE 47
 #define QMI_DPM_OPEN_PORT 32
@@ -30,44 +19,29 @@ struct dpm_control_port {
 	uint32_t producer_pipe_num;
 };
 
-struct dpm_open_port_req;
-struct dpm_open_port_resp;
-
-
-#define QMI_NUM_MESSAGES_DPM 2
-extern const struct qmi_tlv_msg_name dpm_msg_name_map[2];
-
-/*
- * dpm_open_port_req message
- */
-
-struct dpm_open_port_req_data {
+struct dpm_open_port_req {
+	struct qmi_header qmi_header;
+	struct qmi_elem_info **ei;
 	bool port_list_valid;
-	size_t port_list_n;
-	struct dpm_control_port *port_list;
+	uint32_t port_list_len;
+	struct dpm_control_port port_list[1];
 };
 
-struct dpm_open_port_req *dpm_open_port_req_alloc(unsigned txn);
-void *dpm_open_port_req_encode(struct dpm_open_port_req *open_port_req, size_t *len);
-void dpm_open_port_req_free(struct dpm_open_port_req *open_port_req);
-
-int dpm_open_port_req_set_port_list(struct dpm_open_port_req *open_port_req, struct dpm_control_port *val, size_t count);
-
-/*
- * dpm_open_port_resp message
- */
-
-struct dpm_open_port_resp_data {
-	struct qmi_response_type_v01 *res;
+struct dpm_open_port_resp {
+	struct qmi_header qmi_header;
+	struct qmi_elem_info **ei;
+	struct dpm_qmi_response_type_v01 res;
 };
 
-struct dpm_open_port_resp *dpm_open_port_resp_parse(void *buf, size_t len);
-void dpm_open_port_resp_getall(struct dpm_open_port_resp *open_port_resp, struct dpm_open_port_resp_data *data);
-void dpm_open_port_resp_data_free(struct dpm_open_port_resp_data *data);
-void dpm_open_port_resp_free(struct dpm_open_port_resp *open_port_resp);
-
-#ifdef __cplusplus
-}
-#endif
+#define DPM_OPEN_PORT_REQ_NEW ({ \
+	struct dpm_open_port_req *ptr = malloc(sizeof(struct dpm_open_port_req)); \
+	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->ei = &dpm_open_port_req_ei; ptr })
+#define DPM_OPEN_PORT_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &dpm_open_port_req_ei, {} }
+#define DPM_OPEN_PORT_RESP_NEW ({ \
+	struct dpm_open_port_resp *ptr = malloc(sizeof(struct dpm_open_port_resp)); \
+	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->ei = &dpm_open_port_resp_ei; ptr })
+#define DPM_OPEN_PORT_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &dpm_open_port_resp_ei, {} }
 
 #endif

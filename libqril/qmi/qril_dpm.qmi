@@ -1,5 +1,4 @@
 package dpm;
-package_type client;
 
 const QMI_DPM_SERVICE = 47;
 

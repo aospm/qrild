@@ -1,5 +1,4 @@
 package wds;
-package_type client;
 
 const QMI_WDS_SERVICE = 0x1;
 
