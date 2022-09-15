@@ -139,7 +139,7 @@ struct qmi_elem_info uim_card_status_cards_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct uim_card_status_cards),
 		.offset = offsetof(struct uim_card_status_cards, applications),
-		.ei_array = uim_card_status_cards_applications_ei,
+		.ei_array = &uim_card_status_cards_applications_ei,
 	},
 	{}
 };
@@ -181,7 +181,7 @@ struct qmi_elem_info uim_card_status_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct uim_card_status),
 		.offset = offsetof(struct uim_card_status, cards),
-		.ei_array = uim_card_status_cards_ei,
+		.ei_array = &uim_card_status_cards_ei,
 	},
 	{}
 };
@@ -271,7 +271,7 @@ struct qmi_elem_info uim_physical_slot_state_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct uim_physical_slot_state),
 		.offset = offsetof(struct uim_physical_slot_state, slots),
-		.ei_array = uim_physical_slot_state_slots_ei,
+		.ei_array = &uim_physical_slot_state_slots_ei,
 	},
 	{}
 };
@@ -323,7 +323,7 @@ struct qmi_elem_info uim_physical_slot_info_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct uim_physical_slot_info),
 		.offset = offsetof(struct uim_physical_slot_info, slots),
-		.ei_array = uim_physical_slot_info_slots_ei,
+		.ei_array = &uim_physical_slot_info_slots_ei,
 	},
 	{}
 };
@@ -575,7 +575,7 @@ struct qmi_elem_info uim_refresh_ev_t_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct uim_refresh_ev_t),
 		.offset = offsetof(struct uim_refresh_ev_t, files),
-		.ei_array = uim_refresh_ev_t_files_ei,
+		.ei_array = &uim_refresh_ev_t_files_ei,
 	},
 	{}
 };
@@ -584,10 +584,10 @@ struct qmi_elem_info uim_get_card_status_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct uim_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct uim_get_card_status_resp, result),
-		.ei_array = uim_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -645,10 +645,10 @@ struct qmi_elem_info uim_change_provisioning_session_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct uim_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct uim_change_provisioning_session_resp, result),
-		.ei_array = uim_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{}
 };
@@ -704,10 +704,10 @@ struct qmi_elem_info uim_icc_open_logical_channel_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct uim_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct uim_icc_open_logical_channel_resp, result),
-		.ei_array = uim_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -770,10 +770,10 @@ struct qmi_elem_info uim_get_slot_status_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct uim_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct uim_get_slot_status_resp, result),
-		.ei_array = uim_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -925,10 +925,10 @@ struct qmi_elem_info uim_read_transparent_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct uim_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct uim_read_transparent_resp, res),
-		.ei_array = uim_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -1058,10 +1058,10 @@ struct qmi_elem_info uim_read_record_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct uim_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct uim_read_record_resp, res),
-		.ei_array = uim_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -1177,10 +1177,10 @@ struct qmi_elem_info uim_get_file_attrs_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct uim_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct uim_get_file_attrs_resp, res),
-		.ei_array = uim_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,

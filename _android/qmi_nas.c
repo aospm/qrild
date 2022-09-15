@@ -281,7 +281,7 @@ struct qmi_elem_info nas_operator_plmn_arr_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct nas_operator_plmn_arr),
 		.offset = offsetof(struct nas_operator_plmn_arr, operators),
-		.ei_array = nas_operator_plmn_arr_operators_ei,
+		.ei_array = &nas_operator_plmn_arr_operators_ei,
 	},
 	{}
 };
@@ -403,7 +403,7 @@ struct qmi_elem_info nas_operator_plmn_name_arr_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct nas_operator_plmn_name_arr),
 		.offset = offsetof(struct nas_operator_plmn_name_arr, operators),
-		.ei_array = nas_operator_plmn_name_arr_operators_ei,
+		.ei_array = &nas_operator_plmn_name_arr_operators_ei,
 	},
 	{}
 };
@@ -527,7 +527,7 @@ struct qmi_elem_info nas_geran_info_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct nas_geran_info),
 		.offset = offsetof(struct nas_geran_info, cells),
-		.ei_array = nas_geran_info_cells_ei,
+		.ei_array = &nas_geran_info_cells_ei,
 	},
 	{}
 };
@@ -644,7 +644,7 @@ struct qmi_elem_info nas_umts_info_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct nas_umts_info),
 		.offset = offsetof(struct nas_umts_info, cells),
-		.ei_array = nas_umts_info_cells_ei,
+		.ei_array = &nas_umts_info_cells_ei,
 	},
 	{
 		.data_type = QMI_DATA_LEN,
@@ -658,7 +658,7 @@ struct qmi_elem_info nas_umts_info_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct nas_umts_info),
 		.offset = offsetof(struct nas_umts_info, gerans),
-		.ei_array = nas_umts_info_gerans_ei,
+		.ei_array = &nas_umts_info_gerans_ei,
 	},
 	{}
 };
@@ -811,7 +811,7 @@ struct qmi_elem_info nas_intrafreq_lte_info_ei[] = {
 		.array_type = VAR_LEN_ARRAY,
 		.elem_size = sizeof(struct nas_intrafreq_lte_info),
 		.offset = offsetof(struct nas_intrafreq_lte_info, cells),
-		.ei_array = nas_intrafreq_lte_info_cells_ei,
+		.ei_array = &nas_intrafreq_lte_info_cells_ei,
 	},
 	{}
 };
@@ -1177,10 +1177,10 @@ struct qmi_elem_info nas_get_signal_strength_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_get_signal_strength_resp, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -1215,13 +1215,13 @@ struct qmi_elem_info nas_get_signal_strength_resp_ei[] = {
 	{
 		.data_type = QMI_DATA_LEN,
 		.elem_len = 1,
-		.elem_size = sizeof(uint8_t),
+		.elem_size = sizeof(uint16_t),
 		.tlv_type = 17,
 		.offset = offsetof(struct nas_get_signal_strength_resp, rssi_list_len),
 	},
 	{
 		.data_type = QMI_STRUCT,
-		.elem_len = 16,
+		.elem_len = 1,
 		.elem_size = sizeof(struct nas_ss_value),
 		.array_type = VAR_LEN_ARRAY,
 		.tlv_type = 17,
@@ -1238,13 +1238,13 @@ struct qmi_elem_info nas_get_signal_strength_resp_ei[] = {
 	{
 		.data_type = QMI_DATA_LEN,
 		.elem_len = 1,
-		.elem_size = sizeof(uint8_t),
+		.elem_size = sizeof(uint16_t),
 		.tlv_type = 18,
 		.offset = offsetof(struct nas_get_signal_strength_resp, ecio_list_len),
 	},
 	{
 		.data_type = QMI_STRUCT,
-		.elem_len = 16,
+		.elem_len = 1,
 		.elem_size = sizeof(struct nas_ss_value),
 		.array_type = VAR_LEN_ARRAY,
 		.tlv_type = 18,
@@ -1363,10 +1363,10 @@ struct qmi_elem_info nas_serving_system_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_serving_system_resp, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -1580,10 +1580,10 @@ struct qmi_elem_info nas_set_operating_mode_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_set_operating_mode_resp, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{}
 };
@@ -1611,10 +1611,10 @@ struct qmi_elem_info nas_get_system_prefs_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_get_system_prefs, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -1637,10 +1637,10 @@ struct qmi_elem_info nas_get_operator_name_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_get_operator_name_resp, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -1789,10 +1789,10 @@ struct qmi_elem_info nas_get_cell_loc_info_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_get_cell_loc_info, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -1887,10 +1887,10 @@ struct qmi_elem_info nas_get_plmn_name_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_get_plmn_name_resp, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -1914,10 +1914,10 @@ struct qmi_elem_info nas_get_signal_info_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_get_signal_info, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -2121,10 +2121,10 @@ struct qmi_elem_info nas_get_lte_cphy_ca_info_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct nas_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct nas_get_lte_cphy_ca_info_resp, res),
-		.ei_array = nas_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,

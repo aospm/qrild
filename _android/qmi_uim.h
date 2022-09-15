@@ -27,25 +27,38 @@ extern struct qmi_elem_info uim_refresh_ei[];
 #define QMI_UIM_GET_SLOT_STATUS 71
 #define QMI_UIM_SLOT_STATUS_IND 72
 #define QMI_UIM_SESSION_TYPE_PRIMARY_GW_PROVISIONING 0
-#define QMI_UIM_CARD_STATE_ABSENT 0
-#define QMI_UIM_CARD_STATE_PRESENT 1
-#define QMI_UIM_CARD_STATE_ERROR 2
-#define QMI_UIM_PHYSICAL_CARD_STATE_UNKNOWN 0
-#define QMI_UIM_PHYSICAL_CARD_STATE_ABSENT 1
-#define QMI_UIM_PHYSICAL_CARD_STATE_PRESENT 2
-#define QMI_UIM_CARD_APPLICATION_STATE_UNKNOWN 0
-#define QMI_UIM_CARD_APPLICATION_STATE_DETECTED 1
-#define QMI_UIM_CARD_APPLICATION_STATE_PIN1_OR_UPIN_PIN_REQUIRED 2
-#define QMI_UIM_CARD_APPLICATION_STATE_PUK1_OR_UPIN_PUK_REQUIRED 3
-#define QMI_UIM_CARD_APPLICATION_STATE_CHECK_PERSONALIZATION_STATE 4
-#define QMI_UIM_CARD_APPLICATION_STATE_PIN1_BLOCKED 5
-#define QMI_UIM_CARD_APPLICATION_STATE_ILLEGAL 6
-#define QMI_UIM_CARD_APPLICATION_STATE_READY 7
-#define QMI_UIM_FILE_TYPE_TRANSPARENT 0
-#define QMI_UIM_FILE_TYPE_CYCLIC 1
-#define QMI_UIM_FILE_TYPE_LINEAR_FIXED 2
-#define QMI_UIM_FILE_TYPE_DEDICATED_FILE 3
-#define QMI_UIM_FILE_TYPE_MASTER_FILE 4
+
+enum QmiUimCardState {
+	QMI_UIM_CARD_STATE_ABSENT = 0,
+	QMI_UIM_CARD_STATE_PRESENT = 1,
+	QMI_UIM_CARD_STATE_ERROR = 2,
+};
+
+enum QmiUimPhysicalCardState {
+	QMI_UIM_PHYSICAL_CARD_STATE_UNKNOWN = 0,
+	QMI_UIM_PHYSICAL_CARD_STATE_ABSENT = 1,
+	QMI_UIM_PHYSICAL_CARD_STATE_PRESENT = 2,
+};
+
+enum QmiUimCardApplicationState {
+	QMI_UIM_CARD_APPLICATION_STATE_UNKNOWN = 0,
+	QMI_UIM_CARD_APPLICATION_STATE_DETECTED = 1,
+	QMI_UIM_CARD_APPLICATION_STATE_PIN1_OR_UPIN_PIN_REQUIRED = 2,
+	QMI_UIM_CARD_APPLICATION_STATE_PUK1_OR_UPIN_PUK_REQUIRED = 3,
+	QMI_UIM_CARD_APPLICATION_STATE_CHECK_PERSONALIZATION_STATE = 4,
+	QMI_UIM_CARD_APPLICATION_STATE_PIN1_BLOCKED = 5,
+	QMI_UIM_CARD_APPLICATION_STATE_ILLEGAL = 6,
+	QMI_UIM_CARD_APPLICATION_STATE_READY = 7,
+};
+
+enum QmiUimFileType {
+	QMI_UIM_FILE_TYPE_TRANSPARENT = 0,
+	QMI_UIM_FILE_TYPE_CYCLIC = 1,
+	QMI_UIM_FILE_TYPE_LINEAR_FIXED = 2,
+	QMI_UIM_FILE_TYPE_DEDICATED_FILE = 3,
+	QMI_UIM_FILE_TYPE_MASTER_FILE = 4,
+};
+
 
 struct uim_card_status_cards_applications {
 	uint8_t type;
@@ -179,238 +192,223 @@ struct uim_refresh_ev_t {
 	struct uim_refresh_ev_t_files *files;
 };
 
-struct uim_get_card_status_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_qmi_response_type_v01 result;
+struct uim_get_card_status_resp { // 0x002f
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 result;  // 0x02
 	bool status_valid;
-	struct uim_card_status status;
+	struct uim_card_status status;  // 0x10
 };
 
-struct uim_change_provisioning_session_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
+struct uim_change_provisioning_session_req { // 0x0038
+	struct qmi_message_header header;
 	bool session_change_valid;
-	struct uim_provisioning_session_change session_change;
+	struct uim_provisioning_session_change session_change;  // 0x01
 	bool application_information_valid;
-	struct uim_provisioning_session_application application_information;
+	struct uim_provisioning_session_application application_information;  // 0x10
 };
 
-struct uim_change_provisioning_session_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_qmi_response_type_v01 result;
+struct uim_change_provisioning_session_resp { // 0x0038
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 result;  // 0x02
 };
 
-struct uim_icc_open_logical_channel_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	uint8_t slot;
+struct uim_icc_open_logical_channel_req { // 0x0042
+	struct qmi_message_header header;
+	uint8_t slot;  // 0x01
 	bool application_id_valid;
 	uint32_t application_id_len;
-	uint8_t application_id[32];
+	uint8_t application_id[32];  // 0x10
 	bool fileControlInfo_valid;
-	uint8_t fileControlInfo;
+	uint8_t fileControlInfo;  // 0x11
 };
 
-struct uim_icc_open_logical_channel_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_qmi_response_type_v01 result;
+struct uim_icc_open_logical_channel_resp { // 0x0042
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 result;  // 0x02
 	bool channel_id_valid;
-	uint8_t channel_id;
+	uint8_t channel_id;  // 0x10
 	bool card_result_valid;
-	uint16_t card_result;
+	uint16_t card_result;  // 0x11
 	bool select_response_valid;
 	uint32_t select_response_len;
-	uint8_t select_response[255];
+	uint8_t select_response[255];  // 0x12
 };
 
-struct uim_get_slot_status_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
+struct uim_get_slot_status_req { // 0x0047
+	struct qmi_message_header header;
 };
 
-struct uim_get_slot_status_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_qmi_response_type_v01 result;
+struct uim_get_slot_status_resp { // 0x0047
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 result;  // 0x02
 	bool slot_state_valid;
-	struct uim_physical_slot_state slot_state;
+	struct uim_physical_slot_state slot_state;  // 0x10
 	bool slot_info_valid;
-	struct uim_physical_slot_info slot_info;
+	struct uim_physical_slot_info slot_info;  // 0x11
 	bool eid_info_valid;
 	uint32_t eid_info_len;
-	uint8_t eid_info[32];
+	uint8_t eid_info[32];  // 0x12
 };
 
-struct uim_get_slot_status_ind {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_physical_slot_state slot_state;
+struct uim_get_slot_status_ind { // 0x0048
+	struct qmi_message_header header;
+	struct uim_physical_slot_state slot_state;  // 0x10
 	bool slot_info_valid;
-	struct uim_physical_slot_info slot_info;
+	struct uim_physical_slot_info slot_info;  // 0x11
 	bool eid_info_valid;
 	uint32_t eid_info_len;
-	uint8_t eid_info[32];
+	uint8_t eid_info[32];  // 0x12
 };
 
-struct uim_read_transparent_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_session_t session;
-	struct uim_file_t file;
-	struct uim_read_info_t read_info;
+struct uim_read_transparent_req { // 0x0020
+	struct qmi_message_header header;
+	struct uim_session_t session;  // 0x01
+	struct uim_file_t file;  // 0x02
+	struct uim_read_info_t read_info;  // 0x03
 	bool resp_in_ind_valid;
-	uint32_t resp_in_ind;
+	uint32_t resp_in_ind;  // 0x10
 	bool encrypt_data_valid;
-	uint8_t encrypt_data;
+	uint8_t encrypt_data;  // 0x11
 };
 
-struct uim_read_transparent_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_qmi_response_type_v01 res;
+struct uim_read_transparent_resp { // 0x0020
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool card_res_valid;
-	struct uim_card_res_t card_res;
+	struct uim_card_res_t card_res;  // 0x10
 	bool read_result_valid;
 	uint32_t read_result_len;
-	uint8_t read_result[2];
+	uint8_t read_result[2];  // 0x11
 	bool resp_in_ind_valid;
-	uint32_t resp_in_ind;
+	uint32_t resp_in_ind;  // 0x12
 	bool encrypted_valid;
-	uint8_t encrypted;
+	uint8_t encrypted;  // 0x13
 };
 
-struct uim_read_record_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_session_t session;
-	struct uim_file_t file;
-	struct uim_read_info_t read_info;
+struct uim_read_record_req { // 0x0021
+	struct qmi_message_header header;
+	struct uim_session_t session;  // 0x01
+	struct uim_file_t file;  // 0x02
+	struct uim_read_info_t read_info;  // 0x03
 	bool last_record_valid;
-	uint16_t last_record;
+	uint16_t last_record;  // 0x10
 	bool resp_in_ind_valid;
-	uint32_t resp_in_ind;
+	uint32_t resp_in_ind;  // 0x11
 };
 
-struct uim_read_record_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_qmi_response_type_v01 res;
+struct uim_read_record_resp { // 0x0021
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool card_res_valid;
-	struct uim_card_res_t card_res;
+	struct uim_card_res_t card_res;  // 0x10
 	bool read_result_valid;
 	uint32_t read_result_len;
-	uint8_t read_result[2];
+	uint8_t read_result[2];  // 0x11
 	bool additional_read_result_valid;
 	uint32_t additional_read_result_len;
-	uint8_t additional_read_result[2];
+	uint8_t additional_read_result[2];  // 0x12
 	bool resp_in_ind_valid;
-	uint32_t resp_in_ind;
+	uint32_t resp_in_ind;  // 0x13
 };
 
-struct uim_get_file_attrs_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_session_t session;
-	struct uim_file_t file;
+struct uim_get_file_attrs_req { // 0x0024
+	struct qmi_message_header header;
+	struct uim_session_t session;  // 0x01
+	struct uim_file_t file;  // 0x02
 	bool resp_in_ind_valid;
-	uint32_t resp_in_ind;
+	uint32_t resp_in_ind;  // 0x11
 };
 
-struct uim_get_file_attrs_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_qmi_response_type_v01 res;
+struct uim_get_file_attrs_resp { // 0x0024
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool card_res_valid;
-	struct uim_card_res_t card_res;
+	struct uim_card_res_t card_res;  // 0x10
 	bool file_attrs_valid;
-	struct uim_file_attrs_t file_attrs;
+	struct uim_file_attrs_t file_attrs;  // 0x11
 	bool resp_in_ind_valid;
-	uint32_t resp_in_ind;
+	uint32_t resp_in_ind;  // 0x12
 };
 
-struct uim_refresh {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct uim_refresh_ev_t event;
+struct uim_refresh { // 0x0033
+	struct qmi_message_header header;
+	struct uim_refresh_ev_t event;  // 0x10
 };
 
 #define UIM_GET_CARD_STATUS_RESP_NEW ({ \
 	struct uim_get_card_status_resp *ptr = malloc(sizeof(struct uim_get_card_status_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x002f; \
 	ptr->ei = &uim_get_card_status_resp_ei; ptr })
-#define UIM_GET_CARD_STATUS_RESP_INITIALIZER { { 2, 0, 0x002f, 0 }, &uim_get_card_status_resp_ei, {}, {} }
+#define UIM_GET_CARD_STATUS_RESP_INITIALIZER { { 2, 0, 0x002f, 0 }, &uim_get_card_status_resp_ei, "get_card_status_resp", {}, {} }
 #define UIM_CHANGE_PROVISIONING_SESSION_REQ_NEW ({ \
 	struct uim_change_provisioning_session_req *ptr = malloc(sizeof(struct uim_change_provisioning_session_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0038; \
 	ptr->ei = &uim_change_provisioning_session_req_ei; ptr })
-#define UIM_CHANGE_PROVISIONING_SESSION_REQ_INITIALIZER { { 0, 0, 0x0038, 0 }, &uim_change_provisioning_session_req_ei, {}, {} }
+#define UIM_CHANGE_PROVISIONING_SESSION_REQ_INITIALIZER { { 0, 0, 0x0038, 0 }, &uim_change_provisioning_session_req_ei, "change_provisioning_session_req", {}, {} }
 #define UIM_CHANGE_PROVISIONING_SESSION_RESP_NEW ({ \
 	struct uim_change_provisioning_session_resp *ptr = malloc(sizeof(struct uim_change_provisioning_session_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0038; \
 	ptr->ei = &uim_change_provisioning_session_resp_ei; ptr })
-#define UIM_CHANGE_PROVISIONING_SESSION_RESP_INITIALIZER { { 2, 0, 0x0038, 0 }, &uim_change_provisioning_session_resp_ei, {} }
+#define UIM_CHANGE_PROVISIONING_SESSION_RESP_INITIALIZER { { 2, 0, 0x0038, 0 }, &uim_change_provisioning_session_resp_ei, "change_provisioning_session_resp", {} }
 #define UIM_ICC_OPEN_LOGICAL_CHANNEL_REQ_NEW ({ \
 	struct uim_icc_open_logical_channel_req *ptr = malloc(sizeof(struct uim_icc_open_logical_channel_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0042; \
 	ptr->ei = &uim_icc_open_logical_channel_req_ei; ptr })
-#define UIM_ICC_OPEN_LOGICAL_CHANNEL_REQ_INITIALIZER { { 0, 0, 0x0042, 0 }, &uim_icc_open_logical_channel_req_ei, 0, 0, 0 }
+#define UIM_ICC_OPEN_LOGICAL_CHANNEL_REQ_INITIALIZER { { 0, 0, 0x0042, 0 }, &uim_icc_open_logical_channel_req_ei, "icc_open_logical_channel_req", 0, 0, 0 }
 #define UIM_ICC_OPEN_LOGICAL_CHANNEL_RESP_NEW ({ \
 	struct uim_icc_open_logical_channel_resp *ptr = malloc(sizeof(struct uim_icc_open_logical_channel_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0042; \
 	ptr->ei = &uim_icc_open_logical_channel_resp_ei; ptr })
-#define UIM_ICC_OPEN_LOGICAL_CHANNEL_RESP_INITIALIZER { { 2, 0, 0x0042, 0 }, &uim_icc_open_logical_channel_resp_ei, {}, 0, 0, 0 }
+#define UIM_ICC_OPEN_LOGICAL_CHANNEL_RESP_INITIALIZER { { 2, 0, 0x0042, 0 }, &uim_icc_open_logical_channel_resp_ei, "icc_open_logical_channel_resp", {}, 0, 0, 0 }
 #define UIM_GET_SLOT_STATUS_REQ_NEW ({ \
 	struct uim_get_slot_status_req *ptr = malloc(sizeof(struct uim_get_slot_status_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0047; \
 	ptr->ei = &uim_get_slot_status_req_ei; ptr })
-#define UIM_GET_SLOT_STATUS_REQ_INITIALIZER { { 0, 0, 0x0047, 0 }, &uim_get_slot_status_req_ei }
+#define UIM_GET_SLOT_STATUS_REQ_INITIALIZER { { 0, 0, 0x0047, 0 }, &uim_get_slot_status_req_ei, "get_slot_status_req" }
 #define UIM_GET_SLOT_STATUS_RESP_NEW ({ \
 	struct uim_get_slot_status_resp *ptr = malloc(sizeof(struct uim_get_slot_status_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0047; \
 	ptr->ei = &uim_get_slot_status_resp_ei; ptr })
-#define UIM_GET_SLOT_STATUS_RESP_INITIALIZER { { 2, 0, 0x0047, 0 }, &uim_get_slot_status_resp_ei, {}, {}, {}, 0 }
+#define UIM_GET_SLOT_STATUS_RESP_INITIALIZER { { 2, 0, 0x0047, 0 }, &uim_get_slot_status_resp_ei, "get_slot_status_resp", {}, {}, {}, 0 }
 #define UIM_GET_SLOT_STATUS_IND_NEW ({ \
 	struct uim_get_slot_status_ind *ptr = malloc(sizeof(struct uim_get_slot_status_ind)); \
 	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0048; \
 	ptr->ei = &uim_get_slot_status_ind_ei; ptr })
-#define UIM_GET_SLOT_STATUS_IND_INITIALIZER { { 4, 0, 0x0048, 0 }, &uim_get_slot_status_ind_ei, {}, {}, 0 }
+#define UIM_GET_SLOT_STATUS_IND_INITIALIZER { { 4, 0, 0x0048, 0 }, &uim_get_slot_status_ind_ei, "get_slot_status_ind", {}, {}, 0 }
 #define UIM_READ_TRANSPARENT_REQ_NEW ({ \
 	struct uim_read_transparent_req *ptr = malloc(sizeof(struct uim_read_transparent_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
 	ptr->ei = &uim_read_transparent_req_ei; ptr })
-#define UIM_READ_TRANSPARENT_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &uim_read_transparent_req_ei, {}, {}, {}, 0, 0 }
+#define UIM_READ_TRANSPARENT_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &uim_read_transparent_req_ei, "read_transparent_req", {}, {}, {}, 0, 0 }
 #define UIM_READ_TRANSPARENT_RESP_NEW ({ \
 	struct uim_read_transparent_resp *ptr = malloc(sizeof(struct uim_read_transparent_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
 	ptr->ei = &uim_read_transparent_resp_ei; ptr })
-#define UIM_READ_TRANSPARENT_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &uim_read_transparent_resp_ei, {}, {}, 0, 0, 0 }
+#define UIM_READ_TRANSPARENT_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &uim_read_transparent_resp_ei, "read_transparent_resp", {}, {}, 0, 0, 0 }
 #define UIM_READ_RECORD_REQ_NEW ({ \
 	struct uim_read_record_req *ptr = malloc(sizeof(struct uim_read_record_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0021; \
 	ptr->ei = &uim_read_record_req_ei; ptr })
-#define UIM_READ_RECORD_REQ_INITIALIZER { { 0, 0, 0x0021, 0 }, &uim_read_record_req_ei, {}, {}, {}, 0, 0 }
+#define UIM_READ_RECORD_REQ_INITIALIZER { { 0, 0, 0x0021, 0 }, &uim_read_record_req_ei, "read_record_req", {}, {}, {}, 0, 0 }
 #define UIM_READ_RECORD_RESP_NEW ({ \
 	struct uim_read_record_resp *ptr = malloc(sizeof(struct uim_read_record_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0021; \
 	ptr->ei = &uim_read_record_resp_ei; ptr })
-#define UIM_READ_RECORD_RESP_INITIALIZER { { 2, 0, 0x0021, 0 }, &uim_read_record_resp_ei, {}, {}, 0, 0, 0 }
+#define UIM_READ_RECORD_RESP_INITIALIZER { { 2, 0, 0x0021, 0 }, &uim_read_record_resp_ei, "read_record_resp", {}, {}, 0, 0, 0 }
 #define UIM_GET_FILE_ATTRS_REQ_NEW ({ \
 	struct uim_get_file_attrs_req *ptr = malloc(sizeof(struct uim_get_file_attrs_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0024; \
 	ptr->ei = &uim_get_file_attrs_req_ei; ptr })
-#define UIM_GET_FILE_ATTRS_REQ_INITIALIZER { { 0, 0, 0x0024, 0 }, &uim_get_file_attrs_req_ei, {}, {}, 0 }
+#define UIM_GET_FILE_ATTRS_REQ_INITIALIZER { { 0, 0, 0x0024, 0 }, &uim_get_file_attrs_req_ei, "get_file_attrs_req", {}, {}, 0 }
 #define UIM_GET_FILE_ATTRS_RESP_NEW ({ \
 	struct uim_get_file_attrs_resp *ptr = malloc(sizeof(struct uim_get_file_attrs_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0024; \
 	ptr->ei = &uim_get_file_attrs_resp_ei; ptr })
-#define UIM_GET_FILE_ATTRS_RESP_INITIALIZER { { 2, 0, 0x0024, 0 }, &uim_get_file_attrs_resp_ei, {}, {}, {}, 0 }
+#define UIM_GET_FILE_ATTRS_RESP_INITIALIZER { { 2, 0, 0x0024, 0 }, &uim_get_file_attrs_resp_ei, "get_file_attrs_resp", {}, {}, {}, 0 }
 #define UIM_REFRESH_NEW ({ \
 	struct uim_refresh *ptr = malloc(sizeof(struct uim_refresh)); \
 	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0033; \
 	ptr->ei = &uim_refresh_ei; ptr })
-#define UIM_REFRESH_INITIALIZER { { 4, 0, 0x0033, 0 }, &uim_refresh_ei, {} }
+#define UIM_REFRESH_INITIALIZER { { 4, 0, 0x0033, 0 }, &uim_refresh_ei, "refresh", {} }
 
 #endif

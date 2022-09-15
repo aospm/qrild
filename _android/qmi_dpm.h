@@ -19,29 +19,27 @@ struct dpm_control_port {
 	uint32_t producer_pipe_num;
 };
 
-struct dpm_open_port_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
+struct dpm_open_port_req { // 0x0020
+	struct qmi_message_header header;
 	bool port_list_valid;
 	uint32_t port_list_len;
-	struct dpm_control_port port_list[1];
+	struct dpm_control_port port_list[1];  // 0x11
 };
 
-struct dpm_open_port_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct dpm_qmi_response_type_v01 res;
+struct dpm_open_port_resp { // 0x0020
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 };
 
 #define DPM_OPEN_PORT_REQ_NEW ({ \
 	struct dpm_open_port_req *ptr = malloc(sizeof(struct dpm_open_port_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
 	ptr->ei = &dpm_open_port_req_ei; ptr })
-#define DPM_OPEN_PORT_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &dpm_open_port_req_ei, {} }
+#define DPM_OPEN_PORT_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &dpm_open_port_req_ei, "open_port_req", {} }
 #define DPM_OPEN_PORT_RESP_NEW ({ \
 	struct dpm_open_port_resp *ptr = malloc(sizeof(struct dpm_open_port_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
 	ptr->ei = &dpm_open_port_resp_ei; ptr })
-#define DPM_OPEN_PORT_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &dpm_open_port_resp_ei, {} }
+#define DPM_OPEN_PORT_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &dpm_open_port_resp_ei, "open_port_resp", {} }
 
 #endif

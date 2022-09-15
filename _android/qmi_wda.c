@@ -111,10 +111,10 @@ struct qmi_elem_info wda_set_data_format_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct wda_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct wda_set_data_format_resp, res),
-		.ei_array = wda_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{}
 };

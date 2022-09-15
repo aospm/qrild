@@ -78,10 +78,10 @@ struct qmi_elem_info dms_get_ids_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct dms_get_ids_resp, res),
-		.ei_array = dms_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_STRING,
@@ -126,10 +126,10 @@ struct qmi_elem_info dms_get_operating_mode_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct dms_get_operating_mode_resp, res),
-		.ei_array = dms_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_UNSIGNED_1_BYTE,
@@ -177,10 +177,10 @@ struct qmi_elem_info dms_set_operating_mode_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct dms_set_operating_mode_resp, res),
-		.ei_array = dms_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{}
 };
@@ -189,10 +189,10 @@ struct qmi_elem_info dms_get_msisdn_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct dms_get_msisdn, res),
-		.ei_array = dms_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_STRING,
@@ -217,10 +217,10 @@ struct qmi_elem_info dms_uim_get_imsi_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct dms_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct dms_uim_get_imsi, res),
-		.ei_array = dms_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_STRING,

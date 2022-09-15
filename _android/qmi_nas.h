@@ -317,330 +317,312 @@ struct nas_ss_tdma_ext {
 	int32_t sinr;
 };
 
-struct nas_register_indications_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	uint8_t system_selection_preference;
-	uint8_t ddtm_events;
-	uint8_t serving_system_events;
-	uint8_t dual_standby_preference;
-	uint8_t subscription_info;
-	uint8_t network_time;
-	uint8_t system_info;
-	uint8_t signal_info;
-	uint8_t error_rate;
-	uint8_t hdr_new_uati_assigned;
-	uint8_t hdr_session_closed;
-	uint8_t managed_roaming;
-	uint8_t current_plmn_name;
-	uint8_t embms_status;
-	uint8_t rf_band_information;
-	struct nas_network_reject_info network_reject_information;
+struct nas_register_indications_req { // 0x0003
+	struct qmi_message_header header;
+	uint8_t system_selection_preference;  // 0x10
+	uint8_t ddtm_events;  // 0x12
+	uint8_t serving_system_events;  // 0x13
+	uint8_t dual_standby_preference;  // 0x14
+	uint8_t subscription_info;  // 0x15
+	uint8_t network_time;  // 0x17
+	uint8_t system_info;  // 0x18
+	uint8_t signal_info;  // 0x19
+	uint8_t error_rate;  // 0x1a
+	uint8_t hdr_new_uati_assigned;  // 0x1b
+	uint8_t hdr_session_closed;  // 0x1c
+	uint8_t managed_roaming;  // 0x1d
+	uint8_t current_plmn_name;  // 0x1e
+	uint8_t embms_status;  // 0x1f
+	uint8_t rf_band_information;  // 0x20
+	struct nas_network_reject_info network_reject_information;  // 0x21
 };
 
-struct nas_get_signal_strength_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	uint16_t mask;
+struct nas_get_signal_strength_req { // 0x0020
+	struct qmi_message_header header;
+	uint16_t mask;  // 0x10
 };
 
-struct nas_get_signal_strength_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
+struct nas_get_signal_strength_resp { // 0x0020
+	struct qmi_message_header header;
 	bool strength_valid;
-	struct nas_signal_strength strength;
-	struct nas_qmi_response_type_v01 res;
+	struct nas_signal_strength strength;  // 0x01
+	struct qmi_response_type_v01 res;  // 0x02
 	bool strength_list_valid;
 	uint32_t strength_list_len;
-	struct nas_signal_strength strength_list[16];
+	struct nas_signal_strength strength_list[16];  // 0x10
 	bool rssi_list_valid;
 	uint32_t rssi_list_len;
-	struct nas_ss_value rssi_list[16];
+	struct nas_ss_value rssi_list[1];  // 0x11
 	bool ecio_list_valid;
 	uint32_t ecio_list_len;
-	struct nas_ss_value ecio_list[16];
+	struct nas_ss_value ecio_list[1];  // 0x12
 	bool io_valid;
-	uint32_t io;
+	uint32_t io;  // 0x13
 	bool sinr_valid;
-	uint8_t sinr;
+	uint8_t sinr;  // 0x14
 	bool err_rate_list_valid;
 	uint32_t err_rate_list_len;
-	struct nas_ss_value err_rate_list[16];
+	struct nas_ss_value err_rate_list[16];  // 0x15
 	bool rsrq_valid;
-	struct nas_ss_value rsrq;
+	struct nas_ss_value rsrq;  // 0x16
 	bool lte_snr_valid;
-	int16_t lte_snr;
+	int16_t lte_snr;  // 0x17
 	bool lte_rsrp_valid;
-	int16_t lte_rsrp;
+	int16_t lte_rsrp;  // 0x18
 };
 
-struct nas_initiate_network_register {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	uint8_t action;
+struct nas_initiate_network_register { // 0x0022
+	struct qmi_message_header header;
+	uint8_t action;  // 0x01
 };
 
-struct nas_serving_system_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_qmi_response_type_v01 res;
+struct nas_serving_system_resp { // 0x0024
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool system_valid;
-	struct nas_serving_system system;
+	struct nas_serving_system system;  // 0x01
 	bool data_service_cap_valid;
 	uint32_t data_service_cap_len;
-	uint8_t data_service_cap[16];
+	uint8_t data_service_cap[16];  // 0x11
 	bool plmn_valid;
-	struct nas_current_plmn plmn;
+	struct nas_current_plmn plmn;  // 0x12
 	bool lac_valid;
-	uint16_t lac;
+	uint16_t lac;  // 0x1d
 	bool cid_valid;
-	uint16_t cid;
+	uint16_t cid;  // 0x1e
 	bool status_valid;
-	struct nas_service_status status;
+	struct nas_service_status status;  // 0x22
 };
 
-struct nas_serving_system_ind {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
+struct nas_serving_system_ind { // 0x0024
+	struct qmi_message_header header;
 	bool system_valid;
-	struct nas_serving_system system;
+	struct nas_serving_system system;  // 0x01
 	bool data_service_cap_valid;
 	uint32_t data_service_cap_len;
-	uint8_t data_service_cap[16];
+	uint8_t data_service_cap[16];  // 0x11
 	bool plmn_valid;
-	struct nas_current_plmn plmn;
+	struct nas_current_plmn plmn;  // 0x12
 	bool lac_valid;
-	uint16_t lac;
+	uint16_t lac;  // 0x1d
 	bool cid_valid;
-	uint16_t cid;
+	uint16_t cid;  // 0x1e
 	bool status_valid;
-	struct nas_service_status status;
+	struct nas_service_status status;  // 0x22
 };
 
-struct nas_set_operating_mode_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	uint8_t mode;
+struct nas_set_operating_mode_req { // 0x002e
+	struct qmi_message_header header;
+	uint8_t mode;  // 0x01
 };
 
-struct nas_set_operating_mode_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_qmi_response_type_v01 res;
+struct nas_set_operating_mode_resp { // 0x002e
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 };
 
-struct nas_set_system_prefs {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
+struct nas_set_system_prefs { // 0x0033
+	struct qmi_message_header header;
 	bool network_selection_valid;
-	struct nas_network_selection_pref network_selection;
+	struct nas_network_selection_pref network_selection;  // 0x16
 };
 
-struct nas_get_system_prefs {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_qmi_response_type_v01 res;
+struct nas_get_system_prefs { // 0x0034
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool network_selection_valid;
-	uint8_t network_selection;
+	uint8_t network_selection;  // 0x16
 };
 
-struct nas_get_operator_name_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_qmi_response_type_v01 res;
+struct nas_get_operator_name_resp { // 0x0039
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool provider_name_valid;
-	struct nas_service_provider_name provider_name;
+	struct nas_service_provider_name provider_name;  // 0x10
 	bool operator_plmns_valid;
-	struct nas_operator_plmn_arr operator_plmns;
+	struct nas_operator_plmn_arr operator_plmns;  // 0x11
 	bool operator_plmn_names_valid;
-	struct nas_operator_plmn_name_arr operator_plmn_names;
+	struct nas_operator_plmn_name_arr operator_plmn_names;  // 0x12
 	uint32_t operator_string_name_len;
-	char operator_string_name[256];
+	char operator_string_name[256]; // 0x13
 	bool nitz_info_valid;
-	struct nas_operator_plmn_name nitz_info;
+	struct nas_operator_plmn_name nitz_info;  // 0x14
 };
 
-struct nas_operator_name_ind {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
+struct nas_operator_name_ind { // 0x003a
+	struct qmi_message_header header;
 	bool provider_name_valid;
-	struct nas_service_provider_name provider_name;
+	struct nas_service_provider_name provider_name;  // 0x10
 	bool operator_plmns_valid;
-	struct nas_operator_plmn_arr operator_plmns;
+	struct nas_operator_plmn_arr operator_plmns;  // 0x11
 	bool operator_plmn_names_valid;
-	struct nas_operator_plmn_name_arr operator_plmn_names;
+	struct nas_operator_plmn_name_arr operator_plmn_names;  // 0x12
 	uint32_t operator_string_name_len;
-	char operator_string_name[256];
+	char operator_string_name[256]; // 0x13
 	bool nitz_info_valid;
-	struct nas_operator_plmn_name nitz_info;
+	struct nas_operator_plmn_name nitz_info;  // 0x14
 };
 
-struct nas_get_cell_loc_info {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_qmi_response_type_v01 res;
+struct nas_get_cell_loc_info { // 0x0043
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool geran_valid;
-	struct nas_geran_info geran;
+	struct nas_geran_info geran;  // 0x10
 	bool umts_valid;
-	struct nas_umts_info umts;
+	struct nas_umts_info umts;  // 0x11
 	bool cdma_valid;
-	struct nas_cdma_info cdma;
+	struct nas_cdma_info cdma;  // 0x12
 	bool intra_lte_valid;
-	struct nas_intrafreq_lte_info intra_lte;
+	struct nas_intrafreq_lte_info intra_lte;  // 0x13
 };
 
-struct nas_get_plmn_name_req {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_plmn_id plmn;
+struct nas_get_plmn_name_req { // 0x0044
+	struct qmi_message_header header;
+	struct nas_plmn_id plmn;  // 0x01
 	bool send_all_info_valid;
-	uint8_t send_all_info;
+	uint8_t send_all_info;  // 0x16
 };
 
-struct nas_get_plmn_name_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_qmi_response_type_v01 res;
+struct nas_get_plmn_name_resp { // 0x0044
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool plmn_name_valid;
-	struct nas_eons_plmn_name plmn_name;
+	struct nas_eons_plmn_name plmn_name;  // 0x10
 };
 
-struct nas_get_signal_info {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_qmi_response_type_v01 res;
+struct nas_get_signal_info { // 0x004f
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool cdma_valid;
-	struct nas_ss_cdma cdma;
+	struct nas_ss_cdma cdma;  // 0x10
 	bool hdr_valid;
-	struct nas_ss_hdr hdr;
+	struct nas_ss_hdr hdr;  // 0x11
 	bool gsm_valid;
-	int8_t gsm;
+	int8_t gsm;  // 0x12
 	bool wcdma_valid;
-	struct nas_ss_wcdma wcdma;
+	struct nas_ss_wcdma wcdma;  // 0x13
 	bool lte_valid;
-	struct nas_ss_lte lte;
+	struct nas_ss_lte lte;  // 0x14
 	bool tdma_valid;
-	int8_t tdma;
+	int8_t tdma;  // 0x15
 	bool tdma_ext_valid;
-	struct nas_ss_tdma_ext tdma_ext;
+	struct nas_ss_tdma_ext tdma_ext;  // 0x16
 };
 
-struct nas_signal_info_ind {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
+struct nas_signal_info_ind { // 0x0051
+	struct qmi_message_header header;
 	bool cdma_valid;
-	struct nas_ss_cdma cdma;
+	struct nas_ss_cdma cdma;  // 0x10
 	bool hdr_valid;
-	struct nas_ss_hdr hdr;
+	struct nas_ss_hdr hdr;  // 0x11
 	bool gsm_valid;
-	int8_t gsm;
+	int8_t gsm;  // 0x12
 	bool wcdma_valid;
-	struct nas_ss_wcdma wcdma;
+	struct nas_ss_wcdma wcdma;  // 0x13
 	bool lte_valid;
-	struct nas_ss_lte lte;
+	struct nas_ss_lte lte;  // 0x14
 	bool tdma_valid;
-	int8_t tdma;
+	int8_t tdma;  // 0x15
 };
 
-struct nas_get_lte_cphy_ca_info_resp {
-	struct qmi_header qmi_header;
-	struct qmi_elem_info **ei;
-	struct nas_qmi_response_type_v01 res;
+struct nas_get_lte_cphy_ca_info_resp { // 0x00ac
+	struct qmi_message_header header;
+	struct qmi_response_type_v01 res;  // 0x02
 	bool dl_bandwidth_valid;
-	uint32_t dl_bandwidth;
+	uint32_t dl_bandwidth;  // 0x11
 	bool phy_scell_info_valid;
-	struct nas_lte_cphy_agg_scell phy_scell_info;
+	struct nas_lte_cphy_agg_scell phy_scell_info;  // 0x12
 };
 
 #define NAS_REGISTER_INDICATIONS_REQ_NEW ({ \
 	struct nas_register_indications_req *ptr = malloc(sizeof(struct nas_register_indications_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0003; \
 	ptr->ei = &nas_register_indications_req_ei; ptr })
-#define NAS_REGISTER_INDICATIONS_REQ_INITIALIZER { { 0, 0, 0x0003, 0 }, &nas_register_indications_req_ei, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, {} }
+#define NAS_REGISTER_INDICATIONS_REQ_INITIALIZER { { 0, 0, 0x0003, 0 }, &nas_register_indications_req_ei, "register_indications_req", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, {} }
 #define NAS_GET_SIGNAL_STRENGTH_REQ_NEW ({ \
 	struct nas_get_signal_strength_req *ptr = malloc(sizeof(struct nas_get_signal_strength_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
 	ptr->ei = &nas_get_signal_strength_req_ei; ptr })
-#define NAS_GET_SIGNAL_STRENGTH_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &nas_get_signal_strength_req_ei, 0 }
+#define NAS_GET_SIGNAL_STRENGTH_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &nas_get_signal_strength_req_ei, "get_signal_strength_req", 0 }
 #define NAS_GET_SIGNAL_STRENGTH_RESP_NEW ({ \
 	struct nas_get_signal_strength_resp *ptr = malloc(sizeof(struct nas_get_signal_strength_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
 	ptr->ei = &nas_get_signal_strength_resp_ei; ptr })
-#define NAS_GET_SIGNAL_STRENGTH_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &nas_get_signal_strength_resp_ei, {}, {}, {}, {}, {}, 0, 0, {}, {}, 0, 0 }
+#define NAS_GET_SIGNAL_STRENGTH_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &nas_get_signal_strength_resp_ei, "get_signal_strength_resp", {}, {}, {}, {}, {}, 0, 0, {}, {}, 0, 0 }
 #define NAS_INITIATE_NETWORK_REGISTER_NEW ({ \
 	struct nas_initiate_network_register *ptr = malloc(sizeof(struct nas_initiate_network_register)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0022; \
 	ptr->ei = &nas_initiate_network_register_ei; ptr })
-#define NAS_INITIATE_NETWORK_REGISTER_INITIALIZER { { 0, 0, 0x0022, 0 }, &nas_initiate_network_register_ei, 0 }
+#define NAS_INITIATE_NETWORK_REGISTER_INITIALIZER { { 0, 0, 0x0022, 0 }, &nas_initiate_network_register_ei, "initiate_network_register", 0 }
 #define NAS_SERVING_SYSTEM_RESP_NEW ({ \
 	struct nas_serving_system_resp *ptr = malloc(sizeof(struct nas_serving_system_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0024; \
 	ptr->ei = &nas_serving_system_resp_ei; ptr })
-#define NAS_SERVING_SYSTEM_RESP_INITIALIZER { { 2, 0, 0x0024, 0 }, &nas_serving_system_resp_ei, {}, {}, 0, {}, 0, 0, {} }
+#define NAS_SERVING_SYSTEM_RESP_INITIALIZER { { 2, 0, 0x0024, 0 }, &nas_serving_system_resp_ei, "serving_system_resp", {}, {}, 0, {}, 0, 0, {} }
 #define NAS_SERVING_SYSTEM_IND_NEW ({ \
 	struct nas_serving_system_ind *ptr = malloc(sizeof(struct nas_serving_system_ind)); \
 	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0024; \
 	ptr->ei = &nas_serving_system_ind_ei; ptr })
-#define NAS_SERVING_SYSTEM_IND_INITIALIZER { { 4, 0, 0x0024, 0 }, &nas_serving_system_ind_ei, {}, 0, {}, 0, 0, {} }
+#define NAS_SERVING_SYSTEM_IND_INITIALIZER { { 4, 0, 0x0024, 0 }, &nas_serving_system_ind_ei, "serving_system_ind", {}, 0, {}, 0, 0, {} }
 #define NAS_SET_OPERATING_MODE_REQ_NEW ({ \
 	struct nas_set_operating_mode_req *ptr = malloc(sizeof(struct nas_set_operating_mode_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x002e; \
 	ptr->ei = &nas_set_operating_mode_req_ei; ptr })
-#define NAS_SET_OPERATING_MODE_REQ_INITIALIZER { { 0, 0, 0x002e, 0 }, &nas_set_operating_mode_req_ei, 0 }
+#define NAS_SET_OPERATING_MODE_REQ_INITIALIZER { { 0, 0, 0x002e, 0 }, &nas_set_operating_mode_req_ei, "set_operating_mode_req", 0 }
 #define NAS_SET_OPERATING_MODE_RESP_NEW ({ \
 	struct nas_set_operating_mode_resp *ptr = malloc(sizeof(struct nas_set_operating_mode_resp)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x002e; \
 	ptr->ei = &nas_set_operating_mode_resp_ei; ptr })
-#define NAS_SET_OPERATING_MODE_RESP_INITIALIZER { { 0, 0, 0x002e, 0 }, &nas_set_operating_mode_resp_ei, {} }
+#define NAS_SET_OPERATING_MODE_RESP_INITIALIZER { { 0, 0, 0x002e, 0 }, &nas_set_operating_mode_resp_ei, "set_operating_mode_resp", {} }
 #define NAS_SET_SYSTEM_PREFS_NEW ({ \
 	struct nas_set_system_prefs *ptr = malloc(sizeof(struct nas_set_system_prefs)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0033; \
 	ptr->ei = &nas_set_system_prefs_ei; ptr })
-#define NAS_SET_SYSTEM_PREFS_INITIALIZER { { 0, 0, 0x0033, 0 }, &nas_set_system_prefs_ei, {} }
+#define NAS_SET_SYSTEM_PREFS_INITIALIZER { { 0, 0, 0x0033, 0 }, &nas_set_system_prefs_ei, "set_system_prefs", {} }
 #define NAS_GET_SYSTEM_PREFS_NEW ({ \
 	struct nas_get_system_prefs *ptr = malloc(sizeof(struct nas_get_system_prefs)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0034; \
 	ptr->ei = &nas_get_system_prefs_ei; ptr })
-#define NAS_GET_SYSTEM_PREFS_INITIALIZER { { 2, 0, 0x0034, 0 }, &nas_get_system_prefs_ei, {}, 0 }
+#define NAS_GET_SYSTEM_PREFS_INITIALIZER { { 2, 0, 0x0034, 0 }, &nas_get_system_prefs_ei, "get_system_prefs", {}, 0 }
 #define NAS_GET_OPERATOR_NAME_RESP_NEW ({ \
 	struct nas_get_operator_name_resp *ptr = malloc(sizeof(struct nas_get_operator_name_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0039; \
 	ptr->ei = &nas_get_operator_name_resp_ei; ptr })
-#define NAS_GET_OPERATOR_NAME_RESP_INITIALIZER { { 2, 0, 0x0039, 0 }, &nas_get_operator_name_resp_ei, {}, {}, {}, {}, 0, NULL, {} }
+#define NAS_GET_OPERATOR_NAME_RESP_INITIALIZER { { 2, 0, 0x0039, 0 }, &nas_get_operator_name_resp_ei, "get_operator_name_resp", {}, {}, {}, {}, 0, NULL, {} }
 #define NAS_OPERATOR_NAME_IND_NEW ({ \
 	struct nas_operator_name_ind *ptr = malloc(sizeof(struct nas_operator_name_ind)); \
 	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x003a; \
 	ptr->ei = &nas_operator_name_ind_ei; ptr })
-#define NAS_OPERATOR_NAME_IND_INITIALIZER { { 4, 0, 0x003a, 0 }, &nas_operator_name_ind_ei, {}, {}, {}, 0, NULL, {} }
+#define NAS_OPERATOR_NAME_IND_INITIALIZER { { 4, 0, 0x003a, 0 }, &nas_operator_name_ind_ei, "operator_name_ind", {}, {}, {}, 0, NULL, {} }
 #define NAS_GET_CELL_LOC_INFO_NEW ({ \
 	struct nas_get_cell_loc_info *ptr = malloc(sizeof(struct nas_get_cell_loc_info)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0043; \
 	ptr->ei = &nas_get_cell_loc_info_ei; ptr })
-#define NAS_GET_CELL_LOC_INFO_INITIALIZER { { 2, 0, 0x0043, 0 }, &nas_get_cell_loc_info_ei, {}, {}, {}, {}, {} }
+#define NAS_GET_CELL_LOC_INFO_INITIALIZER { { 2, 0, 0x0043, 0 }, &nas_get_cell_loc_info_ei, "get_cell_loc_info", {}, {}, {}, {}, {} }
 #define NAS_GET_PLMN_NAME_REQ_NEW ({ \
 	struct nas_get_plmn_name_req *ptr = malloc(sizeof(struct nas_get_plmn_name_req)); \
 	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0044; \
 	ptr->ei = &nas_get_plmn_name_req_ei; ptr })
-#define NAS_GET_PLMN_NAME_REQ_INITIALIZER { { 0, 0, 0x0044, 0 }, &nas_get_plmn_name_req_ei, {}, 0 }
+#define NAS_GET_PLMN_NAME_REQ_INITIALIZER { { 0, 0, 0x0044, 0 }, &nas_get_plmn_name_req_ei, "get_plmn_name_req", {}, 0 }
 #define NAS_GET_PLMN_NAME_RESP_NEW ({ \
 	struct nas_get_plmn_name_resp *ptr = malloc(sizeof(struct nas_get_plmn_name_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0044; \
 	ptr->ei = &nas_get_plmn_name_resp_ei; ptr })
-#define NAS_GET_PLMN_NAME_RESP_INITIALIZER { { 2, 0, 0x0044, 0 }, &nas_get_plmn_name_resp_ei, {}, {} }
+#define NAS_GET_PLMN_NAME_RESP_INITIALIZER { { 2, 0, 0x0044, 0 }, &nas_get_plmn_name_resp_ei, "get_plmn_name_resp", {}, {} }
 #define NAS_GET_SIGNAL_INFO_NEW ({ \
 	struct nas_get_signal_info *ptr = malloc(sizeof(struct nas_get_signal_info)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x004f; \
 	ptr->ei = &nas_get_signal_info_ei; ptr })
-#define NAS_GET_SIGNAL_INFO_INITIALIZER { { 2, 0, 0x004f, 0 }, &nas_get_signal_info_ei, {}, {}, {}, 0, {}, {}, 0, {} }
+#define NAS_GET_SIGNAL_INFO_INITIALIZER { { 2, 0, 0x004f, 0 }, &nas_get_signal_info_ei, "get_signal_info", {}, {}, {}, 0, {}, {}, 0, {} }
 #define NAS_SIGNAL_INFO_IND_NEW ({ \
 	struct nas_signal_info_ind *ptr = malloc(sizeof(struct nas_signal_info_ind)); \
 	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0051; \
 	ptr->ei = &nas_signal_info_ind_ei; ptr })
-#define NAS_SIGNAL_INFO_IND_INITIALIZER { { 4, 0, 0x0051, 0 }, &nas_signal_info_ind_ei, {}, {}, 0, {}, {}, 0 }
+#define NAS_SIGNAL_INFO_IND_INITIALIZER { { 4, 0, 0x0051, 0 }, &nas_signal_info_ind_ei, "signal_info_ind", {}, {}, 0, {}, {}, 0 }
 #define NAS_GET_LTE_CPHY_CA_INFO_RESP_NEW ({ \
 	struct nas_get_lte_cphy_ca_info_resp *ptr = malloc(sizeof(struct nas_get_lte_cphy_ca_info_resp)); \
 	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x00ac; \
 	ptr->ei = &nas_get_lte_cphy_ca_info_resp_ei; ptr })
-#define NAS_GET_LTE_CPHY_CA_INFO_RESP_INITIALIZER { { 2, 0, 0x00ac, 0 }, &nas_get_lte_cphy_ca_info_resp_ei, {}, 0, {} }
+#define NAS_GET_LTE_CPHY_CA_INFO_RESP_INITIALIZER { { 2, 0, 0x00ac, 0 }, &nas_get_lte_cphy_ca_info_resp_ei, "get_lte_cphy_ca_info_resp", {}, 0, {} }
 
 #endif

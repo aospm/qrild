@@ -151,10 +151,10 @@ struct qmi_elem_info wds_start_network_interface_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct wds_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct wds_start_network_interface_resp, res),
-		.ei_array = wds_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_UNSIGNED_4_BYTE,
@@ -271,10 +271,10 @@ struct qmi_elem_info wds_get_current_settings_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct wds_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct wds_get_current_settings_resp, res),
-		.ei_array = wds_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{
 		.data_type = QMI_OPT_FLAG,
@@ -386,10 +386,10 @@ struct qmi_elem_info wds_bind_mux_data_port_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct wds_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct wds_bind_mux_data_port_resp, res),
-		.ei_array = wds_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{}
 };
@@ -416,10 +416,10 @@ struct qmi_elem_info wds_bind_subscription_resp_ei[] = {
 	{
 		.data_type = QMI_STRUCT,
 		.elem_len = 1,
-		.elem_size = sizeof(struct wds_qmi_response_type_v01),
+		.elem_size = sizeof(struct qmi_response_type_v01),
 		.tlv_type = 2,
 		.offset = offsetof(struct wds_bind_subscription_resp, res),
-		.ei_array = wds_qmi_response_type_v01_ei,
+		.ei_array = qmi_response_type_v01_ei,
 	},
 	{}
 };
