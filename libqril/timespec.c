@@ -413,6 +413,13 @@ struct timespec timespec_normalise(struct timespec ts)
 	return ts;
 }
 
+struct timespec timespec_now()
+{
+	struct timespec t;
+	time_now(&t);
+	return t;
+}
+
 #ifdef TEST
 #include <stdio.h>
 

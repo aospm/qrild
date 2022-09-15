@@ -64,6 +64,8 @@ long timespec_to_ms(struct timespec ts);
 
 struct timespec timespec_normalise(struct timespec ts);
 
+struct timespec timespec_now();
+
 #ifdef __cplusplus
 }
 #endif

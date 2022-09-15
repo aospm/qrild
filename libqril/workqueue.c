@@ -8,7 +8,7 @@
 #include "list.h"
 #include "q_log.h"
 #include "util.h"
-#include "workqueue.h"
+#include "workqueue_priv.h"
 
 static struct list_head delayed_tasks = LIST_INIT(delayed_tasks);
 static struct list_head workqueue = LIST_INIT(workqueue);

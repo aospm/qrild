@@ -137,8 +137,8 @@ response get_signal_strength_resp {
 	optional signal_strength strength = 0x01;
 	required qmi_response_type_v01 res = 0x02;
 	optional signal_strength strength_list(16) = 0x10;
-	optional ss_value rssi_list(16) = 0x11;
-	optional ss_value ecio_list(16) = 0x12;
+	optional ss_value rssi_list(u16) = 0x11;
+	optional ss_value ecio_list(u16) = 0x12;
 	optional u32 io = 0x13;
 	optional u8 sinr = 0x14;
 	optional ss_value err_rate_list(16) = 0x15;

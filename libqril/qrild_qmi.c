@@ -1152,18 +1152,6 @@ int qrild_qmi_uim_get_file_attrs(struct rild_state *state, struct uim_get_file_a
 	return QRILD_STATE_DONE;
 }
 
-const char *qmi_service_to_string(enum qmi_service service, bool short_name)
-{
-	const struct enum_value *v = &qmi_service_values[0];
-	while (v->value_str) {
-		if (v->value == service)
-			return short_name ? v->name : v->value_str;
-		v++;
-	}
-
-	return "NULL";
-}
-
 const char *qmi_error_string(uint16_t err)
 {
 	const struct enum_value *v = &qmi_error_names[0];

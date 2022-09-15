@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "qrild.h"
+#include "libqril_private.h"
 #include "libqrtr.h"
 
 #define TIMEOUT_DEFAULT 5000

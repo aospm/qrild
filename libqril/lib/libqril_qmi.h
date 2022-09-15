@@ -1,22 +1,16 @@
-#ifndef __QRILD_H__
-#define __QRILD_H__
+#ifndef __LIBQRIL_QMI_H__
+#define __LIBQRIL_QMI_H__
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <pthread.h>
-
-#include "list.h"
+#include "qmi_dms.h"
+#include "qmi_dpm.h"
+#include "qmi_nas.h"
 #include "qmi_uim.h"
+#include "qmi_wda.h"
+#include "qmi_wds.h"
 
 __BEGIN_DECLS
 
-#define NUMARGS(...) (sizeof((int[]){ __VA_ARGS__ }) / sizeof(int))
 
-struct enum_value {
-	int value;
-	const char *value_str;
-	const char *name;
-};
 
 /**
  * QmiProtocolError:
@@ -279,8 +273,6 @@ enum qmi_error { /*< since=1.0 >*/
   QMI_ERR_QRILD                            = 0xFFFF,
 };
 
-extern const struct enum_value qmi_error_names[];
-
 /**
  * QmiService:
  * @QMI_SERVICE_UNKNOWN: Unknown service.
@@ -392,222 +384,6 @@ enum qmi_service { /*< since=1.0 >*/
 		   QMI_SERVICE_GMS = 0xE7,
 		   QMI_SERVICE_GAS = 0xE8,
 };
-
-extern const struct enum_value qmi_service_values[];
-
-// Largely from
-// https://github.com/DiUS/sierra-gobi-drivers/blob/master/GobiNet/QMI.h
-
-struct __attribute__((packed)) qmux_header {
-	/* Always 1 */
-	uint8_t tf;
-
-	/* Length of message excluding tf byte */
-	uint16_t len;
-
-	/*
-	 * Dxxxxxxx
-	 * ||||||||
-	 * |+++++++- Unused
-	 * +-------- Direction (1 = from server (the modem), 0 = from control
-	 * point (us))
-	 */
-	uint8_t ctrl_flag;
-
-	/* Service type / id */
-	/* enum qmi_service */ uint8_t service;
-
-	/* Client ID */
-	uint8_t client;
-};
-
-struct qmi_service_info {
-	enum qmi_service type;
-	uint16_t major;
-	uint16_t minor;
-	uint16_t node;
-	uint16_t port;
-	const char *name;
-	struct list_head li;
-	pthread_mutex_t *mut;
-};
-
-#define QRILD_STATE_PENDING 1
-#define QRILD_STATE_ERROR   -1
-#define QRILD_STATE_DONE    0
-
-enum qrild_pending_action {
-	/* Power up the modem */
-	QRILD_ACTION_POWERUP = 0,
-	/* Register for network status/event indications */
-	QRILD_ACTION_REGISTER_INDICATIONS,
-	/* Get the SIM card slot status */
-	QRILD_ACTION_SLOT_STATUS,
-	/* Provision the SIM card and application */
-	QRILD_ACTION_PROVISION,
-	QRILD_ACTION_OPEN_PORT,
-	QRILD_ACTION_SET_DATA_FORMAT,
-	QRILD_ACTION_BIND_SUBSCRIPTION,
-	QRILD_ACTION_MUX_DATA_PORT,
-	QRILD_ACTION_GET_SIGNAL_STRENGTH,
-	/* Start the network interfaces on the modem */
-	QRILD_ACTION_START_NET_IFACES,
-	QRILD_ACTION_GET_RUNTIME_SETTINGS,
-	//	QRILD_ACTION_NETLINK,
-	QRILD_ACTION_IDLE,
-	QRILD_ACTION_EXIT,
-};
-
-struct rild_state;
-struct qrild_msg;
-
-typedef int (*async_msg_handler_t)(struct rild_state *state,
-		       struct qrild_msg *msg);
-
-/*
- * the qrild_msg struct is used to track
- * a QMI message from when the request is sent
- * until the response is decoded. This way
- * we always know what responses are pending
- */
-struct qrild_msg {
-	uint16_t txn;
-	uint32_t msg_id;
-	enum qmi_service svc;
-	bool sent;
-	/*
-	 * QMI msg type:
-	 * 0: request
-	 * 2: response
-	 * 4: indication
-	 */
-	uint8_t type;
-
-	void *buf;
-	size_t buf_len;
-
-	struct list_head li;
-	pthread_mutex_t *mut;
-
-	/*
-	 * For async messages this is the function handler
-	 */
-	async_msg_handler_t handler;
-};
-
-#define THREADED_PROP(name)                                                    \
-	pthread_mutex_t name##_mutex;                                          \
-	pthread_cond_t name##_change
-
-struct rild_state {
-	// The QRTR socket
-	int sock;
-	// state machine
-	enum qrild_pending_action state;
-
-	struct list_head pending_rx;
-	struct list_head pending_tx;
-	THREADED_PROP(msg);
-	// Broadcast when there are new pending QMI indications
-	pthread_cond_t pending_indications;
-
-	/* Mobile data connection */
-	uint8_t connection_status;
-	THREADED_PROP(connection_status);
-
-	uint32_t wds_pkt_data_handle;
-
-	volatile bool exit;
-
-	bool no_configure_inet;
-
-	// Available QMI services
-	struct list_head services;
-	pthread_mutex_t services_mutex;
-};
-
-extern struct rild_state *g_state;
-
-#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-
-/* Uncomment to enable mutex debugging */
-//#define LOCKTRACKER 1
-
-int _q_thread_mutex_lock(pthread_mutex_t* m, const char *mtex, const char *file, const char* func, int line);
-int _q_thread_mutex_unlock(pthread_mutex_t* m, const char *mtex, const char *file, const char* func, int line);
-
-int _q_thread_cond_timedwait(pthread_cond_t* c, pthread_mutex_t* m, struct timespec *ts, const char *mtex, const char *file, const char* func, int line);
-
-int _q_thread_cond_wait(pthread_cond_t* c, pthread_mutex_t* m, const char *mtex, const char *file, const char* func, int line);
-
-#ifdef LOCKTRACKER
-#define q_thread_dump_locks() _q_thread_dump_locks()
-
-#define q_thread_mutex_lock(m) \
-	_q_thread_mutex_lock(m, #m, __FILENAME__, __FUNCTION__, __LINE__)
-
-#define q_thread_mutex_unlock(m) \
-	_q_thread_mutex_unlock(m, #m, __FILENAME__, __FUNCTION__, __LINE__)
-
-#define q_thread_cond_timedwait(c, m, t) \
-	_q_thread_cond_timedwait(c, m, t, #m, __FILENAME__, __FUNCTION__, __LINE__)
-
-#define q_thread_cond_wait(c, m) \
-	_q_thread_cond_wait(c, m, #m, __FILENAME__, __FUNCTION__, __LINE__)
-#else
-#define q_thread_dump_locks() do {} while(0)
-
-#define q_thread_mutex_lock(m) pthread_mutex_lock(m)
-
-#define q_thread_mutex_unlock(m) pthread_mutex_unlock(m)
-
-#define q_thread_cond_timedwait(c, m, t) pthread_cond_timedwait(c, m, t)
-
-#define q_thread_cond_wait(c, m) pthread_cond_wait(c, m)
-#endif
-
-
-/**
- * @brief block until the condition is true, assumes the condition was set up
- * like connection_status is above.
- * 
- * @obj: the object the condition is waiting on
- * @cond: the condition to wait on
- */
-#define THREAD_WAIT(obj, cond)                                                 \
-	({                                                                     \
-		int rc;                                                        \
-		struct timespec ts = { 0, 5000000 };                           \
-		pthread_mutex_lock(&(obj)->cond##_mutex);                      \
-		while (!(obj)->cond) {                                         \
-			rc = pthread_cond_timedwait(&(obj)->cond##_change,     \
-						    &(obj)->cond##_mutex,      \
-						    &ts);                      \
-		}                                                              \
-		pthread_mutex_unlock(&(obj)->cond##_mutex);                    \
-		rc;                                                            \
-	})
-
-/**
- * @brief Return if a service hasn't been discovered yet
- *
- * @_l: service list to search
- * @_s: enum qmi_service to find
- * @_r: return value to use if the service can't be found
- */
-#define QMI_SERVICE_OR_RETURN(_l, _s, _r)                                      \
-	if (!qmi_service_get((_l), _s))                                        \
-	return _r
-
-static inline struct qrild_msg *qrild_msg_get_by_txn(struct list_head *list, uint16_t txn)
-{
-	struct qrild_msg *msg;
-	list_for_each_entry(msg, list, li) {
-		if (msg->txn == txn)
-			return msg;
-	}
-	return NULL;
-}
 
 __END_DECLS
 

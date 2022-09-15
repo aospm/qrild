@@ -1,5 +1,5 @@
-#ifndef __Q_THREADS_H__
-#define __Q_THREADS_H__
+#ifndef __Q_WORKQUEUE_H__
+#define __Q_WORKQUEUE_H__
 
 #include <stdbool.h>
 #include <unistd.h>
@@ -10,7 +10,7 @@ __BEGIN_DECLS
 
 struct q_work {
 	void *data;
-	void (*func)(struct q_work_task *);
+	void (*func)(void *);
 };
 /**
  * @brief: Set up the workqueue, must be called once
@@ -30,4 +30,4 @@ int q_threads_exitall();
 
 __END_DECLS
 
-#endif // __Q_THREADS_H__
+#endif // __Q_WORKQUEUE_H__

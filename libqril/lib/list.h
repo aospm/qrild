@@ -1,6 +1,8 @@
 #ifndef _LIST_H_
 #define _LIST_H_
 
+// FIXME: this shouldn't be exported
+
 #include <pthread.h>
 #include <memory.h>
 

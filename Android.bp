@@ -9,6 +9,8 @@ cc_library {
         "libqril/q_log.c",
         "libqril/workqueue.c",
         "libqril/timespec.c",
+        "libqril/libqril.c",
+        "libqril/libqril_events.c",
         // Generated with qmic
         "_android/qmi_dms.c",
         "_android/qmi_dpm.c",
@@ -23,9 +25,12 @@ cc_library {
         "libcutils",
         "libutils",
     ],
+    local_include_dirs: [
+        "libqril",
+    ],
     cflags: ["-fPIC", "-Wno-error"],
     export_include_dirs: [
-        "libqril",
+        "libqril/lib",
         "_android",
     ],
 }
