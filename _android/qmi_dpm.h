@@ -33,12 +33,16 @@ struct dpm_open_port_resp { // 0x0020
 
 #define DPM_OPEN_PORT_REQ_NEW ({ \
 	struct dpm_open_port_req *ptr = malloc(sizeof(struct dpm_open_port_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x2f; \
 	ptr->ei = &dpm_open_port_req_ei; ptr })
 #define DPM_OPEN_PORT_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &dpm_open_port_req_ei, "open_port_req", {} }
 #define DPM_OPEN_PORT_RESP_NEW ({ \
 	struct dpm_open_port_resp *ptr = malloc(sizeof(struct dpm_open_port_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x2f; \
 	ptr->ei = &dpm_open_port_resp_ei; ptr })
 #define DPM_OPEN_PORT_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &dpm_open_port_resp_ei, "open_port_resp", {} }
 

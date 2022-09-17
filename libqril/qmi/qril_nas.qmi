@@ -1,4 +1,4 @@
-package nas;
+package nas 0x03;
 
 const QMI_NAS_EVENT_REPORT = 0x02;
 const QMI_NAS_REGISTER_INDICATIONS = 0x03;

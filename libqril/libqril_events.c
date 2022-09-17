@@ -35,7 +35,7 @@ struct ev_type {
 	struct q_work work;
 	union {
 		enum modem_state newstate; // EV_MODEM_STATE_CHANGE
-		struct qmi_message_header *ind; // EV_QMI_INDICATION
+		struct qmi_header *ind; // EV_QMI_INDICATION
 		enum qmi_service service; // EV_SERVICE_NEW, EV_SERVICE_GOODBYE
 	};
 };
@@ -69,7 +69,8 @@ static void process_event(void *_event) {
 			break;
 		case EV_QMI_INDICATION:
 			if (handler->h.on_qmi_indication)
-				handler->h.on_qmi_indication(handler->data, event->ind);
+				handler->h.on_qmi_indication(handler->data, event->ind,
+					event->ind->msg_len + sizeof(struct qmi_header));
 			break;
 		case EV_SERVICE_NEW:
 			if (handler->h.on_service_new)
@@ -116,7 +117,7 @@ void event_new_modem_state_change(enum modem_state newstate)
 	q_work_schedule_now(&event->work);
 }
 
-void event_new_indication(struct qmi_message_header *ind)
+void event_new_indication(struct qmi_header *ind)
 {
 	struct ev_type *event =
 		ev_type_new(EV_QMI_INDICATION);

@@ -13,7 +13,7 @@ void event_new_modem_state_change(enum modem_state newstate);
  * 
  * @ind: The QMI indication message
  */
-void event_new_indication(struct qmi_message_header *ind);
+void event_new_indication(struct qmi_header *ind);
 
 /**
  * @brief notify clients of a new QMI service being discovered

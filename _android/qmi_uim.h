@@ -337,77 +337,107 @@ struct uim_refresh { // 0x0033
 
 #define UIM_GET_CARD_STATUS_RESP_NEW ({ \
 	struct uim_get_card_status_resp *ptr = malloc(sizeof(struct uim_get_card_status_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x002f; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x002f; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_get_card_status_resp_ei; ptr })
 #define UIM_GET_CARD_STATUS_RESP_INITIALIZER { { 2, 0, 0x002f, 0 }, &uim_get_card_status_resp_ei, "get_card_status_resp", {}, {} }
 #define UIM_CHANGE_PROVISIONING_SESSION_REQ_NEW ({ \
 	struct uim_change_provisioning_session_req *ptr = malloc(sizeof(struct uim_change_provisioning_session_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0038; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0038; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_change_provisioning_session_req_ei; ptr })
 #define UIM_CHANGE_PROVISIONING_SESSION_REQ_INITIALIZER { { 0, 0, 0x0038, 0 }, &uim_change_provisioning_session_req_ei, "change_provisioning_session_req", {}, {} }
 #define UIM_CHANGE_PROVISIONING_SESSION_RESP_NEW ({ \
 	struct uim_change_provisioning_session_resp *ptr = malloc(sizeof(struct uim_change_provisioning_session_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0038; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0038; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_change_provisioning_session_resp_ei; ptr })
 #define UIM_CHANGE_PROVISIONING_SESSION_RESP_INITIALIZER { { 2, 0, 0x0038, 0 }, &uim_change_provisioning_session_resp_ei, "change_provisioning_session_resp", {} }
 #define UIM_ICC_OPEN_LOGICAL_CHANNEL_REQ_NEW ({ \
 	struct uim_icc_open_logical_channel_req *ptr = malloc(sizeof(struct uim_icc_open_logical_channel_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0042; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0042; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_icc_open_logical_channel_req_ei; ptr })
 #define UIM_ICC_OPEN_LOGICAL_CHANNEL_REQ_INITIALIZER { { 0, 0, 0x0042, 0 }, &uim_icc_open_logical_channel_req_ei, "icc_open_logical_channel_req", 0, 0, 0 }
 #define UIM_ICC_OPEN_LOGICAL_CHANNEL_RESP_NEW ({ \
 	struct uim_icc_open_logical_channel_resp *ptr = malloc(sizeof(struct uim_icc_open_logical_channel_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0042; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0042; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_icc_open_logical_channel_resp_ei; ptr })
 #define UIM_ICC_OPEN_LOGICAL_CHANNEL_RESP_INITIALIZER { { 2, 0, 0x0042, 0 }, &uim_icc_open_logical_channel_resp_ei, "icc_open_logical_channel_resp", {}, 0, 0, 0 }
 #define UIM_GET_SLOT_STATUS_REQ_NEW ({ \
 	struct uim_get_slot_status_req *ptr = malloc(sizeof(struct uim_get_slot_status_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0047; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0047; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_get_slot_status_req_ei; ptr })
 #define UIM_GET_SLOT_STATUS_REQ_INITIALIZER { { 0, 0, 0x0047, 0 }, &uim_get_slot_status_req_ei, "get_slot_status_req" }
 #define UIM_GET_SLOT_STATUS_RESP_NEW ({ \
 	struct uim_get_slot_status_resp *ptr = malloc(sizeof(struct uim_get_slot_status_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0047; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0047; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_get_slot_status_resp_ei; ptr })
 #define UIM_GET_SLOT_STATUS_RESP_INITIALIZER { { 2, 0, 0x0047, 0 }, &uim_get_slot_status_resp_ei, "get_slot_status_resp", {}, {}, {}, 0 }
 #define UIM_GET_SLOT_STATUS_IND_NEW ({ \
 	struct uim_get_slot_status_ind *ptr = malloc(sizeof(struct uim_get_slot_status_ind)); \
-	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0048; \
+	ptr->qmi_header->type = 4; \
+	ptr->qmi_header->msg_id = 0x0048; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_get_slot_status_ind_ei; ptr })
 #define UIM_GET_SLOT_STATUS_IND_INITIALIZER { { 4, 0, 0x0048, 0 }, &uim_get_slot_status_ind_ei, "get_slot_status_ind", {}, {}, 0 }
 #define UIM_READ_TRANSPARENT_REQ_NEW ({ \
 	struct uim_read_transparent_req *ptr = malloc(sizeof(struct uim_read_transparent_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_read_transparent_req_ei; ptr })
 #define UIM_READ_TRANSPARENT_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &uim_read_transparent_req_ei, "read_transparent_req", {}, {}, {}, 0, 0 }
 #define UIM_READ_TRANSPARENT_RESP_NEW ({ \
 	struct uim_read_transparent_resp *ptr = malloc(sizeof(struct uim_read_transparent_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_read_transparent_resp_ei; ptr })
 #define UIM_READ_TRANSPARENT_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &uim_read_transparent_resp_ei, "read_transparent_resp", {}, {}, 0, 0, 0 }
 #define UIM_READ_RECORD_REQ_NEW ({ \
 	struct uim_read_record_req *ptr = malloc(sizeof(struct uim_read_record_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0021; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0021; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_read_record_req_ei; ptr })
 #define UIM_READ_RECORD_REQ_INITIALIZER { { 0, 0, 0x0021, 0 }, &uim_read_record_req_ei, "read_record_req", {}, {}, {}, 0, 0 }
 #define UIM_READ_RECORD_RESP_NEW ({ \
 	struct uim_read_record_resp *ptr = malloc(sizeof(struct uim_read_record_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0021; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0021; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_read_record_resp_ei; ptr })
 #define UIM_READ_RECORD_RESP_INITIALIZER { { 2, 0, 0x0021, 0 }, &uim_read_record_resp_ei, "read_record_resp", {}, {}, 0, 0, 0 }
 #define UIM_GET_FILE_ATTRS_REQ_NEW ({ \
 	struct uim_get_file_attrs_req *ptr = malloc(sizeof(struct uim_get_file_attrs_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0024; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0024; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_get_file_attrs_req_ei; ptr })
 #define UIM_GET_FILE_ATTRS_REQ_INITIALIZER { { 0, 0, 0x0024, 0 }, &uim_get_file_attrs_req_ei, "get_file_attrs_req", {}, {}, 0 }
 #define UIM_GET_FILE_ATTRS_RESP_NEW ({ \
 	struct uim_get_file_attrs_resp *ptr = malloc(sizeof(struct uim_get_file_attrs_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0024; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0024; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_get_file_attrs_resp_ei; ptr })
 #define UIM_GET_FILE_ATTRS_RESP_INITIALIZER { { 2, 0, 0x0024, 0 }, &uim_get_file_attrs_resp_ei, "get_file_attrs_resp", {}, {}, {}, 0 }
 #define UIM_REFRESH_NEW ({ \
 	struct uim_refresh *ptr = malloc(sizeof(struct uim_refresh)); \
-	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0033; \
+	ptr->qmi_header->type = 4; \
+	ptr->qmi_header->msg_id = 0x0033; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &uim_refresh_ei; ptr })
 #define UIM_REFRESH_INITIALIZER { { 4, 0, 0x0033, 0 }, &uim_refresh_ei, "refresh", {} }
 

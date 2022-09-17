@@ -17,7 +17,6 @@
 #include "libqril_private.h"
 
 static struct libqril_state *state;
-static int qrtr_sock;
 
 static void q_log_lock(bool lock, void *data)
 {
@@ -29,36 +28,6 @@ static void q_log_lock(bool lock, void *data)
 	} else {
 		pthread_mutex_unlock(&print_mtex);
 	}
-}
-
-static void *msg_loop(void * _)
-{
-	int rc;
-
-	// Find all QRTR services
-	qrild_qrtr_do_lookup(state);
-
-	while (!state->exit) {
-		rc = qrild_qrtr_send_queued(state);
-		if (rc < 0) {
-			log_error("[MSGLOOP] Failed to send queued messages! %d", rc);
-			state->exit = true;
-			break;
-		}
-		rc = qrtr_poll(qrtr_sock, 50);
-		if (rc < 0 && errno == EINTR)
-			continue;
-		if (rc < 0)
-			log_error("[MSGLOOP] poll() failed: %d (%s)", errno, strerror(errno));
-
-		if (rc > 0)
-			qrild_qrtr_recv(state);
-	}
-
-	log_info("[MSGLOOP] Quitting loop!");
-	qrtr_close(qrtr_sock);
-
-	return NULL;
 }
 
 static void *main_loop(void * _)
@@ -139,16 +108,7 @@ void libqril_init()
 	pthread_mutex_init(&state->connection_status_mutex, &mattr);
 	pthread_cond_init(&state->connection_status_change, &cattr);
 
-	qrtr_sock = qrtr_open(0);
-	if (qrtr_sock < 0) {
-		log_error("Failed to open QRTR socket: %d", qrtr_sock);
-		abort();
-	}
-
-	if (pthread_create(&msg_thread, NULL, msg_loop, NULL)) {
-		log_error("Failed to create msg thread");
-		abort();
-	}
+	messages_init();
 
 	// Wait for the modem to be discovered
 	libqril_wait_for_qmi_service(QMI_SERVICE_DMS);

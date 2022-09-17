@@ -1,4 +1,4 @@
-package wds;
+package wds 0x01;
 
 const QMI_WDS_SERVICE = 0x1;
 

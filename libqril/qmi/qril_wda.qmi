@@ -1,4 +1,4 @@
-package wda;
+package wda 0x1A;
 
 const QMI_WDA_SERVICE = 26;
 

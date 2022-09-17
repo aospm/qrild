@@ -8,6 +8,7 @@
 #include "libqril.h"
 #include "libqril_events.h"
 #include "libqril_services.h"
+#include "libqril_messages.h"
 
 #include "list.h"
 #include "qmi_uim.h"
@@ -25,39 +26,6 @@ struct enum_value {
 extern const struct enum_value qmi_error_names[];
 
 struct rild_state;
-
-typedef int (*async_msg_handler_t)(struct qmi_msg *msg);
-
-/*
- * the qmi_msg struct is used to track
- * a QMI message from when the request is sent
- * until the response is decoded. This way
- * we always know what responses are pending
- */
-struct qmi_msg {
-	uint16_t txn;
-	uint32_t msg_id;
-	enum qmi_service svc;
-	bool sent;
-	/*
-	 * QMI msg type:
-	 * 0: request
-	 * 2: response
-	 * 4: indication
-	 */
-	uint8_t type;
-
-	void *buf;
-	size_t buf_len;
-
-	struct list_head li;
-	pthread_mutex_t *mut;
-
-	/*
-	 * For async messages this is the function handler
-	 */
-	async_msg_handler_t handler;
-};
 
 struct libqril_state {
 	enum modem_state modem_state;
@@ -155,9 +123,9 @@ int _q_thread_cond_wait(pthread_cond_t* c, pthread_mutex_t* m, const char *mtex,
 	if (!qmi_service_get((_l), _s))                                        \
 	return _r
 
-static inline struct qmi_msg *qmi_msg_get_by_txn(struct list_head *list, uint16_t txn)
+static inline struct libqril_message_lifetime *qmi_msg_get_by_txn(struct list_head *list, uint16_t txn)
 {
-	struct qmi_msg *msg;
+	struct libqril_message_lifetime *msg;
 	list_for_each_entry(msg, list, li) {
 		if (msg->txn == txn)
 			return msg;

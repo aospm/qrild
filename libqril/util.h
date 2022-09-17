@@ -60,13 +60,12 @@ int qmi_tlv_set_array(struct qmi_tlv *tlv, uint8_t id, size_t len_size,
 		      void *buf, size_t len, size_t size);
 struct qmi_response_type_v01 *qmi_tlv_get_result(struct qmi_tlv *tlv);
 
-const char *qmi_tlv_msg_get_name(int qmi_svc, int msg_id);
-void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc);
-static inline int qmi_tlv_dump_buf(void *buf, size_t len, int qmi_svc) {
+void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc, const char *msg_name)
+static inline int qmi_tlv_dump_buf(void *buf, size_t len, int qmi_svc, const char *msg_name) {
 	struct qmi_tlv *tlv = qmi_tlv_decode(buf, len);
 	if (!tlv)
 		return -1;
-	qmi_tlv_dump(tlv, qmi_svc);
+	qmi_tlv_dump(tlv, qmi_svc, msg_name);
 	qmi_tlv_free(tlv);
 
 	return 0;

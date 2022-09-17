@@ -1,3 +1,7 @@
+/*
+ * Handles available QMI services
+ */
+
 #include <errno.h>
 #include <linux/qrtr.h>
 #include <stdbool.h>
@@ -22,6 +26,8 @@
 static pthread_mutex_t services_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct list_head services = LIST_INIT(services);
 
+#define service_for_each(s) list_for_each_entry(s, &services, li)
+
 const struct enum_value qmi_service_values[];
 
 struct qmi_service_info {
@@ -37,7 +43,7 @@ struct qmi_service_info {
 struct qmi_service_info *_qmi_service_get(enum qmi_service type)
 {
 	struct qmi_service_info *service, *out = NULL;
-	list_for_each_entry(service, &services, li) {
+	service_for_each(service) {
 		if (service->type == type) {
 			out = service;
 			break;
@@ -46,13 +52,72 @@ struct qmi_service_info *_qmi_service_get(enum qmi_service type)
 	return out;
 }
 
+void _log_service(struct qmi_service_info *info)
+{
+	static int count = 0;
+	if (!info) {
+		count = 0;
+		return;
+	}
+
+	if (!count)
+		log_debug("| Type | Node | Port | Major | Minor | Service Name");
+
+	log_debug("| %4d | %4d | %5d | %4d  | %4d  | %s", info->type, info->node,
+	     info->port, info->major, info->minor,
+	     info->name ? info->name : "<unknown>");
+
+	count++;
+}
+
 /***** Internal API *****/
 
-void qmi_service_get_port(enum qmi_service type)
+int qmi_service_get(enum qmi_service type, int *port, int *node)
 {
-	struct qmi_service_info *service = qmi_service_get(type);
-	if (service)
-		return service->port;
+	q_thread_mutex_lock(&services_mutex);
+	struct qmi_service_info *service = _qmi_service_get(type);
+
+	if (!service) {
+		q_thread_mutex_unlock(&services_mutex);
+		return -ENOENT;
+	}
+
+	if (port)
+		*port = service->port;
+	if (node)
+		*node = service->node;
+	
+	q_thread_mutex_unlock(&services_mutex);
+	return 0;
+}
+
+int qmi_service_get_port(enum qmi_service type)
+{
+	int port;
+	int rc = qmi_servie_get(type, &port, NULL);
+	return rc ?: port;
+}
+
+int qmi_service_get_node(enum qmi_service type)
+{
+	int node;
+	int rc = qmi_servie_get(type, NULL, &node);
+	return rc ?: node;
+}
+
+int qmi_service_from_port(uint16_t port, enum qmi_service *type)
+{
+	struct qmi_service_info *service;
+	q_thread_mutex_lock(&services_mutex);
+	service_for_each(service) {
+		if (service->port == port) {
+			*type = service->type;
+			q_thread_mutex_unlock(&services_mutex);
+			return 0;
+		}
+	}
+
+	q_thread_mutex_unlock(&services_mutex);
 	return -ENOENT;
 }
 
@@ -67,7 +132,8 @@ void qmi_service_new(struct qrtr_packet *pkt)
 	service->minor = pkt->instance >> 8;
 	service->name = qmi_service_get_name(service->type);
 
-	log_debug("Found service: %s", service->name);
+	_log_service(service);
+
 	q_thread_mutex_lock(&services_mutex);
 	list_append(&services, &service->li);
 	q_thread_mutex_unlock(&services_mutex);
@@ -84,6 +150,7 @@ void qmi_service_goodbye(enum qmi_service type)
 		return;
 
 	log_debug("Service shutdown: %s", service->name);
+
 	list_remove(&service->li);
 	q_thread_mutex_unlock(&services_mutex);
 	free(service);

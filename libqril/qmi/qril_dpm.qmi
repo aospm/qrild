@@ -1,4 +1,4 @@
-package dpm;
+package dpm 0x2F;
 
 const QMI_DPM_SERVICE = 47;
 

@@ -1,4 +1,4 @@
-package uim;
+package uim 0x0B;
 
 const QMI_UIM_GET_CARD_STATUS = 0x2F;
 const QMI_UIM_CHANGE_PROVISIONING_SESSION = 0x38;

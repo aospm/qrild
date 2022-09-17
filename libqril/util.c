@@ -372,50 +372,7 @@ int msleep(long ms)
 	return ret;
 }
 
-const char *qmi_tlv_msg_get_name(int qmi_svc, int msg_id)
-{
-	const struct qmi_tlv_msg_name *msg_name_map;
-	size_t n_messages;
-	int i;
-
-	switch (qmi_svc) {
-	case QMI_SERVICE_DMS:
-		msg_name_map = &dms_msg_name_map[0];
-		n_messages = QMI_NUM_MESSAGES_DMS;
-		break;
-	case QMI_SERVICE_DPM:
-		msg_name_map = &dpm_msg_name_map[0];
-		n_messages = QMI_NUM_MESSAGES_DPM;
-		break;
-	case QMI_SERVICE_NAS:
-		msg_name_map = &nas_msg_name_map[0];
-		n_messages = QMI_NUM_MESSAGES_NAS;
-		break;
-	case QMI_SERVICE_UIM:
-		msg_name_map = &uim_msg_name_map[0];
-		n_messages = QMI_NUM_MESSAGES_UIM;
-		break;
-	case QMI_SERVICE_WDA:
-		msg_name_map = &wda_msg_name_map[0];
-		n_messages = QMI_NUM_MESSAGES_WDA;
-		break;
-	case QMI_SERVICE_WDS:
-		msg_name_map = &wds_msg_name_map[0];
-		n_messages = QMI_NUM_MESSAGES_WDS;
-		break;
-	default:
-		return NULL;
-	}
-
-	for (i = 0; i < n_messages; i++) {
-		if (msg_name_map[i].msg_id == msg_id)
-			return msg_name_map[i].msg_name;
-	}
-
-	return NULL;
-}
-
-void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc)
+void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc, const char *msg_name)
 {
 	struct qmi_tlv_item *item;
 	struct qmi_header *pkt;
@@ -425,13 +382,10 @@ void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc)
 	uint8_t ch;
 	size_t linelen, buf_size;
 	char *buf;
-	const char *msg_name;
 	FILE *fp = open_memstream(&buf, &buf_size);
 
 	pkt = tlv->buf;
 	pkt_data = &pkt[0];
-
-	msg_name = qmi_tlv_msg_get_name(qmi_svc, pkt->msg_id);
 
 	fprintf(fp, "<<< QMI Message:\n");
 	if (msg_name)

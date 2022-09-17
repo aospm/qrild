@@ -536,92 +536,128 @@ struct nas_get_lte_cphy_ca_info_resp { // 0x00ac
 
 #define NAS_REGISTER_INDICATIONS_REQ_NEW ({ \
 	struct nas_register_indications_req *ptr = malloc(sizeof(struct nas_register_indications_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0003; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0003; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_register_indications_req_ei; ptr })
 #define NAS_REGISTER_INDICATIONS_REQ_INITIALIZER { { 0, 0, 0x0003, 0 }, &nas_register_indications_req_ei, "register_indications_req", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, {} }
 #define NAS_GET_SIGNAL_STRENGTH_REQ_NEW ({ \
 	struct nas_get_signal_strength_req *ptr = malloc(sizeof(struct nas_get_signal_strength_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_signal_strength_req_ei; ptr })
 #define NAS_GET_SIGNAL_STRENGTH_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &nas_get_signal_strength_req_ei, "get_signal_strength_req", 0 }
 #define NAS_GET_SIGNAL_STRENGTH_RESP_NEW ({ \
 	struct nas_get_signal_strength_resp *ptr = malloc(sizeof(struct nas_get_signal_strength_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_signal_strength_resp_ei; ptr })
 #define NAS_GET_SIGNAL_STRENGTH_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &nas_get_signal_strength_resp_ei, "get_signal_strength_resp", {}, {}, {}, {}, {}, 0, 0, {}, {}, 0, 0 }
 #define NAS_INITIATE_NETWORK_REGISTER_NEW ({ \
 	struct nas_initiate_network_register *ptr = malloc(sizeof(struct nas_initiate_network_register)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0022; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0022; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_initiate_network_register_ei; ptr })
 #define NAS_INITIATE_NETWORK_REGISTER_INITIALIZER { { 0, 0, 0x0022, 0 }, &nas_initiate_network_register_ei, "initiate_network_register", 0 }
 #define NAS_SERVING_SYSTEM_RESP_NEW ({ \
 	struct nas_serving_system_resp *ptr = malloc(sizeof(struct nas_serving_system_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0024; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0024; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_serving_system_resp_ei; ptr })
 #define NAS_SERVING_SYSTEM_RESP_INITIALIZER { { 2, 0, 0x0024, 0 }, &nas_serving_system_resp_ei, "serving_system_resp", {}, {}, 0, {}, 0, 0, {} }
 #define NAS_SERVING_SYSTEM_IND_NEW ({ \
 	struct nas_serving_system_ind *ptr = malloc(sizeof(struct nas_serving_system_ind)); \
-	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0024; \
+	ptr->qmi_header->type = 4; \
+	ptr->qmi_header->msg_id = 0x0024; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_serving_system_ind_ei; ptr })
 #define NAS_SERVING_SYSTEM_IND_INITIALIZER { { 4, 0, 0x0024, 0 }, &nas_serving_system_ind_ei, "serving_system_ind", {}, 0, {}, 0, 0, {} }
 #define NAS_SET_OPERATING_MODE_REQ_NEW ({ \
 	struct nas_set_operating_mode_req *ptr = malloc(sizeof(struct nas_set_operating_mode_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x002e; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x002e; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_set_operating_mode_req_ei; ptr })
 #define NAS_SET_OPERATING_MODE_REQ_INITIALIZER { { 0, 0, 0x002e, 0 }, &nas_set_operating_mode_req_ei, "set_operating_mode_req", 0 }
 #define NAS_SET_OPERATING_MODE_RESP_NEW ({ \
 	struct nas_set_operating_mode_resp *ptr = malloc(sizeof(struct nas_set_operating_mode_resp)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x002e; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x002e; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_set_operating_mode_resp_ei; ptr })
 #define NAS_SET_OPERATING_MODE_RESP_INITIALIZER { { 0, 0, 0x002e, 0 }, &nas_set_operating_mode_resp_ei, "set_operating_mode_resp", {} }
 #define NAS_SET_SYSTEM_PREFS_NEW ({ \
 	struct nas_set_system_prefs *ptr = malloc(sizeof(struct nas_set_system_prefs)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0033; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0033; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_set_system_prefs_ei; ptr })
 #define NAS_SET_SYSTEM_PREFS_INITIALIZER { { 0, 0, 0x0033, 0 }, &nas_set_system_prefs_ei, "set_system_prefs", {} }
 #define NAS_GET_SYSTEM_PREFS_NEW ({ \
 	struct nas_get_system_prefs *ptr = malloc(sizeof(struct nas_get_system_prefs)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0034; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0034; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_system_prefs_ei; ptr })
 #define NAS_GET_SYSTEM_PREFS_INITIALIZER { { 2, 0, 0x0034, 0 }, &nas_get_system_prefs_ei, "get_system_prefs", {}, 0 }
 #define NAS_GET_OPERATOR_NAME_RESP_NEW ({ \
 	struct nas_get_operator_name_resp *ptr = malloc(sizeof(struct nas_get_operator_name_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0039; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0039; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_operator_name_resp_ei; ptr })
 #define NAS_GET_OPERATOR_NAME_RESP_INITIALIZER { { 2, 0, 0x0039, 0 }, &nas_get_operator_name_resp_ei, "get_operator_name_resp", {}, {}, {}, {}, 0, NULL, {} }
 #define NAS_OPERATOR_NAME_IND_NEW ({ \
 	struct nas_operator_name_ind *ptr = malloc(sizeof(struct nas_operator_name_ind)); \
-	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x003a; \
+	ptr->qmi_header->type = 4; \
+	ptr->qmi_header->msg_id = 0x003a; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_operator_name_ind_ei; ptr })
 #define NAS_OPERATOR_NAME_IND_INITIALIZER { { 4, 0, 0x003a, 0 }, &nas_operator_name_ind_ei, "operator_name_ind", {}, {}, {}, 0, NULL, {} }
 #define NAS_GET_CELL_LOC_INFO_NEW ({ \
 	struct nas_get_cell_loc_info *ptr = malloc(sizeof(struct nas_get_cell_loc_info)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0043; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0043; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_cell_loc_info_ei; ptr })
 #define NAS_GET_CELL_LOC_INFO_INITIALIZER { { 2, 0, 0x0043, 0 }, &nas_get_cell_loc_info_ei, "get_cell_loc_info", {}, {}, {}, {}, {} }
 #define NAS_GET_PLMN_NAME_REQ_NEW ({ \
 	struct nas_get_plmn_name_req *ptr = malloc(sizeof(struct nas_get_plmn_name_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0044; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0044; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_plmn_name_req_ei; ptr })
 #define NAS_GET_PLMN_NAME_REQ_INITIALIZER { { 0, 0, 0x0044, 0 }, &nas_get_plmn_name_req_ei, "get_plmn_name_req", {}, 0 }
 #define NAS_GET_PLMN_NAME_RESP_NEW ({ \
 	struct nas_get_plmn_name_resp *ptr = malloc(sizeof(struct nas_get_plmn_name_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0044; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0044; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_plmn_name_resp_ei; ptr })
 #define NAS_GET_PLMN_NAME_RESP_INITIALIZER { { 2, 0, 0x0044, 0 }, &nas_get_plmn_name_resp_ei, "get_plmn_name_resp", {}, {} }
 #define NAS_GET_SIGNAL_INFO_NEW ({ \
 	struct nas_get_signal_info *ptr = malloc(sizeof(struct nas_get_signal_info)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x004f; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x004f; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_signal_info_ei; ptr })
 #define NAS_GET_SIGNAL_INFO_INITIALIZER { { 2, 0, 0x004f, 0 }, &nas_get_signal_info_ei, "get_signal_info", {}, {}, {}, 0, {}, {}, 0, {} }
 #define NAS_SIGNAL_INFO_IND_NEW ({ \
 	struct nas_signal_info_ind *ptr = malloc(sizeof(struct nas_signal_info_ind)); \
-	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0051; \
+	ptr->qmi_header->type = 4; \
+	ptr->qmi_header->msg_id = 0x0051; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_signal_info_ind_ei; ptr })
 #define NAS_SIGNAL_INFO_IND_INITIALIZER { { 4, 0, 0x0051, 0 }, &nas_signal_info_ind_ei, "signal_info_ind", {}, {}, 0, {}, {}, 0 }
 #define NAS_GET_LTE_CPHY_CA_INFO_RESP_NEW ({ \
 	struct nas_get_lte_cphy_ca_info_resp *ptr = malloc(sizeof(struct nas_get_lte_cphy_ca_info_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x00ac; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x00ac; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &nas_get_lte_cphy_ca_info_resp_ei; ptr })
 #define NAS_GET_LTE_CPHY_CA_INFO_RESP_INITIALIZER { { 2, 0, 0x00ac, 0 }, &nas_get_lte_cphy_ca_info_resp_ei, "get_lte_cphy_ca_info_resp", {}, 0, {} }
 

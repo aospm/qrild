@@ -46,10 +46,10 @@ struct libqril_events {
 	/**
 	 * @brief called when a QMI indication is received from the modem
 	 * @data: client data
-	 * @indication: The QMI indication message, this can be cast to the appropriate
-	 * message struct by reading the message ID. It should not be free'd
+	 * @indication: The QMI indication message, this can be decoded by calling
+	 * qmi_decode_message2() with the appropriate message struct.
 	 */
-	void (*on_qmi_indication)(void *data, struct qmi_message_header *indication);
+	void (*on_qmi_indication)(void *data, struct qmi_header *indication, size_t len);
 	/**
 	 * @brief: called when a new QMI service appears on QRTR
 	 * @data: client data
@@ -108,7 +108,7 @@ unsigned long libqril_event_handlers_get_id(struct libqril_events *handlers);
  */
 int libqril_unregister_event_handlers(unsigned long hid);
 
-#define libqril_unregister_event_handlers_by_struct(handlers) \
+#define libqril_unregister_event_handlers_by_struct(handlers)                                      \
 	libqril_unregister_event_handlers(libqril_event_handlers_get_id(handlers))
 
 /**
@@ -117,13 +117,30 @@ int libqril_unregister_event_handlers(unsigned long hid);
  */
 void libqril_wait_for_qmi_service(enum qmi_service service);
 
+typedef void (*qmi_message_handler_t)(struct qmi_message_header *);
+
 /**
- * @brief: Send a message synchronously and populate resp with the response
+ * @brief Send a message synchronously and populate resp with the response
  * 
  * @msg: The header for the message to send
  * @resp: The response message
+ * 
+ * @returns 0 on success, positive QMI_ERR or negative err on failure
  */
 int libqril_send_message_sync(struct qmi_message_header *msg, struct qmi_message_header *resp);
+
+/**
+ * @brief send a message and call cb asynchronously with the response.
+ * Returns immediately.
+ * 
+ * @msg: The message to send
+ * @resp: The message response struct
+ * @cb: Callback function to process response
+ * 
+ * @returns 0 on success, negative err on failure
+ */
+int libqril_send_message_async(struct qmi_message_header *msg, struct qmi_message_header *resp,
+	qmi_message_handler_t *cb);
 
 /* This doesn't turn the modem on/off, but sets how it may operate */
 int libqril_dms_get_operating_mode(enum QmiDmsOperatingMode *mode);

@@ -129,47 +129,65 @@ struct wds_bind_subscription_resp { // 0x00af
 
 #define WDS_START_NETWORK_INTERFACE_REQ_NEW ({ \
 	struct wds_start_network_interface_req *ptr = malloc(sizeof(struct wds_start_network_interface_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_start_network_interface_req_ei; ptr })
 #define WDS_START_NETWORK_INTERFACE_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &wds_start_network_interface_req_ei, "start_network_interface_req", 0, NULL, 0, 0, {}, 0, 0, 0 }
 #define WDS_START_NETWORK_INTERFACE_RESP_NEW ({ \
 	struct wds_start_network_interface_resp *ptr = malloc(sizeof(struct wds_start_network_interface_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_start_network_interface_resp_ei; ptr })
 #define WDS_START_NETWORK_INTERFACE_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &wds_start_network_interface_resp_ei, "start_network_interface_resp", {}, 0, 0, {} }
 #define WDS_GET_PKT_SRVC_STATUS_IND_NEW ({ \
 	struct wds_get_pkt_srvc_status_ind *ptr = malloc(sizeof(struct wds_get_pkt_srvc_status_ind)); \
-	ptr->qmi_header->type = 4; ptr->qmi_header->msg_id = 0x0022; \
+	ptr->qmi_header->type = 4; \
+	ptr->qmi_header->msg_id = 0x0022; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_get_pkt_srvc_status_ind_ei; ptr })
 #define WDS_GET_PKT_SRVC_STATUS_IND_INITIALIZER { { 4, 0, 0x0022, 0 }, &wds_get_pkt_srvc_status_ind_ei, "get_pkt_srvc_status_ind", {}, 0, 0, 0 }
 #define WDS_GET_CURRENT_SETTINGS_REQ_NEW ({ \
 	struct wds_get_current_settings_req *ptr = malloc(sizeof(struct wds_get_current_settings_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x002d; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x002d; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_get_current_settings_req_ei; ptr })
 #define WDS_GET_CURRENT_SETTINGS_REQ_INITIALIZER { { 0, 0, 0x002d, 0 }, &wds_get_current_settings_req_ei, "get_current_settings_req", 0 }
 #define WDS_GET_CURRENT_SETTINGS_RESP_NEW ({ \
 	struct wds_get_current_settings_resp *ptr = malloc(sizeof(struct wds_get_current_settings_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x002d; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x002d; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_get_current_settings_resp_ei; ptr })
 #define WDS_GET_CURRENT_SETTINGS_RESP_INITIALIZER { { 2, 0, 0x002d, 0 }, &wds_get_current_settings_resp_ei, "get_current_settings_resp", {}, 0, 0, 0, 0, 0 }
 #define WDS_BIND_MUX_DATA_PORT_REQ_NEW ({ \
 	struct wds_bind_mux_data_port_req *ptr = malloc(sizeof(struct wds_bind_mux_data_port_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x00a2; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x00a2; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_bind_mux_data_port_req_ei; ptr })
 #define WDS_BIND_MUX_DATA_PORT_REQ_INITIALIZER { { 0, 0, 0x00a2, 0 }, &wds_bind_mux_data_port_req_ei, "bind_mux_data_port_req", {}, 0 }
 #define WDS_BIND_MUX_DATA_PORT_RESP_NEW ({ \
 	struct wds_bind_mux_data_port_resp *ptr = malloc(sizeof(struct wds_bind_mux_data_port_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x00a2; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x00a2; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_bind_mux_data_port_resp_ei; ptr })
 #define WDS_BIND_MUX_DATA_PORT_RESP_INITIALIZER { { 2, 0, 0x00a2, 0 }, &wds_bind_mux_data_port_resp_ei, "bind_mux_data_port_resp", {} }
 #define WDS_BIND_SUBSCRIPTION_REQ_NEW ({ \
 	struct wds_bind_subscription_req *ptr = malloc(sizeof(struct wds_bind_subscription_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x00af; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x00af; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_bind_subscription_req_ei; ptr })
 #define WDS_BIND_SUBSCRIPTION_REQ_INITIALIZER { { 0, 0, 0x00af, 0 }, &wds_bind_subscription_req_ei, "bind_subscription_req", 0 }
 #define WDS_BIND_SUBSCRIPTION_RESP_NEW ({ \
 	struct wds_bind_subscription_resp *ptr = malloc(sizeof(struct wds_bind_subscription_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x00af; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x00af; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wds_bind_subscription_resp_ei; ptr })
 #define WDS_BIND_SUBSCRIPTION_RESP_INITIALIZER { { 2, 0, 0x00af, 0 }, &wds_bind_subscription_resp_ei, "bind_subscription_resp", {} }
 

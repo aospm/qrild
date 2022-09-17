@@ -20,26 +20,8 @@
 
 #include "qmi_uim.h"
 
-void print_service(struct qmi_service_info *pkt)
-{
-	static int count = 0;
-	if (!pkt) {
-		count = 0;
-		return;
-	}
-
-	if (!count)
-		log_debug("| Type | Node | Port | Major | Minor | Service Name");
-
-	log_debug("| %4d | %4d | %5d | %4d  | %4d  | %s", pkt->type, pkt->node,
-	     pkt->port, pkt->major, pkt->minor,
-	     pkt->name ? pkt->name : "<unknown>");
-
-	count++;
-}
-
 void dump_messages(struct list_head *list) {
-	struct qrild_msg *msg;
+	struct libqril_message_lifetime *msg;
 	list_for_each_entry(msg, (list), li) {
 		log_info("{id: 0x%4x, txn: 0x%2x}", msg->msg_id, msg->txn);
 	}
@@ -52,7 +34,7 @@ void dump_messages(struct list_head *list) {
  * @state: RIL state object
  * @msg: The message to send
  */
-static int qrild_qrtr_send_msg(struct rild_state *state, struct qrild_msg *msg)
+static int qrild_qrtr_send_msg(struct rild_state *state, struct libqril_message_lifetime *msg)
 {
 	struct qmi_service_info service, *svc;
 	int rc;
@@ -90,7 +72,7 @@ static int qrild_qrtr_send_msg(struct rild_state *state, struct qrild_msg *msg)
  */
 int qrild_qrtr_send_queued(struct rild_state *state)
 {
-	struct qrild_msg *msg;
+	struct libqril_message_lifetime *msg;
 
 	q_thread_mutex_lock(&state->msg_mutex);
 	list_for_each_entry(msg, &state->pending_tx, li) {
@@ -135,7 +117,7 @@ int qrild_qrtr_send_to_service(struct rild_state *state,
 			       enum qmi_service svc_id, const void *data,
 			       size_t sz, bool sync, int timeout_ms)
 {
-	struct qrild_msg *msg, *msg2;
+	struct libqril_message_lifetime *msg, *msg2;
 	const struct qmi_header *qmi;
 	struct timespec timeout; // = {0, 1000000 * timeout_ms};
 	int rc = 0;
@@ -210,7 +192,7 @@ int qrild_qrtr_send_to_service_async(struct rild_state *state,
 			       enum qmi_service svc_id, const void *data,
 			       size_t sz, async_msg_handler_t handler)
 {
-	struct qrild_msg *msg, *msg2;
+	struct libqril_message_lifetime *msg, *msg2;
 	const struct qmi_header *qmi;
 	struct timespec timeout; // = {0, 1000000 * timeout_ms};
 	int rc = 0;
@@ -250,7 +232,7 @@ void qrild_qrtr_recv(struct rild_state *state)
 	int svc_id;
 	const struct qmi_header *qmi;
 	struct qmi_tlv *tlv;
-	struct qrild_msg *msg;
+	struct libqril_message_lifetime *msg;
 	memset(&svc_name, 0, 32);
 
 	ret = recvfrom(state->sock, buf, 256, 0, (void *)&sq, &sl);
@@ -385,7 +367,7 @@ void qrild_qmi_result_print(struct qmi_response_type_v01 *res)
  */
 int qrild_msg_send_sync(struct rild_state *state, enum qmi_service svc_id,
 			void *data, size_t sz, int timeout_ms,
-			struct qrild_msg **resp)
+			struct libqril_message_lifetime **resp)
 {
 	struct qrtr_packet pkt;
 	unsigned short txn_id;
@@ -430,7 +412,7 @@ int qrild_msg_send_resp_check(struct rild_state *state,
 				     size_t sz, int timeout_ms, struct qmi_response_type_v01 *res)
 {
 	struct qmi_tlv *tlv;
-	struct qrild_msg *resp = NULL;
+	struct libqril_message_lifetime *resp = NULL;
 	struct qmi_response_type_v01 *_res;
 	int rc;
 
@@ -462,7 +444,7 @@ int qrild_msg_send_resp_check(struct rild_state *state,
  * @resp: The response to fill if the request is synchronous, unused for async
  * @sync: Should we wait for the response message?
  */
-static inline int qrild_qmi_send_basic_request(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id, struct qrild_msg **resp, bool sync)
+static inline int qrild_qmi_send_basic_request(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id, struct libqril_message_lifetime **resp, bool sync)
 {
 	void *buf;
 	size_t buf_sz;
@@ -488,7 +470,7 @@ static inline int qrild_qmi_send_basic_request(struct rild_state *state, enum qm
  * @msg_id: The message ID of the request
  * @resp: The response to fill.
  */
-int qrild_qmi_send_basic_request_sync(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id, struct qrild_msg **resp)
+int qrild_qmi_send_basic_request_sync(struct rild_state *state, enum qmi_service svc_id, uint32_t msg_id, struct libqril_message_lifetime **resp)
 {
 	return qrild_qmi_send_basic_request(state, svc_id, msg_id, resp, true);
 }
@@ -513,12 +495,12 @@ int qrild_qmi_send_basic_request_async(struct rild_state *state, enum qmi_servic
  * @service: The QMI service the message is for/from
  * @shared_mutex: A pointer to the shared mutex used for accessing message objects
  * 
- * @returns The created struct qrild_msg object.
+ * @returns The created struct libqril_message_lifetime object.
  */
-struct qrild_msg *qrild_msg_new(uint16_t txn, uint32_t msg_id,
+struct libqril_message_lifetime *qrild_msg_new(uint16_t txn, uint32_t msg_id,
 	pthread_mutex_t *shared_mutex)
 {
-	struct qrild_msg *msg = zalloc(sizeof(struct qrild_msg));
+	struct libqril_message_lifetime *msg = zalloc(sizeof(struct libqril_message_lifetime));
 	msg->txn = txn;
 	msg->msg_id = msg_id;
 	msg->mut = shared_mutex;
@@ -533,7 +515,7 @@ struct qrild_msg *qrild_msg_new(uint16_t txn, uint32_t msg_id,
  * @state: RIL state object
  * @msg: the message to free
  */
-void qrild_msg_free_locked(struct qrild_msg *msg)
+void qrild_msg_free_locked(struct libqril_message_lifetime *msg)
 {
 	if (!msg) {
 		log_error("%s called for NULL msg", __func__);
@@ -547,7 +529,7 @@ void qrild_msg_free_locked(struct qrild_msg *msg)
 	msg = NULL;
 }
 
-void qrild_msg_free(struct qrild_msg *msg)
+void qrild_msg_free(struct libqril_message_lifetime *msg)
 {
 	pthread_mutex_t *mut = msg->mut;
 	q_thread_mutex_lock(mut);
@@ -555,38 +537,6 @@ void qrild_msg_free(struct qrild_msg *msg)
 	qrild_msg_free_locked(msg);
 
 	q_thread_mutex_unlock(mut);
-}
-
-
-
-int qmi_service_get_port(struct list_head *list, enum qmi_service svc)
-{
-	struct qmi_service_info *service = qmi_service_get(list, svc);
-	return service ? service->port : -1;
-}
-
-/**
- * @brief Get the qmi_service_info for a particular service
- * NOTE: Must be called with services_mutex locked!
- * 
- * @list: The list of services to search
- * @svc: The service ID
- * 
- * @returns the service or NULL if it isn't in the list
- */
-struct qmi_service_info *qmi_service_from_port(struct list_head *list,
-					 uint16_t port)
-{
-	struct qmi_service_info *service, *out = NULL;
-	list_for_each_entry(service, list, li)
-	{
-		if (service->port == port) {
-			out = service;
-			break;
-		};
-	}
-
-	return out;
 }
 
 const struct enum_value qmi_error_names[] = {

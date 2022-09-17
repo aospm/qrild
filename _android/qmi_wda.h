@@ -40,12 +40,16 @@ struct wda_set_data_format_resp { // 0x0020
 
 #define WDA_SET_DATA_FORMAT_REQ_NEW ({ \
 	struct wda_set_data_format_req *ptr = malloc(sizeof(struct wda_set_data_format_req)); \
-	ptr->qmi_header->type = 0; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 0; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wda_set_data_format_req_ei; ptr })
 #define WDA_SET_DATA_FORMAT_REQ_INITIALIZER { { 0, 0, 0x0020, 0 }, &wda_set_data_format_req_ei, "set_data_format_req", 0, 0, 0, 0, 0, {} }
 #define WDA_SET_DATA_FORMAT_RESP_NEW ({ \
 	struct wda_set_data_format_resp *ptr = malloc(sizeof(struct wda_set_data_format_resp)); \
-	ptr->qmi_header->type = 2; ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->type = 2; \
+	ptr->qmi_header->msg_id = 0x0020; \
+	ptr->qmi_header->service = 0x00; \
 	ptr->ei = &wda_set_data_format_resp_ei; ptr })
 #define WDA_SET_DATA_FORMAT_RESP_INITIALIZER { { 2, 0, 0x0020, 0 }, &wda_set_data_format_resp_ei, "set_data_format_resp", {} }
 
