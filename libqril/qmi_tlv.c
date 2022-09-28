@@ -210,17 +210,9 @@ int qmi_tlv_set_array(struct qmi_tlv *tlv, uint8_t id, size_t len_size,
 	return 0;
 }
 
-struct qmi_response_type_v01 *qmi_tlv_get_result(struct qmi_tlv *tlv)
+struct qmi_response_type_v01 qmi_tlv_get_result(struct qmi_tlv *tlv)
 {
-	return qmi_tlv_get(tlv, 2, NULL);
+	struct qmi_response_type_v01 res;
+	res = *(struct qmi_response_type_v01 *)qmi_tlv_get(tlv, 2, NULL);
+	return res;
 }
-
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define LINE_LENGTH 40
-
-static inline uint8_t to_hex(uint8_t ch)
-{
-	ch &= 0xf;
-	return ch <= 9 ? '0' + ch : 'a' + ch - 10;
-}
-

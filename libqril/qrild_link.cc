@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022, Linaro Ltd.
+ * Author: Caleb Connolly <caleb.connolly@linaro.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,8 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
- * qrild_link.c: rmnet link configuration
  */
 
 #include <arpa/inet.h>
@@ -35,13 +34,16 @@
 #include <linux/rtnetlink.h>
 #include <linux/netlink.h>
 #include <linux/if_addr.h>
+
+#ifndef __USE_MISC
 #define __USE_MISC
+#endif
+
 #include <net/if.h>
 #include <net/if_arp.h>
 
 #include "q_log.h"
 
-#include "qrild.h"
 #include "util.h"
 
 #define RMNET_DATA_TYPE "rmnet"
@@ -133,7 +135,7 @@ static int qrild_link_open()
 
 	sock_fd = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
 	if (sock_fd < 0)
-		return QRILD_STATE_ERROR;
+		return -1;
 
 	if (setsockopt(sock_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) < 0) {
 		log_error("SO_SNDBUF: %d (%s)", errno, strerror(errno));
@@ -160,11 +162,9 @@ static int qrild_link_send(nlmessage *msg)
 {
 	struct sockaddr_nl dest_addr;
 	struct msghdr skmsg;
-	struct nlmsghdr *hdr;
 	struct iovec iov, resp;
 
 	uint8_t *buf;
-	size_t recv_len;
 
 	memset(&dest_addr, 0, sizeof(dest_addr));
 	dest_addr.nl_family = AF_NETLINK;
@@ -202,7 +202,7 @@ static int qrild_link_send(nlmessage *msg)
 	// log_info("Reply len: %u, type: %u, flags: %u, seq: %u, pid: %u", hdr->nlmsg_len, hdr->nlmsg_type, hdr->nlmsg_flags, hdr->nlmsg_seq, hdr->nlmsg_pid);
 	// close(sock_fd);
 
-	return QRILD_STATE_DONE;
+	return 0;
 }
 
 /**
@@ -218,7 +218,6 @@ int qrild_link_add_link(const char *ifname, uint32_t base_ifindex, uint16_t mux_
 	struct rtattr *link, *data;
 	struct ifinfomsg *ifi;
 	struct ifla_rmnet_flags flags;
-	uint32_t link_off, mux_off;
 
 	//log_info("Before create msg");
 	msg = nl_message_new(RTM_NEWLINK, NLM_F_CREATE | NLM_F_EXCL, sizeof(struct ifinfomsg));
@@ -262,7 +261,7 @@ int qrild_link_add_link(const char *ifname, uint32_t base_ifindex, uint16_t mux_
 	qrild_link_send(msg);
 	nl_free(msg);
 
-	return QRILD_STATE_DONE;
+	return 0;
 }
 
 int qrild_link_set_addr(const char *dev_ifname, struct in_addr *addr, struct in_addr *mask)
@@ -280,7 +279,7 @@ int qrild_link_set_addr(const char *dev_ifname, struct in_addr *addr, struct in_
 	if (!dev_ifindex) {
 		log_error("%s: Couldn't find dev '%s'", __func__, dev_ifname);
 		nl_free(msg);
-		return QRILD_STATE_ERROR;
+		return -1;
 	}
 
 	ifa = nl_hdr_ifaddr(msg);
@@ -295,10 +294,10 @@ int qrild_link_set_addr(const char *dev_ifname, struct in_addr *addr, struct in_
 	qrild_link_send(msg);
 	nl_free(msg);
 
-	return QRILD_STATE_DONE;
+	return 0;
 }
 
-int qrild_link_add_default_route(char *dev_ifname, struct in_addr *gateway)
+int qrild_link_add_default_route(const char *dev_ifname, struct in_addr *gateway)
 {
 	nlmessage *msg;
 	struct rtmsg *rt;
@@ -320,7 +319,7 @@ int qrild_link_add_default_route(char *dev_ifname, struct in_addr *gateway)
 	if (!dev_ifindex) {
 		log_error("%s: Couldn't find dev '%s'", __func__, dev_ifname);
 		nl_free(msg);
-		return QRILD_STATE_ERROR;
+		return -1;
 	}
 
 	// Index of "output interface", it's rmnet_data0 here
@@ -329,7 +328,7 @@ int qrild_link_add_default_route(char *dev_ifname, struct in_addr *gateway)
 	qrild_link_send(msg);
 	nl_free(msg);
 
-	return QRILD_STATE_DONE;
+	return 0;
 }
 
 int qrild_link_set_up(const char *dev_ifname)
@@ -361,7 +360,7 @@ int qrild_link_set_up(const char *dev_ifname)
 				  strerror(errno));
 	}
 
-	return QRILD_STATE_DONE;
+	return 0;
 }
 
 extern "C" int qrild_link_configure(struct in_addr *addr, struct in_addr *mask,

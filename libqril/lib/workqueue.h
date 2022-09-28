@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-__BEGIN_DECLS
-
-#define Q_WORK_N_THREADS 6
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct q_work {
 	void *data;
@@ -19,9 +19,8 @@ static inline int q_work_schedule_now(struct q_work *work)
 	return q_work_schedule_delayed(work, 0);
 }
 
-int q_threads_exitall();
-
-
-__END_DECLS
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __Q_WORKQUEUE_H__

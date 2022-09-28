@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2022, Linaro Ltd.
+ * Author: Caleb Connolly <caleb.connolly@linaro.org>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include <errno.h>
 #include <linux/qrtr.h>
 #include <stdbool.h>
@@ -6,21 +22,21 @@
 #include <string.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include <arpa/inet.h>
 
 #include "q_log.h"
+#include "workqueue_priv.h"
 #include "util.h"
 #include "libqril.h"
 #include "libqril_events.h"
-
 #include "libqril_private.h"
 
-static struct libqril_state *state;
+static enum modem_state modem_state;
 
 static void q_log_lock(bool lock, void *data)
 {
-	struct rild_state *state = data;
 	static pthread_mutex_t print_mtex = PTHREAD_MUTEX_INITIALIZER;
 
 	if (lock) {
@@ -30,7 +46,7 @@ static void q_log_lock(bool lock, void *data)
 	}
 }
 
-static void *main_loop(void * _)
+static void *_main_loop(void * _)
 {
 	while (true) {
 		sleep(1);
@@ -39,81 +55,27 @@ static void *main_loop(void * _)
 	return NULL;
 }
 
-struct wait_for_qmi_service_data {
-	pthread_mutex_t mtex;
-	pthread_cond_t cond;
-	enum qmi_service service;
-};
-
-static void _on_service_new(void *_data, enum qmi_service service)
-{
-	struct wait_for_qmi_service_data *data = _data;
-
-	if (service != data->service)
-		return;
-	
-	q_thread_mutex_lock(&data->mtex);
-	pthread_cond_broadcast(&data->cond);
-	q_thread_mutex_unlock(&data->mtex);
+void dump_state(int x) {
+	messages_dump_pending();
+	q_thread_dump_locks();
 }
 
-void libqril_wait_for_qmi_service(enum qmi_service service)
-{
-	struct wait_for_qmi_service_data data;
-	struct libqril_events handler = {
-		.on_service_new = _on_service_new,
-	};
-
-	log_debug("Waiting for service %s", qmi_service_to_string(service, false));
-
-	data.mtex = PTHREAD_MUTEX_INITIALIZER;
-	data.cond = PTHREAD_COND_INITIALIZER;
-	data.service = service;
-
-	libqril_register_event_handlers(&handler, &data);
-
-	q_thread_mutex_lock(&data.mtex);
-	q_thread_cond_wait(&data.cond, &data.mtex);
-	q_thread_mutex_unlock(&data.mtex);
-
-	libqril_unregister_event_handlers_by_struct(&handler);
-}
+/****** Public API *******/
 
 void libqril_init()
 {
-	int rc;
-	pthread_t msg_thread;
 	pthread_t main_thread;
 
-	pthread_mutexattr_t mattr;
-	pthread_condattr_t cattr;
-
-	state = zalloc(sizeof(struct libqril_state));
-
-	log_set_lock(q_log_lock, state);
+	log_set_level(QLOG_TRACE);
+	log_set_lock(q_log_lock, NULL);
 
 	q_workqueue_init();
 
-	list_init(&state->services);
-	list_init(&state->pending_rx);
-	list_init(&state->pending_tx);
-
-	pthread_mutexattr_init(&mattr);
-	pthread_condattr_init(&cattr);
-
-	pthread_mutex_init(&state->services_mutex, &mattr);
-	pthread_mutex_init(&state->msg_mutex, &mattr);
-	pthread_cond_init(&state->msg_change, &cattr);
-	pthread_cond_init(&state->pending_indications, &cattr);
-	pthread_mutex_init(&state->connection_status_mutex, &mattr);
-	pthread_cond_init(&state->connection_status_change, &cattr);
-
+	services_init();
 	messages_init();
 
-	// Wait for the modem to be discovered
-	libqril_wait_for_qmi_service(QMI_SERVICE_DMS);
-
-	if (pthread_create(&main_thread, NULL, main_loop, NULL)) {
+	// Doesn't do much for now, but that might change
+	if (pthread_create(&main_thread, NULL, _main_loop, NULL)) {
 		log_error("Failed to create msg thread");
 		abort();
 	}
@@ -123,11 +85,13 @@ void libqril_init()
 
 enum modem_state libqril_modem_state()
 {
-	return state->modem_state;
+	return modem_state;
 }
 
-int libqril_modem_activate()
+const char *libqril_strerror(int err)
 {
-	else if (state->modem_state != STATE_OFFLINE)
-		return -EINVAL;
+	if (err < 0)
+		return strerror(err);
+	else
+		return libqril_qmi_error_string(err);
 }

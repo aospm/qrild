@@ -1,5 +1,18 @@
 /*
- * Handles available QMI services
+ * Copyright (C) 2022, Linaro Ltd.
+ * Author: Caleb Connolly <caleb.connolly@linaro.org>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <errno.h>
@@ -13,18 +26,21 @@
 
 #include <arpa/inet.h>
 
-#include "libqrtr.h"
+#include <libqrtr.h>
 
-#include "q_log.h"
-#include "util.h"
-#include "list.h"
 #include "libqril.h"
-#include "libqril_services.h"
-
+#include "util.h"
 #include "libqril_private.h"
 
+static void _wait_service_discovery_done_on_done();
+
 static pthread_mutex_t services_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t service_discovery_done = PTHREAD_COND_INITIALIZER;
 static struct list_head services = LIST_INIT(services);
+
+static struct libqril_events discovery_done_handler = {
+	.on_service_discovery_done = _wait_service_discovery_done_on_done,
+};
 
 #define service_for_each(s) list_for_each_entry(s, &services, li)
 
@@ -40,6 +56,11 @@ struct qmi_service_info {
 	struct list_head li;
 };
 
+struct wait_for_qmi_service_data {
+	pthread_cond_t cond;
+	enum qmi_service service;
+};
+
 struct qmi_service_info *_qmi_service_get(enum qmi_service type)
 {
 	struct qmi_service_info *service, *out = NULL;
@@ -52,6 +73,7 @@ struct qmi_service_info *_qmi_service_get(enum qmi_service type)
 	return out;
 }
 
+// FIXME: this is pretty ugly
 void _log_service(struct qmi_service_info *info)
 {
 	static int count = 0;
@@ -70,6 +92,13 @@ void _log_service(struct qmi_service_info *info)
 	count++;
 }
 
+static void _wait_service_discovery_done_on_done(enum qmi_service service)
+{
+	q_thread_mutex_lock(&services_mutex);
+	pthread_cond_broadcast(&service_discovery_done);
+	q_thread_mutex_unlock(&services_mutex);
+}
+
 /***** Internal API *****/
 
 int qmi_service_get(enum qmi_service type, int *port, int *node)
@@ -86,7 +115,7 @@ int qmi_service_get(enum qmi_service type, int *port, int *node)
 		*port = service->port;
 	if (node)
 		*node = service->node;
-	
+
 	q_thread_mutex_unlock(&services_mutex);
 	return 0;
 }
@@ -94,14 +123,14 @@ int qmi_service_get(enum qmi_service type, int *port, int *node)
 int qmi_service_get_port(enum qmi_service type)
 {
 	int port;
-	int rc = qmi_servie_get(type, &port, NULL);
+	int rc = qmi_service_get(type, &port, NULL);
 	return rc ?: port;
 }
 
 int qmi_service_get_node(enum qmi_service type)
 {
 	int node;
-	int rc = qmi_servie_get(type, NULL, &node);
+	int rc = qmi_service_get(type, NULL, &node);
 	return rc ?: node;
 }
 
@@ -123,19 +152,29 @@ int qmi_service_from_port(uint16_t port, enum qmi_service *type)
 
 void qmi_service_new(struct qrtr_packet *pkt)
 {
-	struct qmi_service_info *service = zalloc(sizeof(struct qmi_service_info));
+	struct qmi_service_info *service;
+	// If the pkt is all empty that means all services have been
+	// discovered
+	if (!pkt->service && !pkt->node && !pkt->port && !pkt->instance) {
+		log_trace("Got null service, firing service discovery done event");
+		event_service_discovery_done();
+		return;
+	}
+
+	service = zalloc(sizeof(struct qmi_service_info));
 
 	service->type = pkt->service;
 	service->node = pkt->node;
 	service->port = pkt->port;
 	service->major = pkt->instance & 0xff;
 	service->minor = pkt->instance >> 8;
-	service->name = qmi_service_get_name(service->type);
+	service->name = libqril_qmi_service_name(service->type);
 
 	_log_service(service);
 
 	q_thread_mutex_lock(&services_mutex);
 	list_append(&services, &service->li);
+	event_service_new(service->type);
 	q_thread_mutex_unlock(&services_mutex);
 }
 
@@ -145,7 +184,7 @@ void qmi_service_goodbye(enum qmi_service type)
 
 	q_thread_mutex_lock(&services_mutex);
 
-	service = qmi_service_get(type);
+	service = _qmi_service_get(type);
 	if (!service)
 		return;
 
@@ -154,9 +193,18 @@ void qmi_service_goodbye(enum qmi_service type)
 	list_remove(&service->li);
 	q_thread_mutex_unlock(&services_mutex);
 	free(service);
+
+	event_service_goodbye(type);
 }
 
-const char *qmi_service_get_name(enum qmi_service service)
+void services_init()
+{
+	libqril_register_event_handlers(&discovery_done_handler, NULL);
+}
+
+/****** Public API *******/
+
+const char *libqril_qmi_service_name(enum qmi_service service)
 {
 	const struct enum_value *v = &qmi_service_values[0];
 	while (v->value_str) {
@@ -167,6 +215,24 @@ const char *qmi_service_get_name(enum qmi_service service)
 
 	return "<UNKNOWN>";
 }
+
+void libqril_wait_for_service_discovery()
+{
+	log_debug("Waiting for services to be discovered");
+
+	q_thread_mutex_lock(&services_mutex);
+	while (q_thread_cond_wait(&service_discovery_done, &services_mutex));
+	q_thread_mutex_unlock(&services_mutex);
+
+	log_trace("Got service discovery done notification!");
+}
+
+int libqril_qmi_service_online(enum qmi_service service)
+{
+	return qmi_service_get(service, NULL, NULL);
+}
+
+/****** Debugging data *******/
 
 const struct enum_value qmi_service_values[] = {
 	{ QMI_SERVICE_UNKNOWN, "QMI_SERVICE_UNKNOWN", "unknown" },

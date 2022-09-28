@@ -1,48 +1,7 @@
-cc_library {
-    name: "libqril",
-    vendor: true,
-    srcs: [
-        "libqril/libqril.c",
-        "libqril/libqril_events.c",
-        "libqril/libqril_services.c",
-        "libqril/libqril_messages.c",
-        // Old library stuff
-        "libqril/qrild_qmi.c",
-        "libqril/qrild_msg.c",
-        "libqril/qrild_link.cc",
-        "libqril/util.c",
-        "libqril/q_log.c",
-        "libqril/workqueue.c",
-        "libqril/timespec.c",
-        // Generated with qmic
-        "_android/qmi_dms.c",
-        "_android/qmi_dpm.c",
-        "_android/qmi_nas.c",
-        "_android/qmi_uim.c",
-        "_android/qmi_wda.c",
-        "_android/qmi_wds.c",
-    ],
-    shared_libs: [
-        "libqrtr",
-        "libril-modem-lib",
-        "libcutils",
-        "libutils",
-    ],
-    local_include_dirs: [
-        "libqril",
-    ],
-    cflags: ["-fPIC", "-Wno-error"],
-    export_include_dirs: [
-        "libqril/lib",
-        "_android",
-    ],
-}
-
 cc_binary {
     name: "android.hardware.radio-service",
     vendor: true,
     srcs: [
-        "qrild/qrild.c",
         "qrild/qrild_android.cc",
         "qrild/qrild_android_config.cc",
         "qrild/qrild_android_data.cc",

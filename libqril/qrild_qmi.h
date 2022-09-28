@@ -8,7 +8,9 @@
 #include "qmi_dms.h"
 #include "qmi_wds.h"
 
-__BEGIN_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define QMI_RESULT_SUCCESS 0
 #define QMI_RESULT_FAILURE 1
@@ -76,11 +78,10 @@ int qrild_qmi_uim_read_record(struct rild_state *state, struct uim_read_record_r
 int qrild_qmi_uim_get_file_attrs(struct rild_state *state, struct uim_get_file_attrs_req_data *data,
 				 struct uim_get_file_attrs_resp_data *resp_data);
 
-const char *qmi_service_to_string(enum qmi_service service, bool short_name);
-const char *qmi_error_string(uint16_t err);
-
 int qrild_qmi_idle(struct rild_state *state);
 int qrild_qmi_process_indications(struct rild_state *state);
 
-__END_DECLS
+#ifdef __cplusplus
+}
+#endif
 #endif

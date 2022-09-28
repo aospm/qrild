@@ -8,9 +8,9 @@
 #include "qmi_wda.h"
 #include "qmi_wds.h"
 
-__BEGIN_DECLS
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * QmiProtocolError:
@@ -145,132 +145,136 @@ __BEGIN_DECLS
   * Since: 1.0
   */
 enum qmi_error { /*< since=1.0 >*/
-  QMI_ERR_NONE                             = 0,  /*< nick=None >*/
-  QMI_ERR_MALFORMED_MESSAGE                = 1,  /*< nick=MalformedMessage >*/
-  QMI_ERR_NO_MEMORY                        = 2,  /*< nick=NoMemory >*/
-  QMI_ERR_INTERNAL                         = 3,  /*< nick=Internal >*/
-  QMI_ERR_ABORTED                          = 4,  /*< nick=Aborted >*/
-  QMI_ERR_CLIENT_IDS_EXHAUSTED             = 5,  /*< nick=ClientIdsExhausted >*/
-  QMI_ERR_UNABORTABLE_TRANSACTION          = 6,  /*< nick=UnabortableTransaction >*/
-  QMI_ERR_INVALID_CLIENT_ID                = 7,  /*< nick=InvalidClientId >*/
-  QMI_ERR_NO_THRESHOLDS_PROVIDED           = 8,  /*< nick=NoThresholdsProvided >*/
-  QMI_ERR_INVALID_HANDLE                   = 9,  /*< nick=InvalidHandle >*/
-  QMI_ERR_INVALID_PROFILE                  = 10, /*< nick=InvalidProfile >*/
-  QMI_ERR_INVALID_PIN_ID                   = 11, /*< nick=InvalidPinId >*/
-  QMI_ERR_INCORRECT_PIN                    = 12, /*< nick=IncorrectPin >*/
-  QMI_ERR_NO_NETWORK_FOUND                 = 13, /*< nick=NoNetworkFound >*/
-  QMI_ERR_CALL_FAILED                      = 14, /*< nick=CallFailed >*/
-  QMI_ERR_OUT_OF_CALL                      = 15, /*< nick=OutOfCall >*/
-  QMI_ERR_NOT_PROVISIONED                  = 16, /*< nick=NotProvisioned >*/
-  QMI_ERR_MISSING_ARGUMENT                 = 17, /*< nick=MissingArgument >*/
-  QMI_ERR_ARGUMENT_TOO_LONG                = 19, /*< nick=ArgumentTooLong >*/
-  QMI_ERR_INVALID_TRANSACTION_ID           = 22, /*< nick=InvalidTransactionId >*/
-  QMI_ERR_DEVICE_IN_USE                    = 23, /*< nick=DeviceInUse >*/
-  QMI_ERR_NETWORK_UNSUPPORTED              = 24, /*< nick=NetworkUnsupported >*/
-  QMI_ERR_DEVICE_UNSUPPORTED               = 25, /*< nick=DeviceUnsupported >*/
-  QMI_ERR_NO_EFFECT                        = 26, /*< nick=NoEffect >*/
-  QMI_ERR_NO_FREE_PROFILE                  = 27, /*< nick=NoFreeProfile >*/
-  QMI_ERR_INVALID_PDP_TYPE                 = 28, /*< nick=InvalidPdpType >*/
-  QMI_ERR_INVALID_TECHNOLOGY_PREFERENCE    = 29, /*< nick=InvalidTechnologyPreference >*/
-  QMI_ERR_INVALID_PROFILE_TYPE             = 30, /*< nick=InvalidProfileType >*/
-  QMI_ERR_INVALID_SERVICE_TYPE             = 31, /*< nick=InvalidServiceType >*/
-  QMI_ERR_INVALID_REGISTER_ACTION          = 32, /*< nick=InvalidRegisterAction >*/
-  QMI_ERR_INVALID_PS_ATTACH_ACTION         = 33, /*< nick=InvalidPsAttachAction >*/
-  QMI_ERR_AUTHENTICATION_FAILED            = 34, /*< nick=AuthenticationFailed >*/
-  QMI_ERR_PIN_BLOCKED                      = 35, /*< nick=PinBlocked >*/
-  QMI_ERR_PIN_ALWAYS_BLOCKED               = 36, /*< nick=PinAlwaysBlocked >*/
-  QMI_ERR_UIM_UNINITIALIZED                = 37, /*< nick=UimUninitialized >*/
-  QMI_ERR_MAXIMUM_QOS_REQUESTS_IN_USE      = 38, /*< nick=MaximumQosRequestsInUse >*/
-  QMI_ERR_INCORRECT_FLOW_FILTER            = 39, /*< nick=IncorrectFlowFilter >*/
-  QMI_ERR_NETWORK_QOS_UNAWARE              = 40, /*< nick=NetworkQosUnaware >*/
-  QMI_ERR_INVALID_QOS_ID                   = 41, /*< nick=InvalidQosId >*/
-  QMI_ERR_REQUESTED_NUMBER_UNSUPPORTED     = 42, /*< nick=RequestedNumberUnsupported >*/
-  QMI_ERR_INTERFACE_NOT_FOUND              = 43, /*< nick=InterfaceNotFound >*/
-  QMI_ERR_FLOW_SUSPENDED                   = 44, /*< nick=FlowSuspended >*/
-  QMI_ERR_INVALID_DATA_FORMAT              = 45, /*< nick=InvalidDataFormat >*/
-  QMI_ERR_GENERAL_ERROR                    = 46, /*< nick=GeneralError >*/
-  QMI_ERR_UNKNOWN_ERROR                    = 47, /*< nick=UnknownError >*/
-  QMI_ERR_INVALID_ARGUMENT                 = 48, /*< nick=InvalidArgument >*/
-  QMI_ERR_INVALID_INDEX                    = 49, /*< nick=InvalidIndex >*/
-  QMI_ERR_NO_ENTRY                         = 50, /*< nick=NoEntry >*/
-  QMI_ERR_DEVICE_STORAGE_FULL              = 51, /*< nick=DeviceStorageFull >*/
-  QMI_ERR_DEVICE_NOT_READY                 = 52, /*< nick=DeviceNotReady >*/
-  QMI_ERR_NETWORK_NOT_READY                = 53, /*< nick=NetworkNotReady >*/
-  QMI_ERR_WMS_CAUSE_CODE                   = 54, /*< nick=WmsCauseCode >*/
-  QMI_ERR_WMS_MESSAGE_NOT_SENT             = 55, /*< nick=WmsMessageNotSent >*/
-  QMI_ERR_WMS_MESSAGE_DELIVERY_FAILURE     = 56, /*< nick=WmsMessageDeliveryFailure >*/
-  QMI_ERR_WMS_INVALID_MESSAGE_ID           = 57, /*< nick=WmsInvalidMessageId >*/
-  QMI_ERR_WMS_ENCODING                     = 58, /*< nick=WmsEncoding >*/
-  QMI_ERR_AUTHENTICATION_LOCK              = 59, /*< nick=AuthenticationLock >*/
-  QMI_ERR_INVALID_TRANSITION               = 60, /*< nick=InvalidTransition >*/
-  QMI_ERR_NOT_MCAST_INTERFACE              = 61, /*< nick=NotMcastInterface >*/
-  QMI_ERR_MAXIMUM_MCAST_REQUESTS_IN_USE    = 62, /*< nick=MaximumMcastRequestsInUse >*/
-  QMI_ERR_INVALID_MCAST_HANDLE             = 63, /*< nick=InvalidMcastHandle >*/
-  QMI_ERR_INVALID_IP_FAMILY_PREFERENCE     = 64, /*< nick=InvalidIpFamilyPreference >*/
-  QMI_ERR_SESSION_INACTIVE                 = 65, /*< nick=SessionInactive >*/
-  QMI_ERR_SESSION_INVALID                  = 66, /*< nick=SessionInvalid >*/
-  QMI_ERR_SESSION_OWNERSHIP                = 67, /*< nick=SessionOwnership >*/
-  QMI_ERR_INSUFFICIENT_RESOURCES           = 68, /*< nick=InsufficientResources >*/
-  QMI_ERR_DISABLED                         = 69, /*< nick=Disabled >*/
-  QMI_ERR_INVALID_OPERATION                = 70, /*< nick=InvalidOperation >*/
-  QMI_ERR_INVALID_QMI_COMMAND              = 71, /*< nick=InvalidQmiCommand >*/
-  QMI_ERR_WMS_T_PDU_TYPE                   = 72, /*< nick=WmsTPduType >*/
-  QMI_ERR_WMS_SMSC_ADDRESS                 = 73, /*< nick=WmsSmscAddress >*/
-  QMI_ERR_INFORMATION_UNAVAILABLE          = 74, /*< nick=InformationUnavailable >*/
-  QMI_ERR_SEGMENT_TOO_LONG                 = 75, /*< nick=SegmentTooLong >*/
-  QMI_ERR_SEGMENT_ORDER                    = 76, /*< nick=SegmentOrder >*/
-  QMI_ERR_BUNDLING_NOT_SUPPORTED           = 77, /*< nick=BundlingNotSupported >*/
-  QMI_ERR_OPERATION_PARTIAL_FAILURE        = 78, /*< nick=OperationPartialFailure >*/
-  QMI_ERR_POLICY_MISMATCH                  = 79, /*< nick=PolicyMismatch >*/
-  QMI_ERR_SIM_FILE_NOT_FOUND               = 80, /*< nick=SimFileNotFound >*/
-  QMI_ERR_EXTENDED_INTERNAL                = 81, /*< nick=ExtendedInternal >*/
-  QMI_ERR_ACCESS_DENIED                    = 82, /*< nick=AccessDenied >*/
-  QMI_ERR_HARDWARE_RESTRICTED              = 83, /*< nick=HardwareRestricted >*/
-  QMI_ERR_ACK_NOT_SENT                     = 84, /*< nick=AckNotSent >*/
-  QMI_ERR_INJECT_TIMEOUT                   = 85, /*< nick=InjectTimeout >*/
-  QMI_ERR_INCOMPATIBLE_STATE               = 90, /*< nick=IncompatibleState >*/
-  QMI_ERR_FDN_RESTRICT                     = 91, /*< nick=FdnRestrict >*/
-  QMI_ERR_SUPS_FAILURE_CASE                = 92, /*< nick=SupsFailureCase >*/
-  QMI_ERR_NO_RADIO                         = 93, /*< nick=NoRadio >*/
-  QMI_ERR_NOT_SUPPORTED                    = 94, /*< nick=NotSupported >*/
-  QMI_ERR_NO_SUBSCRIPTION                  = 95, /*< nick=NoSubscription >*/
-  QMI_ERR_CARD_CALL_CONTROL_FAILED         = 96, /*< nick=CardCallControlFailed >*/
-  QMI_ERR_NETWORK_ABORTED                  = 97, /*< nick=NetworkAborted >*/
-  QMI_ERR_MSG_BLOCKED                      = 98, /*< nick=MsgBlocked >*/
-  QMI_ERR_INVALID_SESSION_TYPE             = 100, /*< nick=InvalidSessionType >*/
-  QMI_ERR_INVALID_PB_TYPE                  = 101, /*< nick=InvalidPbType >*/
-  QMI_ERR_NO_SIM                           = 102, /*< nick=NoSim >*/
-  QMI_ERR_PB_NOT_READY                     = 103, /*< nick=PbNotReady >*/
-  QMI_ERR_PIN_RESTRICTION                  = 104, /*< nick=PinRestriction >*/
-  QMI_ERR_PIN2_RESTRICTION                 = 105, /*< nick=Pin1Restriction >*/
-  QMI_ERR_PUK_RESTRICTION                  = 106, /*< nick=PukRestriction >*/
-  QMI_ERR_PUK2_RESTRICTION                 = 107, /*< nick=Puk2Restriction >*/
-  QMI_ERR_PB_ACCESS_RESTRICTED             = 108, /*< nick=PbAccessRestricted >*/
-  QMI_ERR_PB_DELETE_IN_PROGRESS            = 109, /*< nick=PbDeleteInProgress >*/
-  QMI_ERR_PB_TEXT_TOO_LONG                 = 110, /*< nick=PbTextTooLong >*/
-  QMI_ERR_PB_NUMBER_TOO_LONG               = 111, /*< nick=PbNumberTooLong >*/
-  QMI_ERR_PB_HIDDEN_KEY_RESTRICTION        = 112, /*< nick=PbHiddenKeyRestriction >*/
-  QMI_ERR_PB_NOT_AVAILABLE                 = 113, /*< nick=PbNotAvailable >*/
-  QMI_ERR_DEVICE_MEMORY_ERROR              = 114, /*< nick=DeviceMemoryError >*/
-  QMI_ERR_NO_PERMISSION                    = 115, /*< nick=NoPermission >*/
-  QMI_ERR_TOO_SOON                         = 116, /*< nick=TooSoon >*/
-  QMI_ERR_TIME_NOT_ACQUIRED                = 117, /*< nick=TimeNotAcquired >*/
-  QMI_ERR_OPERATION_IN_PROGRESS            = 118, /*< nick=OperationInProgress >*/
-  QMI_ERR_FW_WRITE_FAILED                  = 388, /*< nick=FwWriteFailed >*/
-  QMI_ERR_FW_INFO_READ_FAILED              = 389, /*< nick=FwInfoReadFailed >*/
-  QMI_ERR_FW_FILE_NOT_FOUND                = 390, /*< nick=FwFileNotFound >*/
-  QMI_ERR_FW_DIR_NOT_FOUND                 = 391, /*< nick=FwDirNotFound >*/
-  QMI_ERR_FW_ALREADY_ACTIVATED             = 392, /*< nick=FwAlreadyActivated >*/
-  QMI_ERR_FW_CANNOT_GENERIC_IMAGE          = 393, /*< nick=FwCannotGenericImage >*/
-  QMI_ERR_FW_FILE_OPEN_FAILED              = 400, /*< nick=FwFileOpenFailed >*/
-  QMI_ERR_FW_UPDATE_DISCONTINUOUS_FRAME    = 401, /*< nick=FwUpdateDiscontinuousFrame >*/
-  QMI_ERR_FW_UPDATE_FAILED                 = 402, /*< nick=FwUpdateFailed >*/
-  QMI_ERR_CAT_EVENT_REGISTRATION_FAILED    = 61441, /*< nick=CatEventRegistrationFailed >*/
-  QMI_ERR_CAT_INVALID_TERMINAL_RESPONSE    = 61442, /*< nick=CatInvalidTerminalResponse >*/
-  QMI_ERR_CAT_INVALID_ENVELOPE_COMMAND     = 61443, /*< nick=CatInvalidEnvelopeCommand >*/
-  QMI_ERR_CAT_ENVELOPE_COMMAND_BUSY        = 61444, /*< nick=CatEnvelopeCommandBusy >*/
-  QMI_ERR_CAT_ENVELOPE_COMMAND_FAILED      = 61445, /*< nick=CatEnvelopeCommandFailed >*/
-  QMI_ERR_QRILD                            = 0xFFFF,
+		 QMI_ERR_NONE = 0, /*< nick=None >*/
+		 QMI_ERR_MALFORMED_MESSAGE = 1, /*< nick=MalformedMessage >*/
+		 QMI_ERR_NO_MEMORY = 2, /*< nick=NoMemory >*/
+		 QMI_ERR_INTERNAL = 3, /*< nick=Internal >*/
+		 QMI_ERR_ABORTED = 4, /*< nick=Aborted >*/
+		 QMI_ERR_CLIENT_IDS_EXHAUSTED = 5, /*< nick=ClientIdsExhausted >*/
+		 QMI_ERR_UNABORTABLE_TRANSACTION = 6, /*< nick=UnabortableTransaction >*/
+		 QMI_ERR_INVALID_CLIENT_ID = 7, /*< nick=InvalidClientId >*/
+		 QMI_ERR_NO_THRESHOLDS_PROVIDED = 8, /*< nick=NoThresholdsProvided >*/
+		 QMI_ERR_INVALID_HANDLE = 9, /*< nick=InvalidHandle >*/
+		 QMI_ERR_INVALID_PROFILE = 10, /*< nick=InvalidProfile >*/
+		 QMI_ERR_INVALID_PIN_ID = 11, /*< nick=InvalidPinId >*/
+		 QMI_ERR_INCORRECT_PIN = 12, /*< nick=IncorrectPin >*/
+		 QMI_ERR_NO_NETWORK_FOUND = 13, /*< nick=NoNetworkFound >*/
+		 QMI_ERR_CALL_FAILED = 14, /*< nick=CallFailed >*/
+		 QMI_ERR_OUT_OF_CALL = 15, /*< nick=OutOfCall >*/
+		 QMI_ERR_NOT_PROVISIONED = 16, /*< nick=NotProvisioned >*/
+		 QMI_ERR_MISSING_ARGUMENT = 17, /*< nick=MissingArgument >*/
+		 QMI_ERR_ARGUMENT_TOO_LONG = 19, /*< nick=ArgumentTooLong >*/
+		 QMI_ERR_INVALID_TRANSACTION_ID = 22, /*< nick=InvalidTransactionId >*/
+		 QMI_ERR_DEVICE_IN_USE = 23, /*< nick=DeviceInUse >*/
+		 QMI_ERR_NETWORK_UNSUPPORTED = 24, /*< nick=NetworkUnsupported >*/
+		 QMI_ERR_DEVICE_UNSUPPORTED = 25, /*< nick=DeviceUnsupported >*/
+		 QMI_ERR_NO_EFFECT = 26, /*< nick=NoEffect >*/
+		 QMI_ERR_NO_FREE_PROFILE = 27, /*< nick=NoFreeProfile >*/
+		 QMI_ERR_INVALID_PDP_TYPE = 28, /*< nick=InvalidPdpType >*/
+		 QMI_ERR_INVALID_TECHNOLOGY_PREFERENCE =
+			 29, /*< nick=InvalidTechnologyPreference >*/
+		 QMI_ERR_INVALID_PROFILE_TYPE = 30, /*< nick=InvalidProfileType >*/
+		 QMI_ERR_INVALID_SERVICE_TYPE = 31, /*< nick=InvalidServiceType >*/
+		 QMI_ERR_INVALID_REGISTER_ACTION = 32, /*< nick=InvalidRegisterAction >*/
+		 QMI_ERR_INVALID_PS_ATTACH_ACTION = 33, /*< nick=InvalidPsAttachAction >*/
+		 QMI_ERR_AUTHENTICATION_FAILED = 34, /*< nick=AuthenticationFailed >*/
+		 QMI_ERR_PIN_BLOCKED = 35, /*< nick=PinBlocked >*/
+		 QMI_ERR_PIN_ALWAYS_BLOCKED = 36, /*< nick=PinAlwaysBlocked >*/
+		 QMI_ERR_UIM_UNINITIALIZED = 37, /*< nick=UimUninitialized >*/
+		 QMI_ERR_MAXIMUM_QOS_REQUESTS_IN_USE = 38, /*< nick=MaximumQosRequestsInUse >*/
+		 QMI_ERR_INCORRECT_FLOW_FILTER = 39, /*< nick=IncorrectFlowFilter >*/
+		 QMI_ERR_NETWORK_QOS_UNAWARE = 40, /*< nick=NetworkQosUnaware >*/
+		 QMI_ERR_INVALID_QOS_ID = 41, /*< nick=InvalidQosId >*/
+		 QMI_ERR_REQUESTED_NUMBER_UNSUPPORTED = 42, /*< nick=RequestedNumberUnsupported >*/
+		 QMI_ERR_INTERFACE_NOT_FOUND = 43, /*< nick=InterfaceNotFound >*/
+		 QMI_ERR_FLOW_SUSPENDED = 44, /*< nick=FlowSuspended >*/
+		 QMI_ERR_INVALID_DATA_FORMAT = 45, /*< nick=InvalidDataFormat >*/
+		 QMI_ERR_GENERAL_ERROR = 46, /*< nick=GeneralError >*/
+		 QMI_ERR_UNKNOWN_ERROR = 47, /*< nick=UnknownError >*/
+		 QMI_ERR_INVALID_ARGUMENT = 48, /*< nick=InvalidArgument >*/
+		 QMI_ERR_INVALID_INDEX = 49, /*< nick=InvalidIndex >*/
+		 QMI_ERR_NO_ENTRY = 50, /*< nick=NoEntry >*/
+		 QMI_ERR_DEVICE_STORAGE_FULL = 51, /*< nick=DeviceStorageFull >*/
+		 QMI_ERR_DEVICE_NOT_READY = 52, /*< nick=DeviceNotReady >*/
+		 QMI_ERR_NETWORK_NOT_READY = 53, /*< nick=NetworkNotReady >*/
+		 QMI_ERR_WMS_CAUSE_CODE = 54, /*< nick=WmsCauseCode >*/
+		 QMI_ERR_WMS_MESSAGE_NOT_SENT = 55, /*< nick=WmsMessageNotSent >*/
+		 QMI_ERR_WMS_MESSAGE_DELIVERY_FAILURE = 56, /*< nick=WmsMessageDeliveryFailure >*/
+		 QMI_ERR_WMS_INVALID_MESSAGE_ID = 57, /*< nick=WmsInvalidMessageId >*/
+		 QMI_ERR_WMS_ENCODING = 58, /*< nick=WmsEncoding >*/
+		 QMI_ERR_AUTHENTICATION_LOCK = 59, /*< nick=AuthenticationLock >*/
+		 QMI_ERR_INVALID_TRANSITION = 60, /*< nick=InvalidTransition >*/
+		 QMI_ERR_NOT_MCAST_INTERFACE = 61, /*< nick=NotMcastInterface >*/
+		 QMI_ERR_MAXIMUM_MCAST_REQUESTS_IN_USE = 62, /*< nick=MaximumMcastRequestsInUse >*/
+		 QMI_ERR_INVALID_MCAST_HANDLE = 63, /*< nick=InvalidMcastHandle >*/
+		 QMI_ERR_INVALID_IP_FAMILY_PREFERENCE = 64, /*< nick=InvalidIpFamilyPreference >*/
+		 QMI_ERR_SESSION_INACTIVE = 65, /*< nick=SessionInactive >*/
+		 QMI_ERR_SESSION_INVALID = 66, /*< nick=SessionInvalid >*/
+		 QMI_ERR_SESSION_OWNERSHIP = 67, /*< nick=SessionOwnership >*/
+		 QMI_ERR_INSUFFICIENT_RESOURCES = 68, /*< nick=InsufficientResources >*/
+		 QMI_ERR_DISABLED = 69, /*< nick=Disabled >*/
+		 QMI_ERR_INVALID_OPERATION = 70, /*< nick=InvalidOperation >*/
+		 QMI_ERR_INVALID_QMI_COMMAND = 71, /*< nick=InvalidQmiCommand >*/
+		 QMI_ERR_WMS_T_PDU_TYPE = 72, /*< nick=WmsTPduType >*/
+		 QMI_ERR_WMS_SMSC_ADDRESS = 73, /*< nick=WmsSmscAddress >*/
+		 QMI_ERR_INFORMATION_UNAVAILABLE = 74, /*< nick=InformationUnavailable >*/
+		 QMI_ERR_SEGMENT_TOO_LONG = 75, /*< nick=SegmentTooLong >*/
+		 QMI_ERR_SEGMENT_ORDER = 76, /*< nick=SegmentOrder >*/
+		 QMI_ERR_BUNDLING_NOT_SUPPORTED = 77, /*< nick=BundlingNotSupported >*/
+		 QMI_ERR_OPERATION_PARTIAL_FAILURE = 78, /*< nick=OperationPartialFailure >*/
+		 QMI_ERR_POLICY_MISMATCH = 79, /*< nick=PolicyMismatch >*/
+		 QMI_ERR_SIM_FILE_NOT_FOUND = 80, /*< nick=SimFileNotFound >*/
+		 QMI_ERR_EXTENDED_INTERNAL = 81, /*< nick=ExtendedInternal >*/
+		 QMI_ERR_ACCESS_DENIED = 82, /*< nick=AccessDenied >*/
+		 QMI_ERR_HARDWARE_RESTRICTED = 83, /*< nick=HardwareRestricted >*/
+		 QMI_ERR_ACK_NOT_SENT = 84, /*< nick=AckNotSent >*/
+		 QMI_ERR_INJECT_TIMEOUT = 85, /*< nick=InjectTimeout >*/
+		 QMI_ERR_INCOMPATIBLE_STATE = 90, /*< nick=IncompatibleState >*/
+		 QMI_ERR_FDN_RESTRICT = 91, /*< nick=FdnRestrict >*/
+		 QMI_ERR_SUPS_FAILURE_CASE = 92, /*< nick=SupsFailureCase >*/
+		 QMI_ERR_NO_RADIO = 93, /*< nick=NoRadio >*/
+		 QMI_ERR_NOT_SUPPORTED = 94, /*< nick=NotSupported >*/
+		 QMI_ERR_NO_SUBSCRIPTION = 95, /*< nick=NoSubscription >*/
+		 QMI_ERR_CARD_CALL_CONTROL_FAILED = 96, /*< nick=CardCallControlFailed >*/
+		 QMI_ERR_NETWORK_ABORTED = 97, /*< nick=NetworkAborted >*/
+		 QMI_ERR_MSG_BLOCKED = 98, /*< nick=MsgBlocked >*/
+		 QMI_ERR_INVALID_SESSION_TYPE = 100, /*< nick=InvalidSessionType >*/
+		 QMI_ERR_INVALID_PB_TYPE = 101, /*< nick=InvalidPbType >*/
+		 QMI_ERR_NO_SIM = 102, /*< nick=NoSim >*/
+		 QMI_ERR_PB_NOT_READY = 103, /*< nick=PbNotReady >*/
+		 QMI_ERR_PIN_RESTRICTION = 104, /*< nick=PinRestriction >*/
+		 QMI_ERR_PIN2_RESTRICTION = 105, /*< nick=Pin1Restriction >*/
+		 QMI_ERR_PUK_RESTRICTION = 106, /*< nick=PukRestriction >*/
+		 QMI_ERR_PUK2_RESTRICTION = 107, /*< nick=Puk2Restriction >*/
+		 QMI_ERR_PB_ACCESS_RESTRICTED = 108, /*< nick=PbAccessRestricted >*/
+		 QMI_ERR_PB_DELETE_IN_PROGRESS = 109, /*< nick=PbDeleteInProgress >*/
+		 QMI_ERR_PB_TEXT_TOO_LONG = 110, /*< nick=PbTextTooLong >*/
+		 QMI_ERR_PB_NUMBER_TOO_LONG = 111, /*< nick=PbNumberTooLong >*/
+		 QMI_ERR_PB_HIDDEN_KEY_RESTRICTION = 112, /*< nick=PbHiddenKeyRestriction >*/
+		 QMI_ERR_PB_NOT_AVAILABLE = 113, /*< nick=PbNotAvailable >*/
+		 QMI_ERR_DEVICE_MEMORY_ERROR = 114, /*< nick=DeviceMemoryError >*/
+		 QMI_ERR_NO_PERMISSION = 115, /*< nick=NoPermission >*/
+		 QMI_ERR_TOO_SOON = 116, /*< nick=TooSoon >*/
+		 QMI_ERR_TIME_NOT_ACQUIRED = 117, /*< nick=TimeNotAcquired >*/
+		 QMI_ERR_OPERATION_IN_PROGRESS = 118, /*< nick=OperationInProgress >*/
+		 QMI_ERR_FW_WRITE_FAILED = 388, /*< nick=FwWriteFailed >*/
+		 QMI_ERR_FW_INFO_READ_FAILED = 389, /*< nick=FwInfoReadFailed >*/
+		 QMI_ERR_FW_FILE_NOT_FOUND = 390, /*< nick=FwFileNotFound >*/
+		 QMI_ERR_FW_DIR_NOT_FOUND = 391, /*< nick=FwDirNotFound >*/
+		 QMI_ERR_FW_ALREADY_ACTIVATED = 392, /*< nick=FwAlreadyActivated >*/
+		 QMI_ERR_FW_CANNOT_GENERIC_IMAGE = 393, /*< nick=FwCannotGenericImage >*/
+		 QMI_ERR_FW_FILE_OPEN_FAILED = 400, /*< nick=FwFileOpenFailed >*/
+		 QMI_ERR_FW_UPDATE_DISCONTINUOUS_FRAME =
+			 401, /*< nick=FwUpdateDiscontinuousFrame >*/
+		 QMI_ERR_FW_UPDATE_FAILED = 402, /*< nick=FwUpdateFailed >*/
+		 QMI_ERR_CAT_EVENT_REGISTRATION_FAILED =
+			 61441, /*< nick=CatEventRegistrationFailed >*/
+		 QMI_ERR_CAT_INVALID_TERMINAL_RESPONSE =
+			 61442, /*< nick=CatInvalidTerminalResponse >*/
+		 QMI_ERR_CAT_INVALID_ENVELOPE_COMMAND =
+			 61443, /*< nick=CatInvalidEnvelopeCommand >*/
+		 QMI_ERR_CAT_ENVELOPE_COMMAND_BUSY = 61444, /*< nick=CatEnvelopeCommandBusy >*/
+		 QMI_ERR_CAT_ENVELOPE_COMMAND_FAILED = 61445, /*< nick=CatEnvelopeCommandFailed >*/
 };
 
 /**
@@ -385,6 +389,8 @@ enum qmi_service { /*< since=1.0 >*/
 		   QMI_SERVICE_GAS = 0xE8,
 };
 
-__END_DECLS
+#ifdef __cplusplus
+}
+#endif
 
 #endif

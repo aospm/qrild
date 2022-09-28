@@ -22,6 +22,8 @@
 
 #include "q_log.h"
 #include <unistd.h>
+#include "util.h"
+#include "unistd.h"
 
 #define LOG_USE_COLOR 1
 

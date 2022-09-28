@@ -1,4 +1,19 @@
-
+/*
+ * Copyright (C) 2022, Linaro Ltd.
+ * Author: Caleb Connolly <caleb.connolly@linaro.org>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include <errno.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -25,27 +40,31 @@ struct q_work_task {
 
 static void *q_worker_scheduler(void *data) {
 	int rc;
-	struct timespec ts, now;
+	struct timespec ts, now, tick;
 	struct q_work_task *task;
 	struct list_head *li, *bkup;
 	bool new_tasks;
 	(void)data;
 
+	log_trace("Work scheduler starting...");
+
 	while (!q_exit) {
 		ts = timespec_from_ms(50);
 		new_tasks = false;
 
-		do {
-			rc = nanosleep(&ts, &ts);
-		} while (rc && errno == EINTR);
-
 		pthread_mutex_lock(&wq_mtex);
-		time_now(&now);
+		now = timespec_now();
+		tick = timespec_add(now, ts);
+		do {
+			rc = pthread_cond_timedwait(&new_task, &wq_mtex, &tick);
+		} while (rc && errno == EINTR);
+		
 		list_for_each_safe(&delayed_tasks, li, bkup) {
 			task = list_entry(li, struct q_work_task, li);
-			if (timespec_gt(now, task->when))
+			if (timespec_lt(now, task->when)) {
 				continue;
-			
+			}
+
 			log_trace("WORK: Adding task to wq: %zu", (uintptr_t)task);
 			list_remove(&task->li);
 			list_push(&workqueue, &task->li);
@@ -79,7 +98,7 @@ static void *q_worker_thread(void* data)
 	pthread_mutex_lock(&wq_mtex);
 	while (!q_exit) {
 		pthread_cond_wait(&new_task, &wq_mtex);
-		log_trace("WORK: new task recv!");
+		//log_trace("WORK: new task recv!");
 		while (!list_empty(&workqueue)) {
 			li = list_pop(&workqueue);
 			pthread_mutex_unlock(&wq_mtex);
@@ -112,8 +131,10 @@ int q_work_schedule_delayed(struct q_work *work, int delay_ms)
 
 	pthread_mutex_lock(&wq_mtex);
 	task->when = timespec_add(task->when, timespec_from_ms(delay_ms));
-	log_info("WORK: scheduling delayed task to run in %dms", delay_ms);
+	//log_trace("WORK: scheduling delayed task to run in %dms", delay_ms);
 	list_push(&delayed_tasks, &task->li);
+	if (delay_ms < 50)
+		pthread_cond_broadcast(&new_task);
 	pthread_mutex_unlock(&wq_mtex);
 
 	return 0;

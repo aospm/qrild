@@ -2,6 +2,7 @@ package nas 0x03;
 
 const QMI_NAS_EVENT_REPORT = 0x02;
 const QMI_NAS_REGISTER_INDICATIONS = 0x03;
+const QMI_NAS_GET_SIGNAL_STRENGTH = 0x20;
 const QMI_NAS_INITIATE_NETWORK_REGISTER = 0x22;
 const QMI_NAS_SERVING_SYSTEM_REPORT = 0x24;
 const QMI_NAS_SET_SYSTEM_PREFS = 0x33;
@@ -20,48 +21,56 @@ const QMI_NAS_GET_LTE_CPY_CA_INFO = 0xAC;
 
 # get_lte_cphy_ca_info_resp.dl_bandwidth
 # in MHz
-const QMI_NAS_DL_BANDWIDTH_1_4      = 0;
-const QMI_NAS_DL_BANDWIDTH_3        = 1;
-const QMI_NAS_DL_BANDWIDTH_5        = 2;
-const QMI_NAS_DL_BANDWIDTH_10       = 3;
-const QMI_NAS_DL_BANDWIDTH_15       = 4;
-const QMI_NAS_DL_BANDWIDTH_20       = 5;
-const QMI_NAS_DL_BANDWIDTH_INVALID  = 6;
+enum QmiNasDlBandwidth {
+	QMI_NAS_DL_BANDWIDTH_1_4      = 0;
+	QMI_NAS_DL_BANDWIDTH_3        = 1;
+	QMI_NAS_DL_BANDWIDTH_5        = 2;
+	QMI_NAS_DL_BANDWIDTH_10       = 3;
+	QMI_NAS_DL_BANDWIDTH_15       = 4;
+	QMI_NAS_DL_BANDWIDTH_20       = 5;
+	QMI_NAS_DL_BANDWIDTH_INVALID  = 6;
+};
 
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_NONE       = 0;
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSSI       = 1;
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_ECIO       = 2;
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_IO         = 4;
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_SINR       = 8;
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_ERROR_RATE = 16;
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSRQ       = 32;
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR    = 64;
-const QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_RSRP   = 128;
-
-const QMI_NAS_GET_SIGNAL_STRENGTH = 0x20;
+enum QmiNasSignalStrength {
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_NONE       = 0;
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSSI       = 1;
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_ECIO       = 2;
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_IO         = 4;
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_SINR       = 8;
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_ERROR_RATE = 16;
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_RSRQ       = 32;
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_SNR    = 64;
+	QMI_NAS_SIGNAL_STRENGTH_REQUEST_LTE_RSRP   = 128;
+};
 
 # serving_system.registration_state
-const QMI_NAS_REGISTRATION_STATE_NOT_REGISTERED           = 0x00;
-const QMI_NAS_REGISTRATION_STATE_REGISTERED               = 0x01;
-const QMI_NAS_REGISTRATION_STATE_NOT_REGISTERED_SEARCHING = 0x02;
-const QMI_NAS_REGISTRATION_STATE_REGISTRATION_DENIED      = 0x03;
-const QMI_NAS_REGISTRATION_STATE_UNKNOWN                  = 0x04;
+enum QmiNasRegistrationState {
+	QMI_NAS_REGISTRATION_STATE_NOT_REGISTERED           = 0x00;
+	QMI_NAS_REGISTRATION_STATE_REGISTERED               = 0x01;
+	QMI_NAS_REGISTRATION_STATE_NOT_REGISTERED_SEARCHING = 0x02;
+	QMI_NAS_REGISTRATION_STATE_REGISTRATION_DENIED      = 0x03;
+	QMI_NAS_REGISTRATION_STATE_UNKNOWN                  = 0x04;
+};
 
 # serving_system.XX_attach_state
-const QMI_NAS_ATTACH_STATE_UNKNOWN  = 0x00;
-const QMI_NAS_ATTACH_STATE_ATTACHED = 0x01;
-const QMI_NAS_ATTACH_STATE_DETACHED = 0x02;
+enum QmiNasAttachState {
+	QMI_NAS_ATTACH_STATE_UNKNOWN  = 0x00;
+	QMI_NAS_ATTACH_STATE_ATTACHED = 0x01;
+	QMI_NAS_ATTACH_STATE_DETACHED = 0x02;
+};
 
-const QMI_NAS_RADIO_INTERFACE_UNKNOWN     = 0xFF;
-const QMI_NAS_RADIO_INTERFACE_NONE        = 0x00;
-const QMI_NAS_RADIO_INTERFACE_CDMA_1X     = 0x01;
-const QMI_NAS_RADIO_INTERFACE_CDMA_1XEVDO = 0x02;
-const QMI_NAS_RADIO_INTERFACE_AMPS        = 0x03;
-const QMI_NAS_RADIO_INTERFACE_GSM         = 0x04;
-const QMI_NAS_RADIO_INTERFACE_UMTS        = 0x05;
-const QMI_NAS_RADIO_INTERFACE_LTE         = 0x08;
-const QMI_NAS_RADIO_INTERFACE_TD_SCDMA    = 0x09;
-const QMI_NAS_RADIO_INTERFACE_5GNR        = 0x0C;
+enum QmiNasRadioInterface {
+	QMI_NAS_RADIO_INTERFACE_UNKNOWN     = 0xFF;
+	QMI_NAS_RADIO_INTERFACE_NONE        = 0x00;
+	QMI_NAS_RADIO_INTERFACE_CDMA_1X     = 0x01;
+	QMI_NAS_RADIO_INTERFACE_CDMA_1XEVDO = 0x02;
+	QMI_NAS_RADIO_INTERFACE_AMPS        = 0x03;
+	QMI_NAS_RADIO_INTERFACE_GSM         = 0x04;
+	QMI_NAS_RADIO_INTERFACE_UMTS        = 0x05;
+	QMI_NAS_RADIO_INTERFACE_LTE         = 0x08;
+	QMI_NAS_RADIO_INTERFACE_TD_SCDMA    = 0x09;
+	QMI_NAS_RADIO_INTERFACE_5GNR        = 0x0C;
+};
 
 # The strength for the requested interface ??
 struct signal_strength {
@@ -401,7 +410,7 @@ struct ss_tdma_ext {
 response get_signal_info {
 	required qmi_response_type_v01 res = 0x02;
 	optional ss_cdma cdma = 0x10;
-	optional ss_hdr hdr = 0x11;
+	optional ss_hdr hdr_strength = 0x11;
 	optional i8 gsm = 0x12;
 	optional ss_wcdma wcdma = 0x13;
 	optional ss_lte lte = 0x14;
@@ -412,7 +421,7 @@ response get_signal_info {
 
 indication signal_info_ind {
 	optional ss_cdma cdma = 0x10;
-	optional ss_hdr hdr = 0x11;
+	optional ss_hdr hdr_strength = 0x11;
 	optional i8 gsm = 0x12;
 	optional ss_wcdma wcdma = 0x13;
 	optional ss_lte lte = 0x14;

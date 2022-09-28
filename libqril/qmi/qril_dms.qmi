@@ -19,17 +19,6 @@ enum QmiDmsOperatingMode {
 	QMI_DMS_OPERATING_MODE_UNKNOWN = 0xFF;
 };
 
-struct ids {
-	u16 esn_len;
-	string esn;
-	u16 imei_len;
-	string imei;
-	u16 meid_len;
-	string meid;
-	u16 imei_ver_len;
-	string imei_ver;
-};
-
 request get_revision_req {
 } = 0x0023;
 

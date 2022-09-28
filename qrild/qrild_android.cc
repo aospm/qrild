@@ -25,15 +25,13 @@
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
 
-#include <qrild_msg.h>
 #include <qmi_nas.h>
 #include <util.h>
 #include <list.h>
 #include <q_log.h>
 
 #include "timespec.h"
-#include "qrild.h"
-#include "qrild_android_interface.h"
+#include "libqril.h"
 #include "qrild_radio.hh"
 
 static std::vector<std::shared_ptr<IHandlesQmiIndications> > services_list;
@@ -94,52 +92,7 @@ template <typename T> std::shared_ptr<T> addService(std::string type, struct ril
     return ser;
 }
 
-void *qrild_event_loop(void *data) {
-    int rc;
-    struct timespec ts;
-    // This thread will handle pending events every 500ms
-
-    while (true) {
-        ts = timespec_from_ms(500);
-        do {
-            rc = nanosleep(&ts, &ts);
-        } while (rc && errno == EINTR);
-    }
-
-    return NULL;
-}
-
-void *qmi_indications_loop(void *arg) {
-    struct rild_state *state = (struct rild_state *)arg;
-    while (!state->exit) {
-        /* Wait for a new indication, call each service to let them process it */
-        q_thread_mutex_lock(&state->msg_mutex);
-        q_thread_cond_wait(&state->pending_indications, &state->msg_mutex);
-        q_thread_mutex_unlock(&state->msg_mutex);
-        for (auto svc : services_list) {
-            svc->_handleQmiIndications();
-        }
-
-        q_thread_mutex_lock(&state->msg_mutex);
-        /* Free all indications */
-        struct qrild_msg *msg;
-        // FIXME: Should use list_for_each_entry_safe
-        // To avoid the silly extra loop here.
-        auto to_free = std::vector<struct qrild_msg *>();
-        list_for_each_entry(msg, &state->pending_rx, li) {
-            if (msg->type == 0x4)
-                to_free.push_back(msg);
-        }
-
-        for (auto m : to_free)
-            qrild_msg_free_locked(m);
-        q_thread_mutex_unlock(&state->msg_mutex);
-    }
-
-    return NULL;
-}
-
-extern "C" void qrild_android_main(struct rild_state *qril_state) {
+int main(int argc, char **argv) {
     ABinderProcess_setThreadPoolMaxThreadCount(0);
     pthread_t qmi_indications_thread;
 
@@ -177,5 +130,5 @@ extern "C" void qrild_android_main(struct rild_state *qril_state) {
 
     ABinderProcess_joinThreadPool();
     LOG(ERROR) << "Should not be here!";
-    qril_state->exit = true;
+    return 1;
 }

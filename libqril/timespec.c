@@ -60,6 +60,7 @@
 #include <stdbool.h>
 #include <sys/time.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "timespec.h"
 
@@ -416,7 +417,7 @@ struct timespec timespec_normalise(struct timespec ts)
 struct timespec timespec_now()
 {
 	struct timespec t;
-	time_now(&t);
+	clock_gettime(CLOCK_REALTIME, &t);
 	return t;
 }
 

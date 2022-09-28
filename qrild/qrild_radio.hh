@@ -11,6 +11,7 @@
 #include <optional>
 #include <vector>
 
+#include <cutils/log.h>
 #include <android-base/logging.h>
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
@@ -45,30 +46,19 @@
 #include <aidl/android/hardware/radio/voice/BnRadioVoiceIndication.h>
 #include <aidl/android/hardware/radio/voice/BnRadioVoiceResponse.h>
 
-#include <qrild.h>
-#include <util.h>
-
+#include <libqril.h>
 #include <workqueue.h>
+#include <libqril_client.hh>
 
 using namespace aidl::android::hardware::radio;
+using namespace libqril;
 
-class IHandlesQmiIndications {
-public:
-    virtual ~IHandlesQmiIndications() = default;
-    /**
-       * @brief: called on each service so they can handle QMI
-       * indications and propagate them up to Android
-       * NOTE: rild_state.msg_mutex is locked when this method
-       * is called!
-       */
-    virtual void _handleQmiIndications() = 0;
-};
 
 /*****************************************************
  * AIDL impl class definitions
  */
 
-class RadioConfig : public config::BnRadioConfig, public IHandlesQmiIndications {
+class RadioConfig : public config::BnRadioConfig, public ILibQrilClient {
     ndk::ScopedAStatus getHalDeviceCapabilities(int32_t in_serial) override;
     ndk::ScopedAStatus getNumOfLiveModems(int32_t in_serial) override;
     ndk::ScopedAStatus getPhoneCapability(int32_t in_serial) override;
@@ -90,7 +80,7 @@ public:
     void _handleQmiIndications() override;
 };
 
-class RadioData : public data::BnRadioData, public IHandlesQmiIndications {
+class RadioData : public data::BnRadioData, public ILibQrilClient {
     ndk::ScopedAStatus allocatePduSessionId(int32_t in_serial) override;
     ndk::ScopedAStatus cancelHandover(int32_t in_serial, int32_t in_callId) override;
     ndk::ScopedAStatus deactivateDataCall(
@@ -147,7 +137,7 @@ public:
     RadioError setup_data_connection();
 };
 
-class RadioMessaging : public messaging::BnRadioMessaging, public IHandlesQmiIndications {
+class RadioMessaging : public messaging::BnRadioMessaging, public ILibQrilClient {
     ndk::ScopedAStatus acknowledgeIncomingGsmSmsWithPdu(
           int32_t in_serial, bool in_success, const std::string &in_ackPdu) override;
     ndk::ScopedAStatus acknowledgeLastIncomingCdmaSms(
@@ -196,7 +186,7 @@ public:
     void _handleQmiIndications() override;
 };
 
-class RadioModem : public modem::BnRadioModem, public IHandlesQmiIndications {
+class RadioModem : public modem::BnRadioModem, public ILibQrilClient {
     ndk::ScopedAStatus enableModem(int32_t in_serial, bool in_on) override;
     ndk::ScopedAStatus getBasebandVersion(int32_t in_serial) override;
     ndk::ScopedAStatus getDeviceIdentity(int32_t in_serial) override;
@@ -234,7 +224,7 @@ public:
     void _handleQmiIndications() override;
 };
 
-class RadioNetwork : public network::BnRadioNetwork, public IHandlesQmiIndications {
+class RadioNetwork : public network::BnRadioNetwork, public ILibQrilClient {
     ndk::ScopedAStatus getAllowedNetworkTypesBitmap(int32_t in_serial) override;
     ndk::ScopedAStatus getAvailableBandModes(int32_t in_serial) override;
     ndk::ScopedAStatus getAvailableNetworks(int32_t in_serial) override;
@@ -322,7 +312,7 @@ public:
     void restrictedStatechanged();
 };
 
-class RadioSim : public sim::BnRadioSim, public IHandlesQmiIndications {
+class RadioSim : public sim::BnRadioSim, public ILibQrilClient {
     ndk::ScopedAStatus areUiccApplicationsEnabled(int32_t in_serial) override;
     ndk::ScopedAStatus changeIccPin2ForApp(int32_t in_serial, const std::string &in_oldPin2,
           const std::string &in_newPin2, const std::string &in_aid) override;
@@ -401,7 +391,7 @@ public:
     struct q_work provision_sim_work;
 };
 
-class RadioVoice : public voice::BnRadioVoice, public IHandlesQmiIndications {
+class RadioVoice : public voice::BnRadioVoice, public ILibQrilClient {
     ndk::ScopedAStatus acceptCall(int32_t in_serial) override;
     ndk::ScopedAStatus cancelPendingUssd(int32_t in_serial) override;
     ndk::ScopedAStatus conference(int32_t in_serial) override;
@@ -495,43 +485,7 @@ void buildResponseInfo(
         info;                                                                                      \
     })
 
-// Helpers defined in qrild_android_config.cc for now
-// should be moved
-/*
- * https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/main/src/qmicli/qmicli-uim.c#L999
- */
-static const char bcd_chars[] = "0123456789\0\0\0\0\0\0";
 
-static inline std::string decode_iccid(uint8_t *bcd, uint8_t len) {
-    char *str = (char *)zalloc(len * 2 + 1);
-    for (size_t i = 0; i < len; i++) {
-        str[i * 2] = (bcd_chars[bcd[i] & 0xF]);
-        str[i * 2 + 1] = (bcd_chars[(bcd[i] >> 4) & 0xF]);
-    }
-
-    auto s = std::string(str);
-    free(str);
-    return s;
-}
-
-static inline std::string decode_eid(uint8_t *eid, uint8_t len) {
-    char *str = (char *)zalloc(len * 2 + 1);
-    for (size_t i = 0; i < len; i++) {
-        str[i * 2] = bcd_chars[(eid[i] >> 4) & 0xF];
-        str[i * 2 + 1] = bcd_chars[eid[i] & 0xF];
-    }
-
-    auto s = std::string(str);
-    free(str);
-    return s;
-}
-
-static inline std::string decode_bytes(uint8_t *bytes, size_t len) {
-    char *str = bytes_to_hex_string(bytes, len);
-    auto s = std::string(str);
-    free(str);
-    return s;
-}
 
 int QmiUimPhysicalCardStateToCardState(int physical_card_state);
 enum RadioTechnology QmiNasRadioInterfaceToRadioTechnology(int radio_interface);

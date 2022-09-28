@@ -79,12 +79,10 @@ struct provisioning_session_application {
 };
 
 struct physical_slot_state {
-	struct {
-		u32 card_state;
-		u32 slot_state;
-		u8 logical_slot;
-		u8 *iccid(u8);
-	} *slots(u8);
+	u32 card_state;
+	u32 slot_state;
+	u8 logical_slot;
+	u8 *iccid(u8);
 };
 
 struct physical_slot_info {
@@ -130,13 +128,13 @@ request get_slot_status_req {
 
 response get_slot_status_resp {
 	required qmi_response_type_v01 result = 0x02;
-	optional physical_slot_state slot_state = 0x10;
+	optional physical_slot_state slot_state(u8) = 0x10;
 	optional physical_slot_info slot_info = 0x11;
 	optional u8 eid_info[32] = 0x12;
 } = 0x0047;
 
 indication get_slot_status_ind {
-	required physical_slot_state slot_state = 0x10;
+	required physical_slot_state slot_state(u8) = 0x10;
 	optional physical_slot_info slot_info = 0x11;
 	optional u8 eid_info[32] = 0x12;
 } = 0x0048;

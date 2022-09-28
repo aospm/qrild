@@ -4,20 +4,31 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/syscall.h>
 
 #include "libqrtr.h"
-
-__BEGIN_DECLS
+#include "timespec.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
+#ifndef gettid
+#define gettid() ((pid_t)syscall(SYS_gettid))
+#endif
+
+struct enum_value {
+	int value;
+	const char *value_str;
+	const char *name;
+};
+
 char to_hex(uint8_t ch);
 void print_hex_dump(const char *prefix, const void *buf, size_t len);
-uint8_t *bytes_from_hex_str(const char *str, size_t *out_len);
-char *bytes_to_hex_string(uint8_t *bytes, size_t len);
 
+#ifndef zalloc
 #define zalloc(size) calloc(1, (size))
+#endif
 
 struct bytearray {
 	size_t len;
@@ -58,9 +69,9 @@ void *qmi_tlv_get_array(struct qmi_tlv *tlv, uint8_t id, size_t len_size,
 int qmi_tlv_set(struct qmi_tlv *tlv, uint8_t id, void *buf, size_t len);
 int qmi_tlv_set_array(struct qmi_tlv *tlv, uint8_t id, size_t len_size,
 		      void *buf, size_t len, size_t size);
-struct qmi_response_type_v01 *qmi_tlv_get_result(struct qmi_tlv *tlv);
+struct qmi_response_type_v01 qmi_tlv_get_result(struct qmi_tlv *tlv);
 
-void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc, const char *msg_name)
+void qmi_tlv_dump(struct qmi_tlv *tlv, int qmi_svc, const char *msg_name);
 static inline int qmi_tlv_dump_buf(void *buf, size_t len, int qmi_svc, const char *msg_name) {
 	struct qmi_tlv *tlv = qmi_tlv_decode(buf, len);
 	if (!tlv)
@@ -73,5 +84,4 @@ static inline int qmi_tlv_dump_buf(void *buf, size_t len, int qmi_svc, const cha
 
 void time_now(struct timespec *ts);
 
-__END_DECLS
 #endif

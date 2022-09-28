@@ -7,6 +7,12 @@
 #include "list.h"
 
 /**
+ * @brief init services local state. Must be called
+ * before \a messages_init()
+ */
+void services_init();
+
+/**
  * @brief get the port and node for a QMI service
  * 
  * @type: The QMI service to get
@@ -15,7 +21,7 @@
  * 
  * @returns 0 if the service is online, -ENOENT otherwise
  */
-int qmi_servie_get(enum qmi_service type, int *port, int *node);
+int qmi_service_get(enum qmi_service type, int *port, int *node);
 
 /**
  * @brief get the port for an online QMI service
@@ -59,7 +65,5 @@ void qmi_service_new(struct qrtr_packet *pkt);
  * @pkt: A qrtr_packet of type QRTR_TYPE_DEL_SERVER
  */
 void qmi_service_goodbye(enum qmi_service type);
-
-const char *qmi_service_get_name(enum qmi_service service);
 
 #endif

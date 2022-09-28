@@ -3,7 +3,9 @@
 
 #include <arpa/inet.h>
 
-__BEGIN_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int qrild_link_configure(struct in_addr *addr, struct in_addr *mask, struct in_addr *gateway);
 /**
@@ -11,5 +13,7 @@ int qrild_link_configure(struct in_addr *addr, struct in_addr *mask, struct in_a
  */
 uint32_t mask_to_prefix(struct in_addr *mask);
 
-__END_DECLS
+#ifdef __cplusplus
+}
+#endif
 #endif

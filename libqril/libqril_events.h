@@ -16,6 +16,12 @@ void event_new_modem_state_change(enum modem_state newstate);
 void event_new_indication(struct qmi_header *ind);
 
 /**
+ * @brief notify clients that service discovery has completed.
+ * This should only be called once!
+ */
+void event_service_discovery_done();
+
+/**
  * @brief notify clients of a new QMI service being discovered
  * 
  * @service: the new QMI service

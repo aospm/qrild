@@ -5,9 +5,11 @@
 #include <unistd.h>
 #include "workqueue.h"
 
-__BEGIN_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#define Q_WORK_N_THREADS 4
+#define Q_WORK_N_THREADS 6
 
 /**
  * @brief: Set up the workqueue, must be called once
@@ -17,7 +19,8 @@ void q_workqueue_init();
 
 int q_threads_exitall();
 
-
-__END_DECLS
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __Q_WORKQUEUE_PRIV_H__
