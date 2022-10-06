@@ -1,12 +1,10 @@
 # qrild
 
-## Generating QMI C/headers
+This is the old branch of qrild. It is left here to serve as a reference.
 
-Install qmic from https://github.com/andersson/qmic
+It used [this fork of
+QRTR](https://github.com/aospm/qrtr/tree/caleb/qrild-fixes) and [this fork of
+QMIC](https://github.com/aospm/qmic/tree/nested_structs).
 
-This MR is also needed if it's not merged: https://github.com/andersson/qmic/pull/3
-
-```sh
-cd src
-for x in src/qmi/*.qmi; do qmic -f $x -o src/qmi; done
-```
+Unless you're here intentionally, please check the [rewrite
+branch](https://github.com/aospm/qrild/tree/rewrite).
