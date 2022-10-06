@@ -37,6 +37,10 @@
 #include "q_log.h"
 #include "workqueue.h"
 
+#define log_trace_msg(msg, fmt, ...)                                                               \
+	log_trace("0x%04x|0x%04x: " fmt, msg->qmi_header.msg_id, msg->qmi_header.txn_id,           \
+		  ##__VA_ARGS__)
+
 #define QMI_MSG_MAX_SIZE 1024
 
 static pthread_mutex_t message_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -87,20 +91,6 @@ struct message_lifetime {
 	struct q_work async_work;
 
 	struct q_work indication_work;
-};
-
-/**
- * @brief struct to link the raw QMI message buffer to
- * a client response
- * 
- * @buf: The buf to be free'd when the client is done with the response
- * @resp: Pointer to the client response header
- * @li: List entry
- */
-struct resp_message_buf {
-	void *buf;
-	struct qmi_message_header *resp;
-	struct list_head li;
 };
 
 /**
@@ -169,8 +159,6 @@ static void _dump_pending()
 int _message_decode(struct message_lifetime *lt)
 {
 	if (!lt->resp_header) {
-		log_trace("Message has no response header 0x%04x (%d)", lt->hdr.msg_id,
-			  lt->hdr.txn_id);
 		return -EINVAL;
 	}
 
@@ -185,7 +173,7 @@ int _message_decode(struct message_lifetime *lt)
 static void _message_indication_work(void *_data)
 {
 	struct message_lifetime *lt = _data;
-	event_new_indication(lt->buf);
+	event_new_indication(lt->service, lt->buf, lt);
 }
 
 static void _message_async_work(void *_data)
@@ -197,6 +185,8 @@ static void _message_async_work(void *_data)
 		return;
 	}
 	lt->handler(lt->cb_data, lt->resp_header);
+
+	messages_free_lifetime(lt);
 }
 
 static void _message_lifetime_new(struct message_lifetime **lt, const struct qmi_header *hdr,
@@ -217,9 +207,9 @@ static void _message_lifetime_new(struct message_lifetime **lt, const struct qmi
 		lifetime->handler = handler;
 		lifetime->async_work.data = lifetime;
 		lifetime->async_work.func = _message_async_work;
-		lifetime->resp_header = resp;
 	}
 
+	lifetime->resp_header = resp;
 	lifetime->indication_work.data = lifetime;
 	lifetime->indication_work.func = _message_indication_work;
 }
@@ -251,7 +241,7 @@ static struct message_lifetime *_find_pending_msg(uint16_t txn_id)
 {
 	struct message_lifetime *m;
 
-	list_for_each_entry(m, &pending_rx, li)
+	list_for_each_entry(m, &pending_tx, li)
 	{
 		if (m->hdr.txn_id == txn_id)
 			return m;
@@ -260,35 +250,14 @@ static struct message_lifetime *_find_pending_msg(uint16_t txn_id)
 	return NULL;
 }
 
-/**
- * @brief: Send a QMI message, message_mutex must be locked
- *
- * @lt: The message to send
- * @node: The QRTR node to send to
- * @port: The QRTR port to send to
- */
-static int _send_msg(struct message_lifetime *lt, int node, int port)
-{
-	int rc;
-	const char *service = libqril_qmi_service_name(lt->service);
-	log_trace("[QRTR] TX: %s - %s", service, lt->name);
-	qmi_tlv_dump_buf(lt->buf, lt->buf_len, lt->service, lt->name);
-
-	rc = qrtr_sendto(qrtr_fd, node, port, lt->buf, lt->buf_len);
-	if (rc)
-		return rc;
-
-	list_append(&pending_tx, &lt->li);
-
-	return rc;
-}
-
 /* Receive and process a QMI message */
 static void _recv_message(struct qrtr_packet *pkt, struct sockaddr_qrtr *sq)
 {
 	struct message_lifetime *lt = NULL;
 	const struct qmi_header *hdr;
+	struct qmi_tlv *tlv;
 	enum qmi_service service;
+	char buf[256];
 	int rc;
 
 	hdr = qmi_get_header(pkt);
@@ -303,15 +272,21 @@ static void _recv_message(struct qrtr_packet *pkt, struct sockaddr_qrtr *sq)
 		return;
 	}
 
+	_print_qmi_msg(hdr, "", service, buf, 256);
+	log_info("Received msg: %s", buf);
+
 	if (hdr->type == QMI_INDICATION) {
 		_message_lifetime_new(&lt, hdr, service, NULL, pkt->data, pkt->data_len, NULL, NULL,
 				      NULL);
+		tlv = qmi_tlv_decode(lt->buf, lt->buf_len);
+		qmi_tlv_dump(tlv, service, "UNKNOWN");
+		qmi_tlv_free(tlv);
 	} else {
 		q_thread_mutex_lock(&message_mutex);
 		lt = _find_pending_msg(hdr->txn_id);
 		if (!lt) {
 			log_error("Failed to find pending lifetime for msg 0x%04x (txn: 0x%04x)",
-				hdr->msg_id, hdr->txn_id);
+				  hdr->msg_id, hdr->txn_id);
 			return;
 		}
 		list_remove(&lt->li);
@@ -327,8 +302,8 @@ static void _recv_message(struct qrtr_packet *pkt, struct sockaddr_qrtr *sq)
 
 	lt->buf = pkt->data;
 	lt->buf_len = pkt->data_len;
-	log_info("[QRTR] RX: %s - %s (0x%04x)", libqril_qmi_service_name(service), lt->name,
-		 lt->hdr.msg_id);
+	log_info("[QRTR] RX: svc: %s, msg: %s (0x%04x)", libqril_qmi_service_name(service),
+		lt->name ?: "UNKNOWN", lt->hdr.msg_id);
 
 	if (lt->handler) {
 		log_trace("Scheduling async handler...");
@@ -336,8 +311,15 @@ static void _recv_message(struct qrtr_packet *pkt, struct sockaddr_qrtr *sq)
 		return;
 	}
 
+	if (hdr->type == QMI_INDICATION) {
+		log_trace("Broadcasting new qmi indication event");
+		q_work_schedule_now(&lt->indication_work);
+		return;
+	}
+
 	q_thread_mutex_lock(&message_mutex);
 	list_append(&pending_rx, &lt->li);
+	pthread_cond_broadcast(&message_received);
 	q_thread_mutex_unlock(&message_mutex);
 }
 
@@ -387,6 +369,62 @@ static int _recv_pending()
 	return 0;
 }
 
+/**
+ * @brief: Send a QMI message, message_mutex must be locked
+ *
+ * @lt: The message to send
+ * @node: The QRTR node to send to
+ * @port: The QRTR port to send to
+ */
+static void _send_msg(struct message_lifetime *lt)
+{
+	int rc;
+	const char *service = libqril_qmi_service_name(lt->service);
+	int port, node;
+
+	rc = qmi_service_get(lt->service, &port, &node);
+	if (rc) {
+		log_error("Couldn't send message %s: service not found! %d", lt->name, rc);
+		return;
+	}
+
+	log_trace("[QRTR] TX: svc: %s, msg: %s", service ?: "UNKNOWN", lt->name ?: "UNKNOWN");
+	qmi_tlv_dump_buf(lt->buf, lt->buf_len, lt->service, lt->name);
+
+	rc = qrtr_sendto(qrtr_fd, node, port, lt->buf, lt->buf_len);
+	if (rc) {
+		log_error("Couldn't send message: %d (%s)", rc, strerror(rc));
+		return;
+	}
+
+	lt->sent = true;
+	free(lt->buf);
+
+	return;
+}
+
+static void _send_pending()
+{
+	struct message_lifetime *lt;
+
+	q_thread_mutex_lock(&message_mutex);
+	if (list_empty(&pending_tx)) {
+		q_thread_mutex_unlock(&message_mutex);
+		return;
+	}
+
+	log_trace("Sending pending messages..");
+
+	list_for_each_entry(lt, &pending_tx, li)
+	{
+		if (!lt->sent)
+			_send_msg(lt);
+		else
+			break;
+	}
+	q_thread_mutex_unlock(&message_mutex);
+}
+
 static void *_recv_loop(void *_)
 {
 	struct qrtr_ctrl_pkt pkt;
@@ -398,12 +436,14 @@ static void *_recv_loop(void *_)
 	rc = qrtr_sendto(qrtr_fd, 1, QRTR_PORT_CTRL, &pkt, sizeof(pkt));
 	if (rc < 0) {
 		log_error("[MSGLOOP] Failed to look up QRTR services: %d", rc);
-		return (void *)rc;
+		return NULL;
 	}
 	log_info("Sent QRTR lookup");
 
 	while (true) {
-		rc = qrtr_poll(qrtr_fd, -1);
+		_send_pending();
+
+		rc = qrtr_poll(qrtr_fd, 50);
 		if (rc < 0 && errno == EINTR)
 			continue;
 		if (rc < 0) {
@@ -411,7 +451,8 @@ static void *_recv_loop(void *_)
 			continue;
 		}
 
-		_recv_pending();
+		if (rc)
+			_recv_pending();
 	}
 
 	log_info("[MSGLOOP] Quitting!");
@@ -443,6 +484,12 @@ void messages_dump_pending()
 	_dump_pending();
 }
 
+void messages_free_lifetime(struct message_lifetime *lt)
+{
+	free(lt->buf);
+	free(lt);
+}
+
 /****** Public API ********/
 
 // Declared in libqril.h
@@ -450,7 +497,6 @@ int libqril_send_message_sync(struct qmi_message_header *msg, struct qmi_message
 {
 	// FIXME: recycle buffers here
 	uint8_t *buf = zalloc(QMI_MSG_MAX_SIZE);
-	char msg_dump[256];
 	struct message_lifetime *lifetime = NULL;
 	int rc, len;
 	int port, node;
@@ -460,35 +506,29 @@ int libqril_send_message_sync(struct qmi_message_header *msg, struct qmi_message
 	struct qmi_tlv *tlv;
 	bool found = false;
 
+	if (!msg || !resp)
+		return -EINVAL;
+
 	rc = qmi_service_get(service, &port, &node);
 	if (rc < 0)
 		return rc;
 
 	len = qmi_encode_message2(buf, QMI_MSG_MAX_SIZE, qmi_txn++, msg);
-
-	_print_message(msg, msg_dump, 256);
-
 	if (len < 0) {
-		log_error("Failed to encode message (%d): %s", len, msg_dump);
+		log_error("Failed to encode message (%d)", len);
 		return len;
 	}
+
+	log_trace_msg(msg, "Encoded message. %s is on node %d, port %d", libqril_qmi_service_name(service),
+		      port, node);
 
 	_message_lifetime_new(&lifetime, &msg->qmi_header, service, msg->name, buf, len, NULL, resp,
 			      NULL);
 
-	log_debug("Encoded message: %s", msg_dump);
 
-	q_thread_mutex_lock(&message_mutex);
 	/* This will mean messages are sent in LIFO order */
-	rc = _send_msg(lifetime, node, port);
-	if (rc < 0) {
-		log_error("Failed to send message: %d", rc);
-		free(lifetime);
-		q_thread_mutex_unlock(&message_mutex);
-		return rc;
-	}
-	// This will be replaced by the response buffer
-	free(lifetime->buf);
+	q_thread_mutex_lock(&message_mutex);
+	list_append(&pending_tx, &lifetime->li);
 
 	timeout = timespec_add(timespec_now(), timespec_from_ms(5000));
 	while (!(found = _find_response(lifetime)) && rc != ETIMEDOUT) {
@@ -496,20 +536,24 @@ int libqril_send_message_sync(struct qmi_message_header *msg, struct qmi_message
 	}
 	if (rc && !found) {
 		log_trace("Failed waiting for response: %d", rc);
-		_dump_pending();
 		q_thread_mutex_unlock(&message_mutex);
-		return rc;
+		return -rc;
 	}
 	list_remove(&lifetime->li);
 	q_thread_mutex_unlock(&message_mutex);
 
 	tlv = qmi_tlv_decode(lifetime->buf, lifetime->buf_len);
 	res = qmi_tlv_get_result(tlv);
+	qmi_tlv_dump(tlv, service, resp ? resp->name : "UNKNOWN");
 	qmi_tlv_free(tlv);
 
 	// Decode the response into resp
-	if (resp)
-		_message_decode(lifetime);
+	rc = _message_decode(lifetime);
+
+	messages_free_lifetime(lifetime);
+	
+	if (rc < 0)
+		return rc;
 
 	return res.error;
 }
@@ -520,7 +564,6 @@ int libqril_send_message_async(struct qmi_message_header *msg, struct qmi_messag
 {
 	// FIXME: recycle buffers here
 	uint8_t *buf = zalloc(QMI_MSG_MAX_SIZE);
-	char msg_dump[256];
 	struct message_lifetime *lifetime = NULL;
 	int rc, len;
 	int port, node;
@@ -532,32 +575,20 @@ int libqril_send_message_async(struct qmi_message_header *msg, struct qmi_messag
 
 	len = qmi_encode_message2(buf, QMI_MSG_MAX_SIZE, qmi_txn++, msg);
 
-	_print_message(msg, msg_dump, 256);
-
 	if (len < 0) {
-		log_error("Failed to encode message (%d): %s", len, msg_dump);
+		log_error("Failed to encode message (%d)", len);
 		return len;
 	}
-
-	log_debug("Encoded message: %s", msg_dump);
 
 	_message_lifetime_new(&lifetime, &msg->qmi_header, service, msg->name, buf, len, cb, resp,
 			      cb_data);
 
-	q_thread_mutex_lock(&message_mutex);
 	/* This will mean messages are sent in LIFO order */
-	rc = _send_msg(lifetime, node, port);
-	if (rc < 0) {
-		log_error("Failed to send message: %d", rc);
-		free(lifetime->buf);
-		free(lifetime);
-		q_thread_mutex_unlock(&message_mutex);
-		return rc;
-	}
+	q_thread_mutex_lock(&message_mutex);
+	list_append(&pending_tx, &lifetime->li);
+	q_thread_mutex_unlock(&message_mutex);
 	// This will be replaced by the response buffer
 	free(lifetime->buf);
-
-	q_thread_mutex_unlock(&message_mutex);
 
 	return 0;
 }
@@ -565,7 +596,8 @@ int libqril_send_message_async(struct qmi_message_header *msg, struct qmi_messag
 int libqril_send_basic_request_sync(enum qmi_service service, uint16_t message_id,
 				    struct qmi_message_header *resp)
 {
-	struct qmi_message_header req = { { 0, 0, message_id, 0 }, NULL, service, NULL, NULL };
+	struct qmi_message_header req = { .qmi_header = { QMI_REQUEST, 0, message_id, 0 },
+					  .service = service };
 
 	return libqril_send_message_sync(&req, resp);
 }
@@ -574,7 +606,61 @@ int libqril_send_basic_request_async(enum qmi_service service, uint16_t message_
 				     struct qmi_message_header *resp, void *cb_data,
 				     qmi_message_handler_t cb)
 {
-	struct qmi_message_header req = { { 0, 0, message_id, 0 }, NULL, service, NULL, NULL };
+	struct qmi_message_header req = { .qmi_header = { QMI_REQUEST, 0, message_id, 0 },
+					  .service = service };
 
 	return libqril_send_message_async(&req, resp, cb_data, cb);
+}
+
+static struct _basic_qmi_response {
+	struct qmi_message_header hdr;
+	struct qmi_response_type_v01 res;
+};
+
+static struct qmi_elem_info _basic_qmi_response_ei[] = {
+	{
+		.data_type = QMI_STRUCT,
+		.elem_len = 1,
+		.elem_size = sizeof(struct qmi_response_type_v01),
+		.tlv_type = 2,
+		.offset = offsetof(struct _basic_qmi_response, res),
+		.ei_array = qmi_response_type_v01_ei,
+	},
+	{}
+};
+
+int libqril_send_message_ack_sync(struct qmi_message_header *req)
+{
+	struct _basic_qmi_response resp = { .hdr = { .qmi_header = { QMI_RESPONSE, 0, req->qmi_header.msg_id, 0 },
+					  .service = req->service, .ei = _basic_qmi_response_ei } };
+
+	int rc = libqril_send_message_sync(req, &resp);
+	if (rc)
+		return rc;
+	
+	return resp.res.error;
+}
+
+int libqril_async_ack_get_error(struct qmi_message_header *msg)
+{
+	if (msg->ei != _basic_qmi_response_ei)
+		return -EINVAL;
+	
+	return ((struct _basic_qmi_response*)msg)->res.error;
+}
+
+int libqril_send_message_ack_async(struct qmi_message_header *req, void *cb_data,
+				     qmi_message_handler_t cb)
+{
+	struct _basic_qmi_response resp = { .hdr = { .qmi_header = { QMI_RESPONSE, 0, req->qmi_header.msg_id, 0 },
+					  .service = req->service, .ei = _basic_qmi_response_ei } };
+
+	return libqril_send_message_async(req, &resp, cb_data, cb);
+}
+
+int libqril_send_message_basic_ack_sync(enum qmi_service service, uint16_t message_id)
+{
+	struct qmi_message_header req = { .qmi_header = { QMI_REQUEST, 0, message_id, 0 },
+					  .service = service };
+	return libqril_send_message_ack_sync(&req);
 }

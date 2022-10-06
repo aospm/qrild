@@ -16,6 +16,7 @@
  */
 #include <errno.h>
 #include <linux/qrtr.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,6 +59,7 @@ static void *_main_loop(void * _)
 void dump_state(int x) {
 	messages_dump_pending();
 	q_thread_dump_locks();
+	q_workqueue_dump();
 }
 
 /****** Public API *******/
@@ -65,6 +67,7 @@ void dump_state(int x) {
 void libqril_init()
 {
 	pthread_t main_thread;
+	struct sigaction action;
 
 	log_set_level(QLOG_TRACE);
 	log_set_lock(q_log_lock, NULL);
@@ -73,6 +76,12 @@ void libqril_init()
 
 	services_init();
 	messages_init();
+
+	memset(&action, 0, sizeof(action));
+	action.sa_handler = dump_state;
+	//sigaction(SIGTERM, &action, NULL);
+	//sigaction(SIGINT, &action, NULL);
+	sigaction(SIGHUP, &action, NULL);
 
 	// Doesn't do much for now, but that might change
 	if (pthread_create(&main_thread, NULL, _main_loop, NULL)) {

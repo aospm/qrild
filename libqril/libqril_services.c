@@ -32,15 +32,9 @@
 #include "util.h"
 #include "libqril_private.h"
 
-static void _wait_service_discovery_done_on_done();
-
 static pthread_mutex_t services_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t service_discovery_done = PTHREAD_COND_INITIALIZER;
 static struct list_head services = LIST_INIT(services);
-
-static struct libqril_events discovery_done_handler = {
-	.on_service_discovery_done = _wait_service_discovery_done_on_done,
-};
+static volatile bool service_discovery_done = false;
 
 #define service_for_each(s) list_for_each_entry(s, &services, li)
 
@@ -90,13 +84,6 @@ void _log_service(struct qmi_service_info *info)
 	     info->name ? info->name : "<unknown>");
 
 	count++;
-}
-
-static void _wait_service_discovery_done_on_done(enum qmi_service service)
-{
-	q_thread_mutex_lock(&services_mutex);
-	pthread_cond_broadcast(&service_discovery_done);
-	q_thread_mutex_unlock(&services_mutex);
 }
 
 /***** Internal API *****/
@@ -156,8 +143,9 @@ void qmi_service_new(struct qrtr_packet *pkt)
 	// If the pkt is all empty that means all services have been
 	// discovered
 	if (!pkt->service && !pkt->node && !pkt->port && !pkt->instance) {
-		log_trace("Got null service, firing service discovery done event");
-		event_service_discovery_done();
+		q_thread_mutex_lock(&services_mutex);
+		service_discovery_done = true;
+		q_thread_mutex_unlock(&services_mutex);
 		return;
 	}
 
@@ -174,8 +162,9 @@ void qmi_service_new(struct qrtr_packet *pkt)
 
 	q_thread_mutex_lock(&services_mutex);
 	list_append(&services, &service->li);
-	event_service_new(service->type);
 	q_thread_mutex_unlock(&services_mutex);
+
+	event_service_new(service->type);
 }
 
 void qmi_service_goodbye(enum qmi_service type)
@@ -199,7 +188,7 @@ void qmi_service_goodbye(enum qmi_service type)
 
 void services_init()
 {
-	libqril_register_event_handlers(&discovery_done_handler, NULL);
+	//
 }
 
 /****** Public API *******/
@@ -218,13 +207,13 @@ const char *libqril_qmi_service_name(enum qmi_service service)
 
 void libqril_wait_for_service_discovery()
 {
-	log_debug("Waiting for services to be discovered");
-
-	q_thread_mutex_lock(&services_mutex);
-	while (q_thread_cond_wait(&service_discovery_done, &services_mutex));
-	q_thread_mutex_unlock(&services_mutex);
-
-	log_trace("Got service discovery done notification!");
+	int rc;
+	log_trace("Waiting for services to be discovered");
+	struct timespec ns = timespec_from_ms(50);
+	do {
+		rc = nanosleep(&ns, &ns);
+	} while (!service_discovery_done || (rc && errno == EINTR));
+	log_trace("Service discovery done!");
 }
 
 int libqril_qmi_service_online(enum qmi_service service)

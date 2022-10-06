@@ -31,9 +31,11 @@ struct libqril_modem_info {
 enum libqril_event_type {
 	EV_MODEM_STATE_CHANGE = 0,
 	EV_QMI_INDICATION,
-	EV_SERVICE_DISCOVERY_DONE,
 	EV_SERVICE_NEW,
 	EV_SERVICE_GOODBYE,
+
+	_EV_TYPE_MAX,
+#define EV_TYPE_MAX (_EV_TYPE_MAX - 1)
 };
 
 /**
@@ -52,24 +54,16 @@ struct libqril_events {
 	void (*on_modem_state_change)(void *data, enum modem_state newstate);
 	/**
 	 * @brief called when a QMI indication is received from the modem
+	 * @service: The QMI service that sent the indication
 	 * @data: client data
-	 * @buf: The QMI indication message, this can be decoded by calling
+	 * @ind: The QMI indication message, this can be decoded by calling
 	 * qmi_decode_message2() with the appropriate message struct.
+	 * @len: The length of the QMI message in bytes.
 	 * 
-	 * The client returns true to take ownership of the buffer,
-	 * e.g. if they decode the message and intend to use it outside
-	 * of the callback scope. Decoding with the helpers provided by libqrtr
-	 * does not require taking ownership of the buffer.
-	 * Use of the buffer after returning false from the callback is undefined.
+	 * See examples/network_indications.c for example usage
 	 */
-	bool (*on_qmi_indication)(void *data, struct qmi_header *buf, size_t len);
-	/**
-	 * @brief called when all available QMI services have been discovered
-	 * @data: Client data
-	 * 
-	 * This callback will only be called once during program startup
-	 */
-	void (*on_service_discovery_done)(void *data);
+	void (*on_qmi_indication)(void *data, enum qmi_service service, struct qmi_header *ind,
+				  size_t len);
 	/**
 	 * @brief: called when a new QMI service appears on QRTR
 	 * @data: client data
@@ -145,7 +139,7 @@ void libqril_wait_for_service_discovery();
  */
 int libqril_qmi_service_online(enum qmi_service service);
 
-typedef void (*qmi_message_handler_t)(void *data, struct qmi_message_header *);
+typedef void (*qmi_message_handler_t)(void *data, struct qmi_message_header *msg);
 
 /**
  * @brief Send a message synchronously and populate resp with the response
@@ -169,7 +163,7 @@ int libqril_send_message_sync(struct qmi_message_header *msg, struct qmi_message
  * @returns 0 on success, negative err on failure
  */
 int libqril_send_message_async(struct qmi_message_header *msg, struct qmi_message_header *resp,
-	void *cb_data, qmi_message_handler_t cb);
+			       void *cb_data, qmi_message_handler_t cb);
 
 /**
  * @brief send a "basic" QMI request message which doesn't contain a body
@@ -177,10 +171,10 @@ int libqril_send_message_async(struct qmi_message_header *msg, struct qmi_messag
  *
  * @service: The service to send the request to
  * @message_id: The ID of the message
- * @resp: Pointer to the response the populate
+ * @resp: Pointer to the response to populate
  */
 int libqril_send_basic_request_sync(enum qmi_service service, uint16_t message_id,
-	struct qmi_message_header *resp);
+				    struct qmi_message_header *resp);
 
 /**
  * @brief send a basic request message and call cb asynchronously
@@ -194,7 +188,58 @@ int libqril_send_basic_request_sync(enum qmi_service service, uint16_t message_i
  * @returns 0 on success, negative err on failure
  */
 int libqril_send_basic_request_async(enum qmi_service service, uint16_t message_id,
-	struct qmi_message_header *resp, void *cb_data, qmi_message_handler_t cb);
+				     struct qmi_message_header *resp, void *cb_data,
+				     qmi_message_handler_t cb);
+
+/**
+ * @brief send a QMI request message where the response
+ * only contains the QMI result TLV ("ack")
+ *
+ * @service: The service to send the request to
+ * @message_id: The ID of the message
+ * @req: Pointer to the request message
+ * 
+ * @returns non-negative QMI_ERROR or negative errno
+ */
+int libqril_send_message_ack_sync(struct qmi_message_header *req);
+
+/**
+ * @brief send a message and call cb asynchronously
+ * with the response TLV ("ack"). Returns immediately.
+ * 
+ * 
+ * @msg: The message to send
+ * @req: The request message struct
+ * @cb_data: Context to pass to the callback
+ * @cb: Callback function to process response
+ * Use \a libqril_async_ack_get_error to get the QMI error
+ * for the response
+ * 
+ * @returns 0 on success, negative err on failure
+ * 
+ * NOTE: untested
+ */
+int libqril_send_message_ack_async(struct qmi_message_header *req, void *cb_data,
+				     qmi_message_handler_t cb);
+
+/**
+ * @brief send a basic QMI message and validate the basic response.
+ * 
+ * @service: The QMI service to send the message to
+ * @message_id: The ID of the QMI message
+ * 
+ * @returns: non-negative QMI error or negative errno
+ */
+int libqril_send_message_basic_ack_sync(enum qmi_service service, uint16_t message_id);
+
+/**
+ * @brief: Get the QMI error for the response message @msg
+ * only valid in the context of a callback handler for
+ * \a libqril_send_message_ack_async
+ * 
+ * @msg: The QMI response message
+ */
+int libqril_async_ack_get_error(struct qmi_message_header *msg);
 
 /**
  * @brief get the name of a QMI error

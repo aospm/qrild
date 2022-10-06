@@ -28,23 +28,28 @@
 
 #include "qmi_uim.h"
 
+/**
+ * @brief get the status of all installed SIM cards and dump them to stdout
+ */
 void get_card_status()
 {
 	// The initializer macro sets the response header so that libqril knows
-	// how to decode it properly.
-	struct uim_get_card_status_resp resp = UIM_GET_CARD_STATUS_RESP_INITIALIZER;
-	struct uim_card_status *status = &resp.status;
+	// how to decode it properly. This pointer does have to be free'd!
+	struct uim_get_card_status_resp *resp = UIM_GET_CARD_STATUS_RESP_NEW;
+	struct uim_card_status *status = &resp->status;
 	int rc;
 
 	// The get card status request doesn't require any arguments, so we use basic request helper
-	rc = libqril_send_basic_request_sync(QMI_SERVICE_UIM, QMI_UIM_GET_CARD_STATUS, &resp.hdr);
+	rc = libqril_send_basic_request_sync(QMI_SERVICE_UIM, QMI_UIM_GET_CARD_STATUS, &resp->hdr);
 	if (rc) {
 		log_error("Failed to get card status: %d, %s", rc, libqril_strerror(rc));
+		free(resp);
 		return;
 	}
 
-	if (!resp.status_valid) {
+	if (!resp->status_valid) {
 		log_error("Response card status is invalid");
+		free(resp);
 		return;
 	}
 
@@ -53,22 +58,24 @@ void get_card_status()
 		 "\tPrimary 1X: %u\n"
 		 "\tSecondary GW: %u\n"
 		 "\tSecondary 1X: %u\n"
-		 "\tCards:",
+		 "\tCards: %u",
 		 status->index_gw_primary, status->index_1x_primary, status->index_gw_secondary,
-		 status->index_1x_secondary);
+		 status->index_1x_secondary, status->cards_len);
 
-	for (size_t i = 0; i < status->cards_len; i++) {
+	for (int i = 0; i < status->cards_len; i++) {
 		struct uim_card_status_cards *card = &status->cards[i];
 		log_info("\t\tState: %u, upin_state: %u, upin_retries: %u", card->card_state,
 			 card->upin_state, card->upin_retries);
-		log_info("\t\tApplications:");
-		for (size_t j = 0; j < card->applications_len; j++) {
+		log_info("\t\tApplications: %u", card->applications_len);
+		for (int j = 0; j < card->applications_len; j++) {
 			struct uim_card_status_cards_applications *appn = &card->applications[i];
 			log_info("\t\t\ttype: %u, state: %u, AID: %s", appn->type, appn->state,
 				 bytes_to_hex_string(appn->application_identifier_value,
 						     appn->application_identifier_value_len));
 		}
 	}
+
+	free(resp);
 }
 
 int main(int argc, char **argv)
@@ -77,7 +84,7 @@ int main(int argc, char **argv)
 
 	libqril_init();
 
-	// Block until all services are discovered
+	// Block until all QMI services are discovered
 	libqril_wait_for_service_discovery();
 	log_info("Services discovered");
 
@@ -88,4 +95,6 @@ int main(int argc, char **argv)
 	}
 
 	get_card_status();
+
+	return 0;
 }

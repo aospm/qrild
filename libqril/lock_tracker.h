@@ -23,6 +23,8 @@ int _q_thread_cond_timedwait(pthread_cond_t *c, pthread_mutex_t *m, struct times
 int _q_thread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m, const char *mtex, const char *file,
 			const char *func, int line);
 
+void _q_thread_dump_locks();
+
 #define q_thread_dump_locks()	 _q_thread_dump_locks()
 
 #define q_thread_mutex_lock(m)	 _q_thread_mutex_lock(m, #m, __FILENAME__, __FUNCTION__, __LINE__)

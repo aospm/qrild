@@ -35,7 +35,8 @@ static bool q_exit = false;
 struct q_work_task {
 	struct list_head li;
 	struct q_work *work;
-	struct timespec when;
+	struct timespec scheduled;
+	struct timespec due;
 };
 
 static void *q_worker_scheduler(void *data) {
@@ -61,11 +62,11 @@ static void *q_worker_scheduler(void *data) {
 		
 		list_for_each_safe(&delayed_tasks, li, bkup) {
 			task = list_entry(li, struct q_work_task, li);
-			if (timespec_lt(now, task->when)) {
+			if (timespec_lt(now, task->due)) {
 				continue;
 			}
 
-			log_trace("WORK: Adding task to wq: %zu", (uintptr_t)task);
+			//log_trace("WORK: Adding task to wq: %zu", (uintptr_t)task);
 			list_remove(&task->li);
 			list_push(&workqueue, &task->li);
 			new_tasks = true;
@@ -81,7 +82,7 @@ static void *q_worker_scheduler(void *data) {
 static void q_worker_process_task(struct q_work_task *task)
 {
 	struct q_work *work = task->work;
-	log_trace("WORK: Processing task");
+	//log_trace("WORK: Processing task");
 
 	if (work->func)
 		(work->func)(work->data);
@@ -98,11 +99,11 @@ static void *q_worker_thread(void* data)
 	pthread_mutex_lock(&wq_mtex);
 	while (!q_exit) {
 		pthread_cond_wait(&new_task, &wq_mtex);
-		//log_trace("WORK: new task recv!");
 		while (!list_empty(&workqueue)) {
 			li = list_pop(&workqueue);
 			pthread_mutex_unlock(&wq_mtex);
 			task = list_entry(li, struct q_work_task, li);
+			//log_trace("WORK: new task recv (%zu)", (uintptr_t)task);
 			q_worker_process_task(task);
 			pthread_mutex_lock(&wq_mtex);
 		}
@@ -122,18 +123,47 @@ void q_workqueue_init()
 	pthread_create(&workthreads[Q_WORK_N_THREADS], NULL, q_worker_scheduler, NULL);
 }
 
+void q_workqueue_dump()
+{
+	struct q_work_task *task;
+	struct list_head *li, *bkup;
+
+	pthread_mutex_lock(&wq_mtex);
+
+	log_info("WORKQUEUE SCHEDULED TASKS:");
+	list_for_each_safe(&delayed_tasks, li, bkup) {
+		task = list_entry(li, struct q_work_task, li);
+		log_info("\t%32s: scheduled %ums ago, delay: %ums",
+			task->work->name ?: "UNNAMED",
+			timespec_to_ms(timespec_sub(timespec_now(), task->scheduled)),
+			timespec_to_ms(timespec_sub(task->due, task->scheduled)));
+	}
+
+	log_info("WORKQUEUE ACTIVE TASKS:");
+	list_for_each_safe(&workqueue, li, bkup) {
+		task = list_entry(li, struct q_work_task, li);
+		log_info("\t%32s: scheduled %ums ago, delay: %ums",
+			task->work->name ?: "UNNAMED",
+			timespec_to_ms(timespec_sub(timespec_now(), task->scheduled)),
+			timespec_to_ms(timespec_sub(task->due, task->scheduled)));
+	}
+
+
+	pthread_mutex_unlock(&wq_mtex);
+}
+
 int q_work_schedule_delayed(struct q_work *work, int delay_ms)
 {
 	struct q_work_task *task = zalloc(sizeof(struct q_work_task));
 
-	time_now(&task->when);
+	task->scheduled = timespec_now();
 	task->work = work;
 
 	pthread_mutex_lock(&wq_mtex);
-	task->when = timespec_add(task->when, timespec_from_ms(delay_ms));
-	//log_trace("WORK: scheduling delayed task to run in %dms", delay_ms);
+	task->due = timespec_add(task->scheduled, timespec_from_ms(delay_ms));
+	//log_trace("WORK: scheduling delayed task to run in %dms (%zu)", delay_ms, (uintptr_t)task);
 	list_push(&delayed_tasks, &task->li);
-	if (delay_ms < 50)
+	if (delay_ms < 5)
 		pthread_cond_broadcast(&new_task);
 	pthread_mutex_unlock(&wq_mtex);
 

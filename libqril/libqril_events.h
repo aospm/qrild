@@ -1,6 +1,8 @@
 #ifndef __LIBQRIL_EVENTS_H__
 #define __LIBQRIL_EVENTS_H__
 
+#include "libqril_messages.h"
+
 /**
  * @brief notify clients of a change in the modem state
  * 
@@ -11,15 +13,12 @@ void event_new_modem_state_change(enum modem_state newstate);
 /**
  * @brief notify clients of a pending QMI indication from the modem
  * 
+ * @service: The QMI service the message is for
  * @ind: The QMI indication message
+ * @lt: The lifetime associated with the message, handed back to \a messages_free_ind_cb
  */
-void event_new_indication(struct qmi_header *ind);
-
-/**
- * @brief notify clients that service discovery has completed.
- * This should only be called once!
- */
-void event_service_discovery_done();
+void event_new_indication(enum qmi_service service, struct qmi_header *ind,
+        struct message_lifetime *lt);
 
 /**
  * @brief notify clients of a new QMI service being discovered

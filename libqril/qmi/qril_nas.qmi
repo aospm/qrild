@@ -108,7 +108,7 @@ struct serving_system {
 struct current_plmn {
 	u16 mcc;
 	u16 mnc;
-	string description;
+	string description[64];
 };
 
 struct service_status {
@@ -191,7 +191,7 @@ request set_operating_mode_resp {
 
 struct service_provider_name {
 	u8 display_condition;
-	string name;
+	string name[64];
 };
 
 struct operator_plmn {

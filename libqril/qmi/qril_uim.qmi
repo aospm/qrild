@@ -56,7 +56,7 @@ struct card_status {
 			u8 personalization_feature;
 			u8 personalization_retries;
 			u8 personalization_unblock_retries;
-			u8 *application_identifier_value(u8);
+			u8 *application_identifier_value(u8)[16];
 			u8 upin_replaces_pin1;
 			u8 pin1_state;
 			u8 pin1_retries;
@@ -64,8 +64,8 @@ struct card_status {
 			u8 pin2_state;
 			u8 pin2_retries;
 			u8 puk2_retries;
-		} *applications(u8);
-	} *cards(u8);
+		} *applications(u8)[2];
+	} *cards(u8)[2];
 };
 
 struct provisioning_session_change {
@@ -75,7 +75,7 @@ struct provisioning_session_change {
 
 struct provisioning_session_application {
 	u8 slot;
-	u8 *application_identifier_value(u8);
+	u8 *application_identifier_value(u8)[16];
 };
 
 struct physical_slot_state {
@@ -89,7 +89,7 @@ struct physical_slot_info {
 	struct {
 		u32 card_protocol;
 		u8 valid_applications;
-		u8 *atr_value(u8);
+		u8 *atr_value(u8)[32];
 		u8 is_euicc;
 	} *slots(u8);
 };
@@ -227,7 +227,7 @@ struct refresh_ev_t {
 	u8 stage;
 	u8 mode;
 	u8 session_type;
-	u8 *aid(u8);
+	u8 *aid(u8)[16];
 	struct {
 		u16 id;
 		u8 *path(u8);

@@ -11,6 +11,7 @@ extern "C" {
 struct q_work {
 	void *data;
 	void (*func)(void *);
+	const char *name; // optional
 };
 
 int q_work_schedule_delayed(struct q_work *work, int delay_ms);

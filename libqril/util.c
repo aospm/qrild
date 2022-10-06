@@ -79,8 +79,6 @@ char *bytes_to_hex_string(uint8_t *bytes, size_t len)
 	return str;
 }
 
-#define LINE_LENGTH 32
-
 void print_hex_dump(const char *prefix, const void *buf, size_t len)
 {
 	const uint8_t *ptr = buf;

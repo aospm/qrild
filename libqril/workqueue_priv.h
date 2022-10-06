@@ -17,6 +17,8 @@ extern "C" {
  */
 void q_workqueue_init();
 
+void q_workqueue_dump();
+
 int q_threads_exitall();
 
 #ifdef __cplusplus

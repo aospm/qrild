@@ -23,18 +23,18 @@ extern "C" {
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
-#define LOG_VERSION "0.1.0"
+#define LOG_VERSION  "0.1.0"
 
 typedef struct {
-  va_list ap;
-  const char *fmt;
-  const char *file;
-  const char *func;
-  struct tm *time;
-  long time_ms;
-  void *udata;
-  int line;
-  int level;
+	va_list ap;
+	const char *fmt;
+	const char *file;
+	const char *func;
+	struct tm *time;
+	long time_ms;
+	void *udata;
+	int line;
+	int level;
 } log_Event;
 
 typedef void (*log_LogFn)(log_Event *ev);
@@ -44,12 +44,12 @@ enum { QLOG_TRACE, QLOG_DEBUG, QLOG_INFO, QLOG_WARN, QLOG_ERROR, QLOG_FATAL };
 
 #define log_trace(...) log_log(QLOG_TRACE, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define log_debug(...) log_log(QLOG_DEBUG, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define log_info(...)  log_log(QLOG_INFO,  __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define log_warn(...)  log_log(QLOG_WARN,  __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define log_info(...)  log_log(QLOG_INFO, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define log_warn(...)  log_log(QLOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define log_error(...) log_log(QLOG_ERROR, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define log_fatal(...) log_log(QLOG_FATAL, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
-const char* log_level_string(int level);
+const char *log_level_string(int level);
 void log_set_lock(log_LockFn fn, void *udata);
 void log_set_level(int level);
 void log_set_quiet(bool enable);

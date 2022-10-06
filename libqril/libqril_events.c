@@ -41,14 +41,6 @@ struct ev_handler {
 	void *data;
 };
 
-const char *event_type_name[] = {
-	[EV_MODEM_STATE_CHANGE] = "EV_MODEM_STATE_CHANGE",
-	[EV_QMI_INDICATION] = "EV_QMI_INDICATION",
-	[EV_SERVICE_DISCOVERY_DONE] = "EV_SERVICE_DISCOVERY_DONE",
-	[EV_SERVICE_NEW] = "EV_SERVICE_NEW",
-	[EV_SERVICE_GOODBYE] = "EV_SERVICE_GOODBYE",
-};
-
 struct ev_type {
 	struct list_head li;
 	enum libqril_event_type type;
@@ -56,10 +48,30 @@ struct ev_type {
 	struct q_work work;
 	union {
 		enum modem_state newstate; // EV_MODEM_STATE_CHANGE
-		struct qmi_header *ind; // EV_QMI_INDICATION
-		enum qmi_service service; // EV_SERVICE_NEW, EV_SERVICE_GOODBYE
+		// FIXME: neater way to handle this?
+		struct {
+			enum qmi_service service; // EV_QMI_INDICATION, EV_SERVICE_NEW,
+				// EV_SERVICE_GOODBYE
+			struct qmi_header *ind; // EV_QMI_INDICATION
+			struct message_lifetime *lt; // EV_QMI_INDICATION lifetime
+		};
 	};
 };
+
+static const char *_ev_type_name(enum libqril_event_type type)
+{
+	static const char *event_type_name[] = {
+		[EV_MODEM_STATE_CHANGE] = "EV_MODEM_STATE_CHANGE",
+		[EV_QMI_INDICATION] = "EV_QMI_INDICATION",
+		[EV_SERVICE_NEW] = "EV_SERVICE_NEW",
+		[EV_SERVICE_GOODBYE] = "EV_SERVICE_GOODBYE",
+	};
+
+	if (type > EV_TYPE_MAX)
+		return "INVALID";
+
+	return event_type_name[type];
+}
 
 static struct ev_type *_ev_type_new(enum libqril_event_type type)
 {
@@ -67,32 +79,10 @@ static struct ev_type *_ev_type_new(enum libqril_event_type type)
 	e->type = type;
 	e->work.data = e;
 	e->work.func = _process_event;
+	e->work.name = _ev_type_name(type);
 	e->timestamp = timespec_now();
 
 	return e;
-}
-
-/**
- * @brief if a client on_qmi_indication() callback returns true
- * then we need to update the pointer to the new buffer and preallocate
- * a new pointer for the next client.
- * The client is then responsible for free'ing the buffer, and we avoid dealing with
- * complicated pointer lifetimes.
- * 
- * We have to duplicate the buffer before calling the callback to avoid racing with
- * the client in case they free the buffer in another thread.
- *
- * @buf: Pointer to the buffer to pre-allocate
- * 
- * @returns a duplicate of @buf
- */
-static struct qmi_header *_ind_buffer_dup(struct qmi_header *buf)
-{
-	struct qmi_header *newbuf = zalloc(buf->msg_len + sizeof(struct qmi_header));
-
-	memcpy(newbuf, buf, buf->msg_len + sizeof(struct qmi_header));
-
-	return newbuf;
 }
 
 static void _process_event(void *_event)
@@ -101,11 +91,9 @@ static void _process_event(void *_event)
 	struct ev_handler *handler;
 	struct list_head *li, *bkup;
 	long age = timespec_to_ms(timespec_sub(timespec_now(), event->timestamp));
-	struct qmi_header *nextbuf;
-	log_debug("[EVENTS] '%s', age: %ldms", event_type_name[event->type], age);
 
-	if (event->type == EV_QMI_INDICATION)
-		nextbuf = _ind_buffer_dup(event->ind);
+	log_trace("[EVENTS] '%s', age: %ldms", _ev_type_name(event->type), age);
+
 
 	q_thread_mutex_lock(&events_mutex);
 	list_for_each_safe(&event_handlers, li, bkup)
@@ -117,20 +105,11 @@ static void _process_event(void *_event)
 				handler->h.on_modem_state_change(handler->data, event->newstate);
 			break;
 		case EV_QMI_INDICATION:
-			// FIXME:
-			// clang-format off
-			if (handler->h.on_qmi_indication &&
-			    handler->h.on_qmi_indication(handler->data, event->ind,
-			    event->ind->msg_len + sizeof(struct qmi_header))) {
-				event->ind = nextbuf;
-				nextbuf = _ind_buffer_dup(event->ind);
-			}
-			// clang-format on
+			if (handler->h.on_qmi_indication)
+				handler->h.on_qmi_indication(
+					handler->data, event->service, event->ind,
+					event->ind->msg_len + sizeof(struct qmi_header));
 			break;
-		case EV_SERVICE_DISCOVERY_DONE:
-			log_trace("Calling handler discovery done");
-			if (handler->h.on_service_discovery_done)
-				handler->h.on_service_discovery_done(handler->data);
 		case EV_SERVICE_NEW:
 			if (handler->h.on_service_new)
 				handler->h.on_service_new(handler->data, event->service);
@@ -146,10 +125,8 @@ static void _process_event(void *_event)
 	}
 	q_thread_mutex_unlock(&events_mutex);
 
-	if (event->type == EV_QMI_INDICATION) {
-		free(nextbuf);
-		free(event->ind);
-	}
+	if (event->type == EV_QMI_INDICATION)
+		messages_free_lifetime(event->lt);
 
 	free(event);
 }
@@ -173,23 +150,6 @@ static struct ev_handler *_event_handlers_get_by_id(long hid)
 
 /******* Internal API *******/
 
-void event_service_discovery_done()
-{
-	static bool called = false;
-	struct ev_type *event;
-
-	if (called) {
-		log_warn("The service discovery event should only occur once!");
-	}
-
-	called = true;
-
-	event = _ev_type_new(EV_SERVICE_DISCOVERY_DONE);
-
-	q_work_schedule_now(&event->work);
-	log_trace("Service discovery done!");
-}
-
 void event_new_modem_state_change(enum modem_state newstate)
 {
 	struct ev_type *event = _ev_type_new(EV_MODEM_STATE_CHANGE);
@@ -198,10 +158,13 @@ void event_new_modem_state_change(enum modem_state newstate)
 	q_work_schedule_now(&event->work);
 }
 
-void event_new_indication(struct qmi_header *ind)
+void event_new_indication(enum qmi_service service, struct qmi_header *ind,
+        struct message_lifetime *lt)
 {
 	struct ev_type *event = _ev_type_new(EV_QMI_INDICATION);
 	event->ind = ind;
+	event->lt = lt;
+	event->service = service;
 
 	q_work_schedule_now(&event->work);
 }
@@ -251,8 +214,10 @@ int libqril_event_handlers_unregister(unsigned long hid)
 	}
 
 	list_remove(&entry->li);
-	free(entry);
+
 	q_thread_mutex_unlock(&events_mutex);
+
+	free(entry);
 
 	return 0;
 }

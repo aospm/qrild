@@ -90,7 +90,7 @@ static inline struct list_head *list_next(struct list_head *item)
 
 #define list_push list_append
 
-#define list_empty(li) ((li)->head == (li)->tail)
+#define list_empty(li) ((li)->next == (li))
 
 #define list_for_each(_list, _iter)                                            \
 	for (_iter = (_list)->head; (_iter) != (_list); _iter = (_iter)->next)

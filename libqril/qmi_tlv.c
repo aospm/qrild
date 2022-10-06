@@ -212,7 +212,8 @@ int qmi_tlv_set_array(struct qmi_tlv *tlv, uint8_t id, size_t len_size,
 
 struct qmi_response_type_v01 qmi_tlv_get_result(struct qmi_tlv *tlv)
 {
-	struct qmi_response_type_v01 res;
-	res = *(struct qmi_response_type_v01 *)qmi_tlv_get(tlv, 2, NULL);
-	return res;
+	struct qmi_response_type_v01 *r = qmi_tlv_get(tlv, 2, NULL);
+	if (r)
+		return *r;
+	return (struct qmi_response_type_v01){0, 0};
 }
